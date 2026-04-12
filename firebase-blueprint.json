@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["parent", "kid"] },
+        "parentId": { "type": "string", "description": "UID of the parent for kid accounts" },
+        "linkedKids": { "type": "array", "items": { "type": "string" }, "description": "List of kid UIDs for parent accounts" },
+        "screenTime": {
+          "type": "object",
+          "properties": {
+            "dailyAllowance": { "type": "number", "description": "Minutes allowed per day" },
+            "usedToday": { "type": "number", "description": "Minutes used today" },
+            "lastReset": { "type": "string", "format": "date-time" }
+          }
+        },
+        "allowedGames": { "type": "array", "items": { "type": "string" }, "description": "List of RAWG game IDs approved by parent" },
+        "friends": { "type": "array", "items": { "type": "string" } },
+        "wishlist": { "type": "array", "items": { "type": "object" } },
+        "availability": { 
+          "type": "object",
+          "description": "Weekly availability map. Key: day_hour (e.g., 'monday_14'), Value: 'available' | 'unavailable' | 'once'"
+        }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "ApprovalRequest": {
+      "title": "ApprovalRequest",
+      "description": "A request requiring parent approval",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "parentId": { "type": "string" },
+        "childId": { "type": "string" },
+        "childName": { "type": "string" },
+        "type": { "type": "string", "enum": ["friend", "game", "time", "team"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "denied"] },
+        "data": { "type": "object", "description": "Payload specific to the request type" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "parentId", "childId", "type", "status"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "Gaming group or team",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "isPublic": { "type": "boolean" },
+        "imageURL": { "type": "string" },
+        "teamAvailability": { 
+          "type": "object",
+          "description": "Weekly team availability map. Key: day_hour, Value: 'available' | 'unavailable'"
+        }
+      },
+      "required": ["id", "name", "ownerId", "members"]
+    },
+    "GroupGame": {
+      "title": "GroupGame",
+      "description": "A game associated with a group",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "platforms": { "type": "array", "items": { "type": "string" } },
+        "genres": { "type": "array", "items": { "type": "string" } },
+        "steamData": {
+          "type": "object",
+          "properties": {
+            "playtime": { "type": "number" },
+            "achievements": { "type": "array", "items": { "type": "object" } },
+            "lastPlayed": { "type": "string" }
+          }
+        },
+        "teamGoals": { "type": "array", "items": { "type": "string" } },
+        "teamNotes": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "A scheduled gaming session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "gameId": { "type": "string" },
+        "gameName": { "type": "string" },
+        "gameImage": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "proposedBy": { "type": "string" },
+        "proposedByName": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "responses": { 
+          "type": "object",
+          "description": "Map of userId to { status: 'accepted' | 'rejected' | 'maybe', note: string }"
+        },
+        "goals": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "actualStartTime": { "type": "string", "format": "date-time" },
+        "actualEndTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["proposed", "scheduled", "ongoing", "completed", "cancelled"] }
+      },
+      "required": ["id", "groupId", "gameId", "startTime", "proposedBy"]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "description": "A request to be friends",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fromId": { "type": "string" },
+        "fromName": { "type": "string" },
+        "toId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "fromId", "toId", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Parental notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "UID of the parent to receive notification" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["session_start", "session_end", "time_warning"] },
+        "childId": { "type": "string" },
+        "childName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "title", "message", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/friendRequests/{requestId}": {
+      "schema": "FriendRequest",
+      "description": "Friend requests"
+    },
+    "/approvals/{approvalId}": {
+      "schema": "ApprovalRequest",
+      "description": "Parent approval queue"
+    },
+    "/groups/{groupId}": {
+      "schema": "Group",
+      "description": "Gaming groups"
+    },
+    "/groups/{groupId}/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Sessions within a group"
+    },
+    "/groups/{groupId}/games/{gameId}": {
+      "schema": "GroupGame",
+      "description": "Games associated with a group"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Parental notifications"
+    }
+  }
+}

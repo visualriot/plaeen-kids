@@ -1,0 +1,60 @@
+@import url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  
+  --color-plaeen-green: #76E900;
+  --color-plaeen-purple: #2D1B4D;
+  --color-plaeen-dark: #0A0514;
+  --color-plaeen-glass: rgba(255, 255, 255, 0.05);
+  --color-plaeen-glass-border: rgba(255, 255, 255, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-plaeen-dark text-white font-sans antialiased selection:bg-plaeen-green selection:text-black;
+    background-image: 
+      radial-gradient(circle at 50% -20%, #2D1B4D 0%, #0A0514 100%),
+      radial-gradient(circle at 0% 0%, rgba(118, 233, 0, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(118, 233, 0, 0.05) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+.glass {
+  @apply bg-plaeen-glass backdrop-blur-xl border border-plaeen-glass-border;
+}
+
+.neon-glow {
+  box-shadow: 0 0 20px rgba(118, 233, 0, 0.3);
+}
+
+.neon-glow-strong {
+  box-shadow: 0 0 40px rgba(118, 233, 0, 0.5);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(118, 233, 0, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(118, 233, 0, 0.4);
+}
