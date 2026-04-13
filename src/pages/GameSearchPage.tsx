@@ -25,8 +25,11 @@ interface Game {
   isChildFriendly: boolean;
 }
 
+import { useProfile } from '@/contexts/ProfileContext';
+
 export const GameSearchPage = () => {
   const [user] = useAuthState(auth);
+  const { activeKid: kidData, role } = useProfile();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialQuery = searchParams.get('q') || '';
@@ -36,7 +39,6 @@ export const GameSearchPage = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [recommendation, setRecommendation] = useState<Game | null>(null);
 
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
@@ -46,23 +48,31 @@ export const GameSearchPage = () => {
   const [isRequesting, setIsRequesting] = useState(false);
 
   const isGameApproved = (gameId: string) => {
-    if (!userProfile || userProfile.role !== 'kid') return true;
-    return userProfile.allowedGames?.includes(gameId);
+    if (role !== 'kid' || !kidData) return true;
+    return kidData.allowedGames?.includes(gameId);
   };
 
   const requestGameAccess = async (game: Game) => {
-    if (!user || !userProfile || !userProfile.parentId) return;
+    if (!user || !kidData || !kidData.parentId) return;
     setIsRequesting(true);
     try {
       await addDoc(collection(db, 'approvals'), {
-        parentId: userProfile.parentId,
-        childId: user.uid,
-        childName: user.displayName || 'Anonymous',
+        parentId: kidData.parentId,
+        childId: kidData.uid,
+        childName: kidData.displayName || 'Anonymous',
         type: 'game',
         status: 'pending',
         data: {
           gameId: game.id,
-          gameName: game.name
+          gameName: game.name,
+          image: game.image,
+          description: game.description,
+          rating: game.rating,
+          genres: game.genres,
+          platforms: game.platforms,
+          slug: game.slug || game.id,
+          isChildFriendly: game.isChildFriendly,
+          esrbRating: (game as any).esrb_rating?.name || (game as any).esrbRating || 'Not Rated'
         },
         createdAt: Timestamp.now()
       });
@@ -94,7 +104,11 @@ export const GameSearchPage = () => {
   const exploreGames = useCallback(async (pageNum = 1) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/games?page=${pageNum}`);
+      let url = `/api/games?page=${pageNum}`;
+      if (role === 'kid' && kidData?.restrictedMode) {
+        url += '&isChildFriendly=true';
+      }
+      const response = await fetch(url);
       if (!response.ok) throw new Error('API error');
       const data = await response.json();
       if (pageNum === 1) {
@@ -152,7 +166,11 @@ export const GameSearchPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/games?search=${encodeURIComponent(query)}&page=${pageNum}`);
+      let url = `/api/games?search=${encodeURIComponent(query)}&page=${pageNum}`;
+      if (role === 'kid' && kidData?.restrictedMode) {
+        url += '&isChildFriendly=true';
+      }
+      const response = await fetch(url);
       if (!response.ok) throw new Error('API error');
       const data = await response.json();
       if (pageNum === 1) {
@@ -166,7 +184,7 @@ export const GameSearchPage = () => {
       try {
         const prompt = `Act as a game database API. Search for games matching "${query}". 
         Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).
-        Filter results based on: ${userProfile?.restrictedMode ? 'ONLY child-friendly games' : 'all games'}.`;
+        Filter results based on: ${role === 'kid' && kidData?.restrictedMode ? 'ONLY child-friendly games' : 'all games'}.`;
 
         const geminiResponse = await ai.models.generateContent({
           model: "gemini-3-flash-preview",
@@ -188,7 +206,7 @@ export const GameSearchPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, userProfile?.restrictedMode, exploreGames]);
+  }, [searchQuery, role, exploreGames]);
 
   const fetchGameDetails = async (game: Game) => {
     setLoadingDetails(true);
@@ -237,30 +255,16 @@ export const GameSearchPage = () => {
   };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      if (!user) {
-        if (initialQuery) {
-          searchGames(initialQuery);
-        } else {
-          exploreGames();
-        }
-        return;
-      }
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setUserProfile(data);
-        setWishlistIds(data.wishlist?.map((g: any) => g.id) || []);
-      }
-      
-      if (initialQuery) {
-        searchGames(initialQuery);
-      } else {
-        exploreGames();
-      }
-    };
-    fetchUser();
-  }, [user, initialQuery, searchGames, exploreGames]);
+    if (kidData) {
+      setWishlistIds(kidData.wishlist?.map((g: any) => g.id) || []);
+    }
+    
+    if (initialQuery) {
+      searchGames(initialQuery);
+    } else {
+      exploreGames();
+    }
+  }, [kidData, initialQuery, searchGames, exploreGames]);
 
   const toggleWishlist = async (game: Game) => {
     if (!user) return;

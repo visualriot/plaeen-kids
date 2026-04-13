@@ -53,7 +53,7 @@ export const ParentActivityPage = () => {
         onClick={() => navigate('/parent-dashboard')}
         className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] mb-8 transition-colors"
       >
-        <ArrowLeft size={14} /> Back to Command Center
+        <ArrowLeft size={14} /> Back to Guardian Hub
       </button>
 
       <div className="mb-12">

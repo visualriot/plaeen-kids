@@ -33,39 +33,34 @@ interface FriendRequest {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+import { useProfile } from '@/contexts/ProfileContext';
+
 export const FriendsPage = () => {
   const [user] = useAuthState(auth);
-  const [role, setRole] = useState<string | null>(null);
-  const [parentId, setParentId] = useState<string | null>(null);
+  const { role, activeKid: kidData, parentProfile } = useProfile();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const activeUid = kidData ? kidData.uid : user?.uid;
 
   useEffect(() => {
-    if (!user) return;
-
-    const fetchRole = async () => {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setRole(data.role || 'parent');
-        setParentId(data.parentId || null);
-      }
-    };
-    fetchRole();
+    if (!activeUid) return;
 
     // Listen to friend requests
-    const q = query(collection(db, 'friendRequests'), where('toId', '==', user.uid), where('status', '==', 'pending'));
+    const q = query(collection(db, 'friendRequests'), where('toId', '==', activeUid), where('status', '==', 'pending'));
     const unsubscribeRequests = onSnapshot(q, (snapshot) => {
       setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest)));
     });
 
     // Listen to user's friends list
-    const unsubscribeUser = onSnapshot(doc(db, 'users', user.uid), async (docSnap) => {
+    const unsubscribeUser = onSnapshot(doc(db, 'users', activeUid), async (docSnap) => {
       if (docSnap.exists()) {
-        const friendIds = docSnap.data().friends || [];
+        const friendIds = docSnap.data()?.friends || [];
         if (friendIds.length > 0) {
           const friendsQuery = query(collection(db, 'users_public'), where('uid', 'in', friendIds));
           const friendsSnap = await getDocs(friendsQuery);
@@ -80,7 +75,7 @@ export const FriendsPage = () => {
       unsubscribeRequests();
       unsubscribeUser();
     };
-  }, [user]);
+  }, [activeUid]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -92,7 +87,7 @@ export const FriendsPage = () => {
         where('displayName', '<=', searchQuery + '\uf8ff')
       );
       const snapshot = await getDocs(q);
-      setSearchResults(snapshot.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== user?.uid));
+      setSearchResults(snapshot.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== activeUid));
     } catch (err) {
       console.error('Search error:', err);
     } finally {
@@ -101,14 +96,14 @@ export const FriendsPage = () => {
   };
 
   const sendRequest = async (targetUser: UserProfile) => {
-    if (!user) return;
+    if (!activeUid) return;
     try {
-      if (role === 'kid' && parentId) {
+      if (role === 'kid' && kidData?.parentId) {
         // Create approval request for parent
         await addDoc(collection(db, 'approvals'), {
-          parentId: parentId,
-          childId: user.uid,
-          childName: user.displayName || 'Anonymous',
+          parentId: kidData.parentId,
+          childId: kidData.uid,
+          childName: kidData.displayName || 'Anonymous',
           type: 'friend',
           status: 'pending',
           data: {
@@ -117,16 +112,16 @@ export const FriendsPage = () => {
           },
           createdAt: serverTimestamp()
         });
-        alert('Friend request submitted for parent approval!');
+        setMessage({ text: 'Friend request submitted for parent approval!', type: 'success' });
       } else {
         await addDoc(collection(db, 'friendRequests'), {
-          fromId: user.uid,
-          fromName: user.displayName || 'Anonymous',
+          fromId: activeUid,
+          fromName: kidData?.displayName || user?.displayName || 'Anonymous',
           toId: targetUser.uid,
           status: 'pending',
           createdAt: serverTimestamp()
         });
-        alert('Request sent!');
+        setMessage({ text: 'Request sent!', type: 'success' });
       }
     } catch (err) {
       console.error('Error sending request:', err);
@@ -134,18 +129,18 @@ export const FriendsPage = () => {
   };
 
   const handleRequest = async (request: FriendRequest, accept: boolean) => {
-    if (!user) return;
+    if (!activeUid) return;
     try {
       const requestRef = doc(db, 'friendRequests', request.id);
       if (accept) {
         await updateDoc(requestRef, { status: 'accepted' });
         
         // Add to both users' friends lists
-        await updateDoc(doc(db, 'users', user.uid), {
+        await updateDoc(doc(db, 'users', activeUid), {
           friends: arrayUnion(request.fromId)
         });
         await updateDoc(doc(db, 'users', request.fromId), {
-          friends: arrayUnion(user.uid)
+          friends: arrayUnion(activeUid)
         });
       } else {
         await updateDoc(requestRef, { status: 'rejected' });
@@ -156,17 +151,19 @@ export const FriendsPage = () => {
   };
 
   const removeFriend = async (friendId: string) => {
-    if (!user) return;
-    if (!confirm('Are you sure you want to remove this friend?')) return;
+    if (!activeUid) return;
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
+      await updateDoc(doc(db, 'users', activeUid), {
         friends: arrayRemove(friendId)
       });
       await updateDoc(doc(db, 'users', friendId), {
-        friends: arrayRemove(user.uid)
+        friends: arrayRemove(activeUid)
       });
+      setConfirmDelete(null);
+      setMessage({ text: 'Friend removed.', type: 'success' });
     } catch (err) {
       console.error('Error removing friend:', err);
+      setMessage({ text: 'Failed to remove friend.', type: 'error' });
     }
   };
 
@@ -175,6 +172,14 @@ export const FriendsPage = () => {
       <h1 className="font-display text-5xl font-bold text-plaeen-green uppercase tracking-tight mb-12">
         Friends
       </h1>
+
+      {message && (
+        <div className={`mb-8 p-4 rounded-xl border font-bold uppercase tracking-widest text-xs ${
+          message.type === 'success' ? 'bg-plaeen-green/10 border-plaeen-green/20 text-plaeen-green' : 'bg-red-500/10 border-red-500/20 text-red-400'
+        }`}>
+          {message.text}
+        </div>
+      )}
 
       <div className="grid gap-12 lg:grid-cols-[1fr_350px]">
         <div className="space-y-12">
@@ -245,7 +250,7 @@ export const FriendsPage = () => {
                       <span className="font-bold text-white">{friend.displayName}</span>
                     </div>
                     <button 
-                      onClick={() => removeFriend(friend.uid)}
+                      onClick={() => setConfirmDelete(friend.uid)}
                       className="text-white/20 hover:text-red-500 transition-colors"
                     >
                       <UserMinus size={20} />
@@ -258,7 +263,31 @@ export const FriendsPage = () => {
         </div>
 
         {/* Sidebar: Requests */}
-        <aside>
+        <aside className="space-y-8">
+          {confirmDelete && (
+            <Card className="bg-red-500/10 border-red-500/20">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">Remove Friend?</h3>
+              <p className="text-xs text-white/60 mb-6">This action cannot be undone.</p>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  onClick={() => removeFriend(confirmDelete)}
+                >
+                  Confirm
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="flex-1 border border-white/10"
+                  onClick={() => setConfirmDelete(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </Card>
+          )}
+
           <Card className="bg-plaeen-purple/20 border-plaeen-purple/40 sticky top-24">
             <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <Clock size={20} className="text-plaeen-green" /> Requests

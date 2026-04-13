@@ -1,7 +1,7 @@
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Plus, Edit2, X, Check, UserPlus, Sparkles, Trash2, Settings, Shield } from 'lucide-react';
@@ -29,9 +29,11 @@ const AVATARS = [
   'https://api.dicebear.com/7.x/avataaars/svg?seed=Ruby',
 ];
 
+import { useProfile } from '@/contexts/ProfileContext';
+
 export const TeamsPage = () => {
   const [user] = useAuthState(auth);
-  const [role, setRole] = useState<string | null>(null);
+  const { role, activeKid: kidData } = useProfile();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,28 +45,28 @@ export const TeamsPage = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const activeUid = kidData ? kidData.uid : user?.uid;
 
   useEffect(() => {
-    if (!user) return;
+    if (!activeUid) return;
 
-    const fetchUserRole = async () => {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        setRole(userDoc.data().role || 'parent');
-      }
-    };
-    fetchUserRole();
-
-    const q = query(collection(db, 'groups'), where('members', 'array-contains', user.uid));
+    const isParent = user?.uid !== activeUid;
+    const q = query(
+      collection(db, 'groups'), 
+      where(isParent ? 'parentIds' : 'members', 'array-contains', user?.uid)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-      setTeams(teamsData);
+      const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+      // Filter client-side to avoid multiple array-contains
+      setTeams(allTeams.filter((t: any) => (t as any).members.includes(activeUid)));
       setLoading(false);
     });
 
     // Fetch friends for the modal
     const fetchFriends = async () => {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db, 'users', activeUid));
       if (userDoc.exists()) {
         const friendIds = userDoc.data().friends || [];
         if (friendIds.length > 0) {
@@ -77,23 +79,26 @@ export const TeamsPage = () => {
     fetchFriends();
 
     return () => unsubscribe();
-  }, [user]);
+  }, [activeUid]);
 
   const handleCreateTeam = async () => {
-    if (!user || !teamName.trim()) return;
+    if (!activeUid || !teamName.trim()) return;
 
     try {
+      const parentId = kidData?.parentId || user?.uid;
       if (editingTeam) {
         await updateDoc(doc(db, 'groups', editingTeam.id), {
           name: teamName,
           imageURL: selectedAvatar,
-          members: [user.uid, ...selectedFriends],
+          members: [activeUid, ...selectedFriends],
+          parentIds: arrayUnion(parentId)
         });
       } else {
         await addDoc(collection(db, 'groups'), {
           name: teamName,
-          ownerId: user.uid,
-          members: [user.uid, ...selectedFriends],
+          ownerId: activeUid,
+          members: [activeUid, ...selectedFriends],
+          parentIds: [parentId],
           isPublic: false,
           games: [],
           imageURL: selectedAvatar,
@@ -110,12 +115,10 @@ export const TeamsPage = () => {
     }
   };
 
-  const handleDeleteTeam = async (e: React.MouseEvent, teamId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this team?')) return;
+  const handleDeleteTeam = async (teamId: string) => {
     try {
       await deleteDoc(doc(db, 'groups', teamId));
+      setConfirmDelete(null);
     } catch (err) {
       console.error('Error deleting team:', err);
     }
@@ -197,7 +200,11 @@ export const TeamsPage = () => {
                         <Settings size={20} />
                       </button>
                       <button 
-                        onClick={(e) => handleDeleteTeam(e, team.id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setConfirmDelete(team.id);
+                        }}
                         className="h-10 w-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
                       >
                         <Trash2 size={20} />
@@ -231,6 +238,36 @@ export const TeamsPage = () => {
           >
             Add new team
           </Button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+          <Card className="w-full max-w-md bg-plaeen-dark border-red-500/30 p-10 text-center">
+            <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Trash2 size={32} className="text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">Delete Team?</h2>
+            <p className="text-white/40 text-sm mb-8 font-bold uppercase tracking-widest leading-relaxed">
+              This will permanently remove the team and all its history.
+            </p>
+            <div className="flex gap-4">
+              <Button 
+                onClick={() => handleDeleteTeam(confirmDelete)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-6 font-bold uppercase tracking-widest"
+              >
+                Confirm
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setConfirmDelete(null)}
+                className="flex-1 border-white/10 text-white hover:bg-white/5 py-6 font-bold uppercase tracking-widest"
+              >
+                Cancel
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
 

@@ -2,343 +2,571 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, doc, getDoc, limit, orderBy, updateDoc, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc, getDoc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Clock, Gamepad2, Users, Calendar, Bell, ChevronRight, Play, Star, Square, Shield, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { 
+  Plus, 
+  Users, 
+  Clock, 
+  Gamepad2, 
+  Bell, 
+  Shield, 
+  Lock, 
+  Unlock, 
+  ChevronRight, 
+  Check, 
+  X,
+  Calendar,
+  Zap,
+  Star,
+  Trophy,
+  Activity
+} from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useProfile } from '@/contexts/ProfileContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface KidData {
-  uid: string;
-  displayName: string;
-  parentId: string;
-  screenTime: {
-    dailyAllowance: number;
-    usedToday: number;
-  };
-  allowedGames: string[];
-}
-
-interface Session {
-  id: string;
-  gameName: string;
-  startTime: any;
-  status: string;
-}
+import { cn } from '@/lib/utils';
 
 export const KidDashboard = () => {
   const [user] = useAuthState(auth);
-  const [kidData, setKidData] = useState<KidData | null>(null);
-  const [nextSession, setNextSession] = useState<Session | null>(null);
-  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
-  
-  // Session Tracking State
+  const { activeKid, parentProfile } = useProfile();
+  const [sessions, setSessions] = useState<any[]>([]);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showOvertimeWarning, setShowOvertimeWarning] = useState(false);
+  const [isChoreModalOpen, setIsChoreModalOpen] = useState(false);
+  const [choreTitle, setChoreTitle] = useState('');
+  const [isSubmittingChore, setIsSubmittingChore] = useState(false);
+  const [choreSuccess, setChoreSuccess] = useState(false);
+  const [screenTimeView, setScreenTimeView] = useState<'daily' | 'weekly' | 'monthly'>((activeKid?.screenTime as any)?.allowanceType || 'daily');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) return;
+    if (activeKid?.screenTime) {
+      setScreenTimeView((activeKid.screenTime as any).allowanceType || 'daily');
+    }
+  }, [activeKid?.uid]);
 
-    const unsubscribeKid = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-      if (doc.exists()) {
-        setKidData({ uid: doc.id, ...doc.data() } as KidData);
+  // Request notification permission
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
       }
-    });
+    }
+  }, []);
 
-    const qApprovals = query(
-      collection(db, 'approvals'), 
-      where('childId', '==', user.uid), 
-      where('status', '==', 'pending'),
-      limit(3)
-    );
-    const unsubscribeApprovals = onSnapshot(qApprovals, (snapshot) => {
-      setPendingApprovals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-
-    return () => {
-      unsubscribeKid();
-      unsubscribeApprovals();
-    };
-  }, [user]);
-
+  // Timer for active session
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isSessionActive && sessionStartTime) {
-      interval = setInterval(async () => {
-        const now = Date.now();
-        const diffMinutes = Math.floor((now - sessionStartTime) / 60000);
-        
-        if (diffMinutes > elapsedMinutes) {
-          setElapsedMinutes(diffMinutes);
-          
-          // Update usedToday in Firestore
-          if (user && kidData) {
-            const userRef = doc(db, 'users', user.uid);
-            await updateDoc(userRef, {
-              'screenTime.usedToday': (kidData.screenTime.usedToday || 0) + 1
-            });
-          }
-
-          // Check for warnings
-          const remaining = (kidData?.screenTime.dailyAllowance || 0) - (kidData?.screenTime.usedToday || 0);
-          if (remaining === 15 && kidData?.parentId) {
-            await addDoc(collection(db, 'notifications'), {
-              userId: kidData.parentId,
-              title: 'Time Warning',
-              message: `${kidData.displayName} has 15 minutes left.`,
-              type: 'time_warning',
-              childId: user?.uid,
-              childName: kidData.displayName,
-              createdAt: serverTimestamp(),
-              read: false
-            });
-          }
-          
-          if (remaining <= 0) {
-            handleStopSession();
-          }
-        }
-      }, 60000); // Check every minute
+    if (isSessionActive) {
+      interval = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isSessionActive, sessionStartTime, elapsedMinutes, kidData, user]);
+  }, [isSessionActive]);
+
+  useEffect(() => {
+    if (!user || !activeKid) return;
+
+    // Fetch upcoming sessions from groups the kid is in
+    const q = query(collection(db, 'groups'), where('members', 'array-contains', activeKid.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allSessions: any[] = [];
+      snapshot.docs.forEach(groupDoc => {
+        const groupData = groupDoc.data();
+        // This is a simplified fetch, ideally sessions are in a subcollection or separate collection
+        // For now, let's assume we fetch from a 'sessions' collection where groupId is in kid's groups
+      });
+    });
+
+    return () => unsubscribe();
+  }, [user, activeKid]);
 
   const handleStartSession = async () => {
-    if (!user || !kidData) return;
-    if ((kidData.screenTime.usedToday || 0) >= (kidData.screenTime.dailyAllowance || 0)) {
-      alert('You have no screen time left today!');
+    if (!activeKid) return;
+
+    // Check for restricted days
+    const today = format(new Date(), 'EEE'); // Mon, Tue, etc.
+    const restrictedDays = (activeKid.screenTime as any)?.restrictedDays || [];
+    if (restrictedDays.includes(today)) {
+      setErrorMessage("Today is a restricted day. No gaming sessions allowed!");
+      return;
+    }
+
+    const used = activeKid.screenTime?.usedToday || 0;
+    const allowance = activeKid.screenTime?.dailyAllowance || 0;
+    
+    if (used >= allowance) {
+      setErrorMessage('You have no screen time left today!');
       return;
     }
 
     setIsSessionActive(true);
     setSessionStartTime(Date.now());
     setElapsedMinutes(0);
+    setErrorMessage(null);
 
     // Notify parent
-    if (kidData.parentId) {
+    if (activeKid.parentId) {
       await addDoc(collection(db, 'notifications'), {
-        userId: kidData.parentId,
-        title: 'Session Started',
-        message: `${kidData.displayName} started a gaming session.`,
+        userId: activeKid.parentId,
         type: 'session_start',
-        childId: user.uid,
-        childName: kidData.displayName,
+        childId: activeKid.uid,
+        childName: activeKid.displayName,
+        message: `${activeKid.displayName} started a gaming session.`,
         createdAt: serverTimestamp(),
         read: false
       });
     }
   };
 
-  const handleStopSession = async () => {
-    setIsSessionActive(false);
-    setSessionStartTime(null);
-    setElapsedMinutes(0);
+  const handleEndSession = async () => {
+    if (!activeKid || !sessionStartTime) return;
 
-    // Notify parent
-    if (user && kidData?.parentId) {
-      await addDoc(collection(db, 'notifications'), {
-        userId: kidData.parentId,
-        title: 'Session Ended',
-        message: `${kidData.displayName} ended their gaming session.`,
-        type: 'session_end',
-        childId: user.uid,
-        childName: kidData.displayName,
-        createdAt: serverTimestamp(),
-        read: false
-      });
+    const endTime = Date.now();
+    const durationMs = endTime - sessionStartTime;
+    const durationMin = Math.round(durationMs / 60000);
+    
+    // Calculate penalty if overtime > 5 mins
+    const overtimeMin = Math.max(0, durationMin - (allowance - used));
+    const penalty = overtimeMin > 5 ? overtimeMin : 0;
+
+    try {
+      const userRef = doc(db, 'users', activeKid.uid);
+      const updates: any = {
+        'screenTime.usedToday': (activeKid.screenTime?.usedToday || 0) + durationMin
+      };
+
+      if (penalty > 0) {
+        // Deduct from accumulated time (can go negative as a debt)
+        updates['screenTime.accumulatedTime'] = (activeKid.screenTime?.accumulatedTime || 0) - penalty;
+      }
+
+      await updateDoc(userRef, updates);
+
+      setIsSessionActive(false);
+      setSessionStartTime(null);
+      setShowOvertimeWarning(false);
+
+      if (activeKid.parentId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: activeKid.parentId,
+          type: 'session_end',
+          childId: activeKid.uid,
+          childName: activeKid.displayName,
+          message: `${activeKid.displayName} finished their session.${penalty > 0 ? ` (Penalty: -${penalty}m for overtime)` : ''}`,
+          duration: durationMin,
+          overtime: overtimeMin,
+          penaltyApplied: penalty,
+          createdAt: serverTimestamp(),
+          read: false,
+          rewardEligible: penalty === 0
+        });
+      }
+    } catch (err) {
+      console.error('Error ending session:', err);
     }
   };
 
-  if (!kidData) return <div className="flex h-screen items-center justify-center">Initializing Hub...</div>;
+  const handleAddChore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeKid || !choreTitle || isSubmittingChore) return;
 
-  const remainingTime = kidData.screenTime.dailyAllowance - kidData.screenTime.usedToday;
-  const timePercent = (remainingTime / kidData.screenTime.dailyAllowance) * 100;
+    setIsSubmittingChore(true);
+    try {
+      await addDoc(collection(db, 'approvals'), {
+        parentId: activeKid.parentId,
+        childId: activeKid.uid,
+        childName: activeKid.displayName,
+        type: 'activity',
+        title: choreTitle,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        rewardMinutes: 0
+      });
+
+      setChoreSuccess(true);
+      setChoreTitle('');
+      setTimeout(() => {
+        setIsChoreModalOpen(false);
+        setChoreSuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Error adding chore:', err);
+      setErrorMessage('Failed to send activity for approval. Please try again.');
+    } finally {
+      setIsSubmittingChore(false);
+    }
+  };
+
+  if (!activeKid) return null;
+
+  const used = screenTimeView === 'daily' ? (activeKid.screenTime?.usedToday || 0) : 
+               screenTimeView === 'weekly' ? (activeKid.screenTime?.usedWeekly || 0) : 
+               (activeKid.screenTime?.usedMonthly || 0);
+  
+  const allowance = screenTimeView === 'daily' ? (activeKid.screenTime?.dailyAllowance || 0) : 
+                    screenTimeView === 'weekly' ? (activeKid.screenTime?.weeklyAllowance || 420) : 
+                    (activeKid.screenTime?.monthlyAllowance || 1800);
+
+  // Calculate precise remaining time
+  const usedInSessionSeconds = isSessionActive && sessionStartTime ? Math.floor((currentTime - sessionStartTime) / 1000) : 0;
+  const totalUsedSeconds = (used * 60) + usedInSessionSeconds;
+  const totalAllowanceSeconds = allowance * 60;
+  const remainingSecondsTotal = totalAllowanceSeconds - totalUsedSeconds;
+  
+  const isOvertime = remainingSecondsTotal < 0;
+  const absoluteRemainingSeconds = Math.abs(remainingSecondsTotal);
+  const remainingMinutes = Math.floor(absoluteRemainingSeconds / 60);
+  const remainingSecondsDisplay = absoluteRemainingSeconds % 60;
+
+  const progress = Math.min(100, (totalUsedSeconds / totalAllowanceSeconds) * 100);
+
+  // Sound and Notification Logic
+  useEffect(() => {
+    if (!isSessionActive) {
+      setShowOvertimeWarning(false);
+      return;
+    }
+
+    if (isOvertime) {
+      setShowOvertimeWarning(true);
+      
+      // Play sound every minute, or more frequently as 5min approaches
+      const overtimeSeconds = absoluteRemainingSeconds;
+      const shouldPlaySound = overtimeSeconds % 60 === 0 || (overtimeSeconds > 240 && overtimeSeconds % 10 === 0);
+
+      if (shouldPlaySound) {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.volume = overtimeSeconds > 300 ? 1 : 0.5;
+        audio.play().catch(e => console.log('Audio play failed:', e));
+      }
+
+      // Browser notification at the very start of overtime
+      if (overtimeSeconds === 0 && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('Time is Up!', {
+          body: 'Your gaming session has ended. You have 5 minutes to finish before penalties apply!',
+          icon: '/logo.png',
+          requireInteraction: true
+        });
+      }
+    }
+  }, [absoluteRemainingSeconds, isSessionActive, isOvertime]);
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
-      <div className="mb-12">
-        <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
-          Welcome, <span className="text-plaeen-green">{kidData.displayName}</span>
-        </h1>
-        <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">Your Gaming Hub is Online</p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+        >
+          <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+            Welcome, <span className="text-plaeen-green">{activeKid.displayName}</span>
+          </h1>
+          <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">Your Gaming Hub is Online</p>
+        </motion.div>
+
+        <div className="flex gap-4">
+          <Button 
+            onClick={() => setIsChoreModalOpen(true)}
+            variant="outline"
+            className="border-plaeen-purple/30 text-plaeen-purple hover:bg-plaeen-purple/10 font-bold uppercase tracking-widest px-8 py-6"
+          >
+            <Zap size={20} className="mr-2" /> Log Activity
+          </Button>
+          {!isSessionActive ? (
+            <Button 
+              onClick={handleStartSession}
+              className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-12 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)] hover:scale-105 transition-transform"
+            >
+              <Gamepad2 size={20} className="mr-2" /> Start Playing
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleEndSession}
+              className="bg-red-500 text-white font-bold uppercase tracking-widest px-12 py-6 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:scale-105 transition-transform"
+            >
+              <X size={20} className="mr-2" /> End Session
+            </Button>
+          )}
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-12">
-        {/* Main Stats */}
-        <div className="lg:col-span-2 space-y-12">
-          {/* Screen Time Card */}
-          <Card className="bg-plaeen-purple/20 border-plaeen-green/30 p-10 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Clock size={120} className="text-plaeen-green" />
-            </div>
-            
-            <div className="relative z-10">
-              <div className="flex justify-between items-end mb-8">
-                <div>
-                  <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-4 flex items-center gap-2">
-                    <Clock size={14} /> Screen Time Status
-                  </h2>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-7xl font-bold text-white tracking-tighter">{remainingTime}</span>
-                    <span className="text-xl font-bold text-white/40 uppercase tracking-widest">Minutes Left</span>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  {isSessionActive ? (
-                    <Button 
-                      onClick={handleStopSession}
-                      className="bg-red-500 text-white font-bold uppercase tracking-widest text-[10px] px-8 py-4 shadow-[0_0_20px_rgba(239,68,68,0.4)]"
-                    >
-                      <Square size={14} className="mr-2" /> Stop Session
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleStartSession}
-                      disabled={remainingTime <= 0}
-                      className="bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] px-8 py-4 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
-                    >
-                      <Play size={14} className="mr-2" /> Start Session
-                    </Button>
-                  )}
-                  <Button className="bg-white/5 border border-white/10 text-white hover:bg-white/10 font-bold uppercase tracking-widest text-[10px] px-8 py-4">
-                    Request More Time
-                  </Button>
-                </div>
-              </div>
+      {errorMessage && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest text-center"
+        >
+          {errorMessage}
+        </motion.div>
+      )}
 
-              <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden border border-white/10 p-1">
-                <div 
-                  className="h-full bg-plaeen-green rounded-full shadow-[0_0_15px_rgba(118,233,0,0.5)] transition-all duration-1000"
-                  style={{ width: `${timePercent}%` }}
-                />
+      {/* Main Grid */}
+      <div className="grid lg:grid-cols-3 gap-12">
+        {/* Left Column: Screen Time & Stats */}
+        <div className="space-y-12">
+          <Card className="bg-white/5 border-white/10 p-8 relative overflow-hidden group">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                <Clock size={18} className="text-plaeen-green" /> Screen Time
+              </h2>
+              <div className="flex bg-white/5 rounded-lg p-1">
+                {(['daily', 'weekly', 'monthly'] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setScreenTimeView(v)}
+                    className={`px-3 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest transition-all ${
+                      screenTimeView === v ? 'bg-plaeen-green text-black' : 'text-white/40 hover:text-white'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
               </div>
-              <div className="flex justify-between mt-4 text-[10px] font-bold uppercase tracking-widest text-white/20">
-                <span>0m Used</span>
-                <span>{kidData.screenTime.dailyAllowance}m Limit</span>
+            </div>
+
+            <div className="text-center mb-8">
+              <div className="relative inline-flex items-center justify-center">
+                <svg className="h-48 w-48 -rotate-90">
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="transparent"
+                    stroke="currentColor"
+                    strokeWidth="12"
+                    className="text-white/5"
+                  />
+                  <motion.circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="transparent"
+                    stroke="currentColor"
+                    strokeWidth="12"
+                    strokeDasharray={552.92}
+                    initial={{ strokeDashoffset: 552.92 }}
+                    animate={{ strokeDashoffset: 552.92 - (552.92 * progress) / 100 }}
+                    className="text-plaeen-green"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <motion.div 
+                    key={remainingSecondsTotal}
+                    initial={isSessionActive ? { scale: 1.1, opacity: 0.5 } : {}}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="flex flex-col items-center"
+                  >
+                    <span className={cn(
+                      "font-bold tracking-tighter leading-none transition-colors",
+                      isSessionActive ? "text-4xl" : "text-5xl",
+                      isOvertime ? "text-red-500" : "text-white"
+                    )}>
+                      {isSessionActive ? (
+                        `${isOvertime ? '-' : ''}${remainingMinutes}:${remainingSecondsDisplay.toString().padStart(2, '0')}`
+                      ) : (
+                        remainingMinutes
+                      )}
+                    </span>
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest mt-1",
+                      isOvertime ? "text-red-500/60" : "text-white/40"
+                    )}>
+                      {isOvertime ? 'Overtime' : isSessionActive ? 'Remaining' : 'Minutes Left'}
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white/5 rounded-2xl p-4 text-center">
+                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">Used Today</p>
+                <p className="text-xl font-bold text-white">{used}m</p>
+              </div>
+              <div className="bg-white/5 rounded-2xl p-4 text-center">
+                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">Allowance</p>
+                <p className="text-xl font-bold text-plaeen-green">{allowance}m</p>
+              </div>
+            </div>
+
+            {activeKid.screenTime?.accumulatedTime && activeKid.screenTime.accumulatedTime > 0 && (
+              <div className="mt-6 p-4 rounded-2xl bg-plaeen-purple/10 border border-plaeen-purple/20 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Star size={16} className="text-plaeen-purple" />
+                  <span className="text-[10px] font-bold text-white uppercase tracking-widest">Bonus Time</span>
+                </div>
+                <span className="text-sm font-bold text-plaeen-purple">+{activeKid.screenTime.accumulatedTime}m</span>
+              </div>
+            )}
+          </Card>
+
+          <Card className="bg-plaeen-purple/10 border-plaeen-purple/20 p-8">
+            <h2 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Trophy size={18} className="text-plaeen-purple" /> Achievements
+            </h2>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-3 rounded-xl bg-white/5">
+                <div className="h-10 w-10 rounded-lg bg-plaeen-green/20 flex items-center justify-center">
+                  <Zap size={20} className="text-plaeen-green" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white uppercase tracking-tight">Early Finisher</p>
+                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">5 Sessions on time</p>
+                </div>
               </div>
             </div>
           </Card>
-
-          {/* Quick Actions Grid */}
-          <div className="grid md:grid-cols-3 gap-6">
-            <Link to="/teams">
-              <Card className="bg-white/5 border-white/10 p-8 hover:border-plaeen-green/50 transition-all text-center group">
-                <div className="h-16 w-16 mx-auto bg-plaeen-green/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-plaeen-green group-hover:text-black transition-all">
-                  <Users size={32} />
-                </div>
-                <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-2">My Teams</h3>
-                <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Play with friends</p>
-              </Card>
-            </Link>
-            <Link to="/search">
-              <Card className="bg-white/5 border-white/10 p-8 hover:border-plaeen-green/50 transition-all text-center group">
-                <div className="h-16 w-16 mx-auto bg-plaeen-green/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-plaeen-green group-hover:text-black transition-all">
-                  <Gamepad2 size={32} />
-                </div>
-                <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-2">Explore</h3>
-                <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Find new games</p>
-              </Card>
-            </Link>
-            <Link to="/calendar">
-              <Card className="bg-white/5 border-white/10 p-8 hover:border-plaeen-green/50 transition-all text-center group">
-                <div className="h-16 w-16 mx-auto bg-plaeen-green/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-plaeen-green group-hover:text-black transition-all">
-                  <Calendar size={32} />
-                </div>
-                <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-2">Schedule</h3>
-                <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Plan sessions</p>
-              </Card>
-            </Link>
-          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-12">
-          {/* Next Session */}
+        {/* Middle Column: Activity & Sessions */}
+        <div className="lg:col-span-2 space-y-12">
           <section className="space-y-6">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
-              <Play size={16} /> Next Session
+              <Calendar size={16} /> Upcoming Sessions
             </h2>
-            <Card className="bg-white/5 border-white/10 p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                <Gamepad2 size={64} />
-              </div>
-              {isSessionActive ? (
-                <div className="animate-pulse">
-                  <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest mb-2">Active Session</p>
-                  <p className="text-2xl font-bold text-white uppercase tracking-tight mb-4">Playing Now</p>
-                  <div className="flex items-center gap-2 text-white/40 font-bold uppercase tracking-widest text-[10px]">
-                    <Clock size={12} /> {elapsedMinutes}m elapsed
-                  </div>
-                </div>
-              ) : nextSession ? (
-                <div>
-                  <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest mb-2">{nextSession.gameName}</p>
-                  <p className="text-2xl font-bold text-white uppercase tracking-tight mb-4">Starting Soon</p>
-                  <div className="flex items-center gap-2 text-white/40 font-bold uppercase tracking-widest text-[10px]">
-                    <Clock size={12} /> {format(nextSession.startTime.toDate(), 'HH:mm')}
-                  </div>
-                </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              {sessions.length > 0 ? (
+                sessions.map(session => (
+                  <Card key={session.id} className="bg-white/5 border-white/10 p-6 hover:border-plaeen-green/30 transition-all">
+                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Session Details</p>
+                  </Card>
+                ))
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-4">No sessions planned</p>
-                  <Link to="/calendar">
-                    <Button variant="outline" size="sm" className="border-white/10 text-white/40 hover:text-plaeen-green text-[8px] font-bold uppercase tracking-widest">
-                      Create One
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </Card>
-          </section>
-
-          {/* Request Status */}
-          <section className="space-y-6">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
-              <Bell size={16} /> Request Status
-            </h2>
-            <div className="space-y-4">
-              {pendingApprovals.map(req => (
-                <Card key={req.id} className="bg-white/5 border-white/10 p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">
-                        {req.type === 'game' ? 'Game Access' : req.type === 'friend' ? 'Friend Request' : 'Extra Time'}
-                      </p>
-                      <p className="text-xs font-bold text-white uppercase tracking-tight">Pending Approval</p>
-                    </div>
-                    <div className="h-2 w-2 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
-                  </div>
+                <Card className="md:col-span-2 bg-white/5 border-dashed border-white/10 p-12 text-center">
+                  <p className="text-white/20 font-bold uppercase tracking-widest">No sessions planned yet</p>
+                  <Button variant="ghost" className="mt-4 text-plaeen-green text-[10px] font-bold uppercase tracking-widest">
+                    Invite Friends to Play
+                  </Button>
                 </Card>
-              ))}
-              {pendingApprovals.length === 0 && (
-                <p className="text-center py-8 text-white/10 text-[10px] font-bold uppercase tracking-widest border border-dashed border-white/5 rounded-2xl">No pending requests</p>
               )}
             </div>
           </section>
 
-          {/* Approved Games */}
           <section className="space-y-6">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
-              <Star size={16} /> Top Games
+              <Activity size={16} /> Recent Activity
             </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {kidData.allowedGames.slice(0, 4).map(gameId => (
-                <div key={gameId} className="aspect-square rounded-xl bg-white/5 border border-white/10 overflow-hidden group cursor-pointer">
-                  <img 
-                    src={`https://picsum.photos/seed/${gameId}/200`} 
-                    alt="Game" 
-                    className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity"
-                  />
+            <Card className="bg-white/5 border-white/10 p-8">
+              <div className="space-y-6">
+                <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-plaeen-green/10 flex items-center justify-center">
+                      <Gamepad2 size={20} className="text-plaeen-green" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase tracking-tight">Minecraft Session</p>
+                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Today • 45 Minutes</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">Completed</span>
                 </div>
-              ))}
-              <Link to="/search" className="aspect-square rounded-xl border border-dashed border-white/10 flex items-center justify-center hover:border-plaeen-green/50 transition-all group">
-                <Plus size={24} className="text-white/10 group-hover:text-plaeen-green" />
-              </Link>
-            </div>
+              </div>
+            </Card>
           </section>
         </div>
       </div>
+
+      {/* Chore Modal */}
+      <AnimatePresence>
+        {isChoreModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md"
+          >
+            <Card className="w-full max-w-md bg-plaeen-dark border-plaeen-purple/30 p-10">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">Log Activity</h2>
+                <button onClick={() => setIsChoreModalOpen(false)} className="text-white/40 hover:text-white"><X size={24} /></button>
+              </div>
+              <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-8 leading-relaxed">
+                Tell your parents what you've done to earn extra screen time!
+              </p>
+              
+              {choreSuccess ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-12 text-center"
+                >
+                  <div className="h-20 w-20 rounded-full bg-plaeen-green/20 flex items-center justify-center mx-auto mb-6">
+                    <Check size={40} className="text-plaeen-green" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-2">Activity Sent!</h3>
+                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Waiting for parent approval</p>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleAddChore} className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-purple mb-2 block">What did you do?</label>
+                    <input 
+                      type="text"
+                      value={choreTitle}
+                      onChange={(e) => setChoreTitle(e.target.value)}
+                      placeholder="E.G. DID THE DISHES, CLEANED ROOM"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-plaeen-purple focus:outline-none transition-all uppercase tracking-widest text-sm"
+                      required
+                      disabled={isSubmittingChore}
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmittingChore}
+                    className="w-full py-6 bg-plaeen-purple hover:bg-plaeen-purple/80 text-white font-bold uppercase tracking-widest"
+                  >
+                    {isSubmittingChore ? 'Sending...' : 'Send for Approval'}
+                  </Button>
+                </form>
+              )}
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Overtime Warning Overlay */}
+      <AnimatePresence>
+        {showOvertimeWarning && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-6"
+          >
+            <Card className="bg-red-500 border-red-400 p-6 shadow-[0_0_50px_rgba(239,68,68,0.4)] flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center animate-pulse">
+                  <Bell size={24} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white uppercase tracking-tight">Time is Up!</p>
+                  <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest">
+                    {remainingMinutes < 5 
+                      ? `Finish in ${5 - remainingMinutes}m to avoid penalty` 
+                      : "Penalty applied! End session now"}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={handleEndSession}
+                className="bg-white text-red-500 hover:bg-white/90 font-bold uppercase tracking-widest text-[10px] px-6"
+              >
+                End Now
+              </Button>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

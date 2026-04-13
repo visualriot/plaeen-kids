@@ -25,21 +25,33 @@ export const AuthPage = () => {
       if (!userDoc.exists()) {
         const newUser = {
           uid: user.uid,
-          displayName: user.displayName,
+          displayName: user.displayName || user.email?.split('@')[0] || 'Parent',
           email: user.email,
           photoURL: user.photoURL,
           role: 'parent',
+          onboardingComplete: false,
           linkedKids: [],
           friends: [],
           wishlist: [],
           availability: {}
         };
-        await setDoc(doc(db, 'users', user.uid), newUser);
-        navigate('/parent-dashboard');
+        await setDoc(doc(db, 'users', user.uid), newUser, { merge: true });
+        
+        // Create public profile
+        await setDoc(doc(db, 'users_public', user.uid), {
+          uid: user.uid,
+          displayName: newUser.displayName,
+          photoURL: newUser.photoURL,
+          role: 'parent'
+        }, { merge: true });
+
+        navigate('/onboarding');
       } else {
         const userData = userDoc.data();
-        if (userData.role === 'parent') {
-          navigate('/parent-dashboard');
+        if (!userData.onboardingComplete) {
+          navigate('/onboarding');
+        } else if (userData.role === 'parent') {
+          navigate('/select-profile');
         } else {
           navigate('/kid-dashboard');
         }
@@ -58,8 +70,10 @@ export const AuthPage = () => {
         const result = await signInWithEmailAndPassword(auth, email, password);
         const userDoc = await getDoc(doc(db, 'users', result.user.uid));
         const userData = userDoc.data();
-        if (userData?.role === 'parent') {
-          navigate('/parent-dashboard');
+        if (!userData?.onboardingComplete) {
+          navigate('/onboarding');
+        } else if (userData?.role === 'parent') {
+          navigate('/select-profile');
         } else {
           navigate('/kid-dashboard');
         }
@@ -70,13 +84,22 @@ export const AuthPage = () => {
           displayName: email.split('@')[0],
           email: email,
           role: 'parent',
+          onboardingComplete: false,
           linkedKids: [],
           friends: [],
           wishlist: [],
           availability: {}
         };
-        await setDoc(doc(db, 'users', result.user.uid), newUser);
-        navigate('/parent-dashboard');
+        await setDoc(doc(db, 'users', result.user.uid), newUser, { merge: true });
+        
+        // Create public profile
+        await setDoc(doc(db, 'users_public', result.user.uid), {
+          uid: result.user.uid,
+          displayName: newUser.displayName,
+          role: 'parent'
+        }, { merge: true });
+
+        navigate('/onboarding');
       }
     } catch (err) {
       setError('Authentication failed. Please check your credentials.');

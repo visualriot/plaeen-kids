@@ -46,9 +46,12 @@ interface Session {
   responses?: Record<string, { status: 'accepted' | 'rejected' | 'maybe', note?: string }>;
 }
 
+import { useProfile } from '@/contexts/ProfileContext';
+
 export const TeamDetailPage = () => {
   const { teamId } = useParams();
   const [user] = useAuthState(auth);
+  const { role, activeKid: kidData } = useProfile();
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<UserProfile[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
@@ -65,6 +68,8 @@ export const TeamDetailPage = () => {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [proposalNote, setProposalNote] = useState('');
   const navigate = useNavigate();
+
+  const activeUid = kidData ? kidData.uid : user?.uid;
 
   useEffect(() => {
     if (!teamId) return;
@@ -106,9 +111,9 @@ export const TeamDetailPage = () => {
   }, [team?.members]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!activeUid) return;
     const fetchFriends = async () => {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db, 'users', activeUid));
       if (userDoc.exists()) {
         const friendIds = userDoc.data().friends || [];
         const nonMemberFriends = friendIds.filter((id: string) => !team?.members.includes(id));
@@ -122,7 +127,7 @@ export const TeamDetailPage = () => {
       }
     };
     fetchFriends();
-  }, [user, team?.members]);
+  }, [activeUid, team?.members]);
 
   useEffect(() => {
     if (teamGames.length > 0 && !selectedGame) {
@@ -155,7 +160,7 @@ export const TeamDetailPage = () => {
   };
 
   const proposeSession = async () => {
-    if (!teamId || !user || !selectedSlot || !selectedGame) return;
+    if (!teamId || !activeUid || !selectedSlot || !selectedGame) return;
     
     const startTime = new Date(selectedSlot.day);
     startTime.setHours(selectedSlot.hour, 0, 0, 0);
@@ -166,11 +171,11 @@ export const TeamDetailPage = () => {
         gameName: selectedGame.name,
         gameImage: selectedGame.image,
         startTime: Timestamp.fromDate(startTime),
-        proposedBy: user.uid,
-        proposedByName: user.displayName,
+        proposedBy: activeUid,
+        proposedByName: kidData?.displayName || user?.displayName || 'Anonymous',
         status: 'proposed',
         responses: {
-          [user.uid]: { status: 'accepted', note: proposalNote }
+          [activeUid]: { status: 'accepted', note: proposalNote }
         }
       });
       setIsProposeOpen(false);
@@ -181,11 +186,12 @@ export const TeamDetailPage = () => {
     }
   };
 
-  const respondToSession = async (status: 'accepted' | 'rejected' | 'maybe', note: string) => {
-    if (!teamId || !user || !selectedSession) return;
+  const respondToSession = async (status: 'accepted' | 'rejected' | 'maybe', note: string, sessionId?: string) => {
+    const targetSessionId = sessionId || selectedSession?.id;
+    if (!teamId || !activeUid || !targetSessionId) return;
     try {
-      await updateDoc(doc(db, 'groups', teamId, 'sessions', selectedSession.id), {
-        [`responses.${user.uid}`]: { status, note }
+      await updateDoc(doc(db, 'groups', teamId, 'sessions', targetSessionId), {
+        [`responses.${activeUid}`]: { status, note }
       });
       setIsResponseOpen(false);
       setSelectedSession(null);
@@ -297,6 +303,56 @@ export const TeamDetailPage = () => {
             >
               <Plus size={20} className="mr-2" /> Add Game
             </Button>
+          </div>
+        </div>
+
+        {/* Game Proposals Section */}
+        <div className="lg:col-span-4 space-y-8 mt-12">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-purple flex items-center gap-3">
+              <Sparkles size={16} /> Game Proposals
+            </h2>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {sessions.filter(s => s.status === 'proposed' && !s.startTime).map(proposal => {
+              const votes = Object.values(proposal.responses || {}).filter((r: any) => r.status === 'accepted').length;
+              const hasVoted = proposal.responses?.[activeUid || '']?.status === 'accepted';
+
+              return (
+                <Card key={proposal.id} className="bg-white/5 border-white/10 p-6 group hover:border-plaeen-purple/30 transition-all">
+                  <div className="aspect-video rounded-xl overflow-hidden mb-4">
+                    <img src={proposal.gameImage} className="w-full h-full object-cover" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white uppercase mb-2">{proposal.gameName}</h3>
+                  <p className="text-[10px] text-white/40 uppercase font-bold mb-6">Proposed by {proposal.proposedByName}</p>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-24 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-plaeen-purple transition-all" 
+                          style={{ width: `${Math.min((votes / (team.members.length || 1)) * 100, 100)}%` }} 
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-plaeen-purple">{votes}/{team.members.length}</span>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant={hasVoted ? 'outline' : 'default'}
+                      className={hasVoted ? 'border-plaeen-purple text-plaeen-purple' : 'bg-plaeen-purple text-white'}
+                      onClick={() => respondToSession(hasVoted ? 'rejected' : 'accepted', '', proposal.id)}
+                    >
+                      {hasVoted ? 'Voted' : 'Vote'}
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+            {sessions.filter(s => s.status === 'proposed' && !s.startTime).length === 0 && (
+              <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2rem]">
+                <p className="text-white/20 font-bold uppercase tracking-widest text-xs">No active game proposals</p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Check, X, Bell, UserPlus, Gamepad2, Clock, Users, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -44,26 +44,42 @@ export const ApprovalsPage = () => {
             allowedGames: arrayUnion(request.data.gameId)
           });
         } else if (request.type === 'friend') {
-          await updateDoc(doc(db, 'users', request.childId), {
-            friends: arrayUnion(request.data.friendId)
+          // Instead of just adding to kid's list, create a formal request for the friend to accept
+          // This ensures mutual friendship and follows security rules
+          await addDoc(collection(db, 'friendRequests'), {
+            fromId: request.childId,
+            fromName: request.childName,
+            toId: request.data.friendId,
+            status: 'pending',
+            createdAt: serverTimestamp()
           });
-          // Also add the child to the friend's list if the friend is also a kid?
-          // For now, just one-way for simplicity in MVP
         } else if (request.type === 'time') {
           const kidDoc = await getDoc(doc(db, 'users', request.childId));
-          const currentAllowance = kidDoc.data()?.screenTime.dailyAllowance || 60;
+          const currentAllowance = kidDoc.data()?.screenTime?.dailyAllowance || 60;
           await updateDoc(doc(db, 'users', request.childId), {
             'screenTime.dailyAllowance': currentAllowance + (request.data.minutes || 30)
           });
         }
       }
+
+      // Send notification to kid
+      await addDoc(collection(db, 'notifications'), {
+        userId: request.childId,
+        type: 'approval_status',
+        title: `Request ${status}`,
+        message: `Your request for ${request.type === 'game' ? request.data.gameName : request.type} has been ${status}.`,
+        createdAt: serverTimestamp(),
+        read: false,
+        status: status,
+        requestType: request.type
+      });
     } catch (err) {
       console.error('Error processing approval:', err);
     }
   };
 
   const pending = approvals.filter(a => a.status === 'pending');
-  const history = approvals.filter(a => a.status !== 'pending').sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  const history = approvals.filter(a => a.status !== 'pending').sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
@@ -71,7 +87,7 @@ export const ApprovalsPage = () => {
         onClick={() => navigate('/parent-dashboard')}
         className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] mb-8 transition-colors"
       >
-        <ArrowLeft size={14} /> Back to Command Center
+        <ArrowLeft size={14} /> Back to Guardian Hub
       </button>
 
       <div className="mb-12">
@@ -106,9 +122,50 @@ export const ApprovalsPage = () => {
                       <h3 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
                         {req.type === 'friend' ? `Friend Request: ${req.data.friendName}` : 
                          req.type === 'game' ? `Access to ${req.data.gameName}` :
-                         req.type === 'time' ? `Extra Time: +${req.data.minutes}m` : `Join Team: ${req.data.teamName}`}
+                         req.type === 'time' ? `Extra Time: +${req.data.minutes}m` : 
+                         req.type === 'activity' ? `Activity: ${req.title}` : `Join Team: ${req.data.teamName}`}
                       </h3>
-                      <p className="text-xs text-white/40 font-medium">{req.data.reason || 'No additional details provided.'}</p>
+                      
+                      {req.type === 'game' && req.data.image && (
+                        <div className="mt-6 flex flex-col md:flex-row gap-6 bg-white/5 rounded-2xl p-6 border border-white/5">
+                          <img 
+                            src={req.data.image} 
+                            alt={req.data.gameName} 
+                            className="h-32 w-48 object-cover rounded-xl shadow-2xl"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-3 mb-3">
+                              <span className="px-3 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[8px] font-bold uppercase tracking-widest">
+                                {req.data.rating ? `Metascore: ${req.data.rating}%` : 'Rating: N/A'}
+                              </span>
+                              {req.data.esrbRating && (
+                                <span className="px-3 py-1 rounded-full bg-plaeen-purple/10 border border-plaeen-purple/20 text-plaeen-purple text-[8px] font-bold uppercase tracking-widest">
+                                  ESRB: {req.data.esrbRating}
+                                </span>
+                              )}
+                              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest">
+                                {req.data.genres ? req.data.genres.join(', ') : 'No Genre'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-white/60 leading-relaxed line-clamp-3 mb-4">
+                              {req.data.description || 'No description available.'}
+                            </p>
+                            <a 
+                              href={`https://rawg.io/games/${req.data.slug || req.data.gameId}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-[8px] font-bold text-plaeen-green uppercase tracking-widest hover:underline"
+                            >
+                              View on RAWG.io <Gamepad2 size={12} />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {req.type !== 'game' && (
+                        <p className="text-xs text-white/40 font-medium">{req.data.reason || req.title || 'No additional details provided.'}</p>
+                      )}
                     </div>
                   </div>
 

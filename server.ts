@@ -35,7 +35,7 @@ async function startServer() {
       const data = await response.json();
       
       // Transform RAWG data to our app's format
-      const games = data.results.map((game: any) => ({
+      let games = data.results.map((game: any) => ({
         id: game.id.toString(),
         slug: game.slug,
         name: game.name,
@@ -45,8 +45,13 @@ async function startServer() {
         image: game.background_image || `https://picsum.photos/seed/${game.id}/600/400`,
         rating: Math.round(game.metacritic || game.rating * 20),
         releaseDate: game.released || "TBA",
-        isChildFriendly: !game.esrb_rating || ["Everyone", "Everyone 10+", "Teen"].includes(game.esrb_rating.name)
+        isChildFriendly: !game.esrb_rating || ["Everyone", "Everyone 10+", "Teen"].includes(game.esrb_rating.name),
+        esrb_rating: game.esrb_rating
       }));
+
+      if (req.query.isChildFriendly === 'true') {
+        games = games.filter((g: any) => g.isChildFriendly);
+      }
 
       res.json(games);
     } catch (error) {
@@ -78,7 +83,8 @@ async function startServer() {
         image: game.background_image || `https://picsum.photos/seed/${game.id}/600/400`,
         rating: Math.round(game.metacritic || game.rating * 20),
         releaseDate: game.released || "TBA",
-        isChildFriendly: !game.esrb_rating || ["Everyone", "Everyone 10+", "Teen"].includes(game.esrb_rating.name)
+        isChildFriendly: !game.esrb_rating || ["Everyone", "Everyone 10+", "Teen"].includes(game.esrb_rating.name),
+        esrb_rating: game.esrb_rating
       });
     } catch (error) {
       console.error("RAWG API Error:", error);
