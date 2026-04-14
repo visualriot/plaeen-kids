@@ -18,6 +18,7 @@ import { KidDashboard } from './pages/KidDashboard';
 import { ChildManagementPage } from './pages/ChildManagementPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
 import { ParentActivityPage } from './pages/ParentActivityPage';
+import { OvertimeDecisionPage } from './pages/OvertimeDecisionPage';
 import { ProfileSelectionPage } from './pages/ProfileSelectionPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { ProfileProvider, useProfile } from './contexts/ProfileContext';
@@ -174,6 +175,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRole="parent">
                 <ChildManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/parent/overtime-decision/:approvalId"
+            element={
+              <ProtectedRoute allowedRole="parent">
+                <OvertimeDecisionPage />
               </ProtectedRoute>
             }
           />

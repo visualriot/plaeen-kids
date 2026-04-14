@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc, getDoc, Timestamp, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, Timestamp, addDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { 
   Plus, 
@@ -39,10 +39,14 @@ export const KidDashboard = () => {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showOvertimeWarning, setShowOvertimeWarning] = useState(false);
+  const [hasPlayed5MinWarning, setHasPlayed5MinWarning] = useState(false);
+  const [hasPlayed0MinWarning, setHasPlayed0MinWarning] = useState(false);
+  const [lastOvertimeSoundMinute, setLastOvertimeSoundMinute] = useState(-1);
   const [isChoreModalOpen, setIsChoreModalOpen] = useState(false);
   const [choreTitle, setChoreTitle] = useState('');
   const [isSubmittingChore, setIsSubmittingChore] = useState(false);
   const [choreSuccess, setChoreSuccess] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [screenTimeView, setScreenTimeView] = useState<'daily' | 'weekly' | 'monthly'>((activeKid?.screenTime as any)?.allowanceType || 'daily');
   const navigate = useNavigate();
 
@@ -84,6 +88,28 @@ export const KidDashboard = () => {
         // This is a simplified fetch, ideally sessions are in a subcollection or separate collection
         // For now, let's assume we fetch from a 'sessions' collection where groupId is in kid's groups
       });
+    }, (error) => {
+      console.error("Group listener error:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user, activeKid]);
+
+  // Fetch notifications
+  useEffect(() => {
+    if (!user || !activeKid) return;
+
+    const q = query(
+      collection(db, 'notifications'), 
+      where('userId', '==', activeKid.uid),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => {
+      console.error("Notification listener error:", error);
     });
 
     return () => unsubscribe();
@@ -100,18 +126,37 @@ export const KidDashboard = () => {
       return;
     }
 
-    const used = activeKid.screenTime?.usedToday || 0;
-    const allowance = activeKid.screenTime?.dailyAllowance || 0;
+    // Check for banned dates
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const bannedDates = activeKid.screenTime?.bannedDates || [];
+    if (bannedDates.includes(todayStr)) {
+      setErrorMessage("Your access is restricted for today by your guardian.");
+      return;
+    }
+
+    const usedToday = activeKid.screenTime?.usedToday || 0;
+    const allowanceToday = activeKid.screenTime?.dailyAllowance || 0;
     
-    if (used >= allowance) {
+    if (usedToday >= allowanceToday) {
       setErrorMessage('You have no screen time left today!');
       return;
     }
 
+    const now = Date.now();
     setIsSessionActive(true);
-    setSessionStartTime(Date.now());
+    setSessionStartTime(now);
+    setCurrentTime(now);
     setElapsedMinutes(0);
     setErrorMessage(null);
+    setHasPlayed5MinWarning(false);
+    setHasPlayed0MinWarning(false);
+    setLastOvertimeSoundMinute(-1);
+
+    // Update user document for live status
+    await updateDoc(doc(db, 'users', activeKid.uid), {
+      'screenTime.isSessionActive': true,
+      'screenTime.sessionStartTime': now
+    });
 
     // Notify parent
     if (activeKid.parentId) {
@@ -127,47 +172,117 @@ export const KidDashboard = () => {
     }
   };
 
+  const handleTeamInvite = async (notification: any, accept: boolean) => {
+    if (!activeKid) return;
+    try {
+      const groupRef = doc(db, 'groups', notification.data.groupId);
+      if (accept) {
+        await updateDoc(groupRef, {
+          members: arrayUnion(activeKid.uid),
+          pendingMembers: arrayRemove(activeKid.uid)
+        });
+      } else {
+        await updateDoc(groupRef, {
+          pendingMembers: arrayRemove(activeKid.uid)
+        });
+      }
+      // Mark notification as read
+      await updateDoc(doc(db, 'notifications', notification.id), { read: true });
+    } catch (err) {
+      console.error('Error handling team invite:', err);
+    }
+  };
+
   const handleEndSession = async () => {
     if (!activeKid || !sessionStartTime) return;
 
     const endTime = Date.now();
     const durationMs = endTime - sessionStartTime;
-    const durationMin = Math.round(durationMs / 60000);
+    const durationMin = Math.ceil(durationMs / 60000); // Use ceil to be conservative with time
     
-    // Calculate penalty if overtime > 5 mins
-    const overtimeMin = Math.max(0, durationMin - (allowance - used));
-    const penalty = overtimeMin > 5 ? overtimeMin : 0;
+    // Get latest data from activeKid
+    const currentAllowance = activeKid.screenTime?.dailyAllowance || 0;
+    const currentUsed = activeKid.screenTime?.usedToday || 0;
+    const remainingAtStart = Math.max(0, currentAllowance - currentUsed);
+    
+    // Calculate overtime
+    const overtimeMin = Math.max(0, durationMin - remainingAtStart);
 
     try {
       const userRef = doc(db, 'users', activeKid.uid);
-      const updates: any = {
-        'screenTime.usedToday': (activeKid.screenTime?.usedToday || 0) + durationMin
-      };
+      let finalUsedToday = currentUsed + durationMin;
+      let finalUsedWeekly = (activeKid.screenTime?.usedWeekly || 0) + durationMin;
+      let finalUsedMonthly = (activeKid.screenTime?.usedMonthly || 0) + durationMin;
 
-      if (penalty > 0) {
-        // Deduct from accumulated time (can go negative as a debt)
-        updates['screenTime.accumulatedTime'] = (activeKid.screenTime?.accumulatedTime || 0) - penalty;
+      // Rule: Overtime should not affect allowance until guardian decides
+      // So we cap the usage at the allowance for now.
+      if (overtimeMin > 0) {
+        finalUsedToday = currentAllowance;
+        finalUsedWeekly = (activeKid.screenTime?.usedWeekly || 0) + remainingAtStart;
+        finalUsedMonthly = (activeKid.screenTime?.usedMonthly || 0) + remainingAtStart;
       }
 
+      const updates: any = {
+        'screenTime.usedToday': finalUsedToday,
+        'screenTime.usedWeekly': finalUsedWeekly,
+        'screenTime.usedMonthly': finalUsedMonthly,
+        'screenTime.lastReset': serverTimestamp(),
+        'screenTime.isSessionActive': false,
+        'screenTime.sessionStartTime': null
+      };
+
       await updateDoc(userRef, updates);
+
+      // Save start time before clearing state
+      const startTimeVal = sessionStartTime;
 
       setIsSessionActive(false);
       setSessionStartTime(null);
       setShowOvertimeWarning(false);
 
-      if (activeKid.parentId) {
+      if (activeKid.parentId && startTimeVal) {
+        if (overtimeMin > 1) {
+          // Create approval request for punishment decision
+          await addDoc(collection(db, 'approvals'), {
+            parentId: activeKid.parentId,
+            childId: activeKid.uid,
+            childName: activeKid.displayName,
+            type: 'overtime',
+            title: `Overtime: ${overtimeMin}m`,
+            status: 'pending',
+            data: {
+              overtimeMinutes: overtimeMin,
+              sessionDuration: durationMin,
+              allowanceAtStart: currentAllowance,
+              usedAtStart: currentUsed
+            },
+            createdAt: serverTimestamp()
+          });
+        }
+
         await addDoc(collection(db, 'notifications'), {
           userId: activeKid.parentId,
-          type: 'session_end',
+          type: overtimeMin > 1 ? 'time_warning' : 'session_end',
           childId: activeKid.uid,
           childName: activeKid.displayName,
-          message: `${activeKid.displayName} finished their session.${penalty > 0 ? ` (Penalty: -${penalty}m for overtime)` : ''}`,
+          title: overtimeMin > 1 ? 'Overtime Alert' : 'Session Ended',
+          message: `${activeKid.displayName} finished their session.${overtimeMin > 1 ? ` (Overtime: ${overtimeMin}m - Action Required)` : overtimeMin > 0 ? ' (Within grace period)' : ''}`,
           duration: durationMin,
           overtime: overtimeMin,
-          penaltyApplied: penalty,
           createdAt: serverTimestamp(),
           read: false,
-          rewardEligible: penalty === 0
+          rewardEligible: overtimeMin === 0
+        });
+
+        // Add to session history
+        await addDoc(collection(db, 'sessions'), {
+          childId: activeKid.uid,
+          parentId: activeKid.parentId,
+          startTime: new Timestamp(Math.floor(startTimeVal / 1000), 0),
+          endTime: serverTimestamp(),
+          duration: durationMin,
+          overtime: overtimeMin,
+          status: overtimeMin > 1 ? 'overtime_pending' : 'completed'
         });
       }
     } catch (err) {
@@ -212,22 +327,101 @@ export const KidDashboard = () => {
                screenTimeView === 'weekly' ? (activeKid.screenTime?.usedWeekly || 0) : 
                (activeKid.screenTime?.usedMonthly || 0);
   
-  const allowance = screenTimeView === 'daily' ? (activeKid.screenTime?.dailyAllowance || 0) : 
-                    screenTimeView === 'weekly' ? (activeKid.screenTime?.weeklyAllowance || 420) : 
-                    (activeKid.screenTime?.monthlyAllowance || 1800);
+  const restrictedDays = (activeKid.screenTime as any)?.restrictedDays || [];
+  const dailyAllowance = activeKid.screenTime?.dailyAllowance || 0;
+
+  // Calculate Synced Allowances
+  const weeklyAllowance = dailyAllowance * (7 - restrictedDays.length);
+  
+  // Monthly calculation: non-restricted days in current month
+  const getMonthlyAllowance = () => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    let total = 0;
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayName = format(new Date(now.getFullYear(), now.getMonth(), i), 'EEE');
+      if (!restrictedDays.includes(dayName)) total += dailyAllowance;
+    }
+    return total;
+  };
+
+  const allowance = screenTimeView === 'daily' ? dailyAllowance : 
+                    screenTimeView === 'weekly' ? weeklyAllowance : 
+                    getMonthlyAllowance();
 
   // Calculate precise remaining time
-  const usedInSessionSeconds = isSessionActive && sessionStartTime ? Math.floor((currentTime - sessionStartTime) / 1000) : 0;
+  const usedInSessionSeconds = isSessionActive && sessionStartTime ? Math.max(0, Math.floor((currentTime - sessionStartTime) / 1000)) : 0;
   const totalUsedSeconds = (used * 60) + usedInSessionSeconds;
   const totalAllowanceSeconds = allowance * 60;
   const remainingSecondsTotal = totalAllowanceSeconds - totalUsedSeconds;
   
   const isOvertime = remainingSecondsTotal < 0;
+  const isTimeUp = remainingSecondsTotal <= 0;
   const absoluteRemainingSeconds = Math.abs(remainingSecondsTotal);
   const remainingMinutes = Math.floor(absoluteRemainingSeconds / 60);
   const remainingSecondsDisplay = absoluteRemainingSeconds % 60;
 
   const progress = Math.min(100, (totalUsedSeconds / totalAllowanceSeconds) * 100);
+
+  // Reset Logic
+  useEffect(() => {
+    if (!activeKid || !user) return;
+
+    const checkAndReset = async () => {
+      const now = new Date();
+      const lastReset = activeKid.screenTime?.lastReset?.toDate() || new Date(0);
+      const updates: any = {};
+
+      // Daily Reset
+      if (format(now, 'yyyy-MM-dd') !== format(lastReset, 'yyyy-MM-dd')) {
+        updates['screenTime.usedToday'] = 0;
+        
+        // Apply scheduled deductions for today
+        const todayStr = format(now, 'yyyy-MM-dd');
+        const deductions = activeKid.screenTime?.scheduledDeductions || [];
+        const todayDeductions = deductions.filter(d => d.date === todayStr);
+        
+        if (todayDeductions.length > 0) {
+          const totalDeduction = todayDeductions.reduce((acc, d) => acc + d.minutes, 0);
+          updates['screenTime.usedToday'] = totalDeduction;
+          // Remove only today's deductions from the list
+          updates['screenTime.scheduledDeductions'] = deductions.filter(d => d.date !== todayStr);
+        }
+
+        // Clean up old banned dates
+        const bannedDates = activeKid.screenTime?.bannedDates || [];
+        const activeBanned = bannedDates.filter(d => d >= todayStr);
+        if (activeBanned.length !== bannedDates.length) {
+          updates['screenTime.bannedDates'] = activeBanned;
+        }
+        
+        updates['screenTime.lastReset'] = serverTimestamp();
+      }
+
+      // Weekly Reset
+      const firstDay = parentProfile?.firstDayOfWeek || 'Mon';
+      const currentDay = format(now, 'EEE');
+      const lastResetDay = format(lastReset, 'EEE');
+      
+      // If today is the first day of week and we haven't reset this week yet
+      // A simple way: check if more than 6 days passed OR if it's the first day and last reset was a different day
+      const daysSinceReset = Math.floor((now.getTime() - lastReset.getTime()) / (1000 * 60 * 60 * 24));
+      if (currentDay === firstDay && (daysSinceReset >= 1 || format(now, 'yyyy-ww') !== format(lastReset, 'yyyy-ww'))) {
+        updates['screenTime.usedWeekly'] = 0;
+      }
+
+      // Monthly Reset
+      if (now.getDate() === 1 && now.getMonth() !== lastReset.getMonth()) {
+        updates['screenTime.usedMonthly'] = 0;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(doc(db, 'users', activeKid.uid), updates);
+      }
+    };
+
+    checkAndReset();
+  }, [activeKid?.uid, parentProfile?.firstDayOfWeek]);
 
   // Sound and Notification Logic
   useEffect(() => {
@@ -236,32 +430,52 @@ export const KidDashboard = () => {
       return;
     }
 
-    if (isOvertime) {
-      setShowOvertimeWarning(true);
-      
-      // Play sound every minute, or more frequently as 5min approaches
-      const overtimeSeconds = absoluteRemainingSeconds;
-      const shouldPlaySound = overtimeSeconds % 60 === 0 || (overtimeSeconds > 240 && overtimeSeconds % 10 === 0);
+    // 5 Minute Warning
+    if (!isOvertime && remainingMinutes === 5 && remainingSecondsDisplay === 0 && !hasPlayed5MinWarning) {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+      audio.play().catch(e => console.log('Audio play failed:', e));
+      setHasPlayed5MinWarning(true);
+    }
 
-      if (shouldPlaySound) {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        audio.volume = overtimeSeconds > 300 ? 1 : 0.5;
-        audio.play().catch(e => console.log('Audio play failed:', e));
-      }
+    // 0 Minute Warning (System Notification + Longer Sound)
+    // Fix: Trigger exactly when remainingSecondsTotal hits 0
+    if (remainingSecondsTotal === 0 && !hasPlayed0MinWarning) {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.play().catch(e => console.log('Audio play failed:', e));
+      setHasPlayed0MinWarning(true);
 
-      // Browser notification at the very start of overtime
-      if (overtimeSeconds === 0 && 'Notification' in window && Notification.permission === 'granted') {
+      if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Time is Up!', {
-          body: 'Your gaming session has ended. You have 5 minutes to finish before penalties apply!',
+          body: 'Your gaming session has ended. Please end your session now!',
           icon: '/logo.png',
           requireInteraction: true
         });
       }
     }
-  }, [absoluteRemainingSeconds, isSessionActive, isOvertime]);
+
+    // Overtime Recurring Sound (Every minute)
+    if (isOvertime && remainingMinutes > 0 && remainingMinutes !== lastOvertimeSoundMinute && remainingSecondsDisplay === 0) {
+      // Use a more urgent "hurry up" sound
+      // If >= 5 minutes overtime, use a longer "buzz" sound
+      const soundUrl = remainingMinutes >= 5 
+        ? 'https://assets.mixkit.co/active_storage/sfx/1003/1003-preview.mp3' // Buzz/Alarm
+        : 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'; // Urgent beep
+      
+      const audio = new Audio(soundUrl);
+      audio.play().catch(e => console.log('Audio play failed:', e));
+      setLastOvertimeSoundMinute(remainingMinutes);
+    }
+
+    if (isOvertime && !showOvertimeWarning) {
+      setShowOvertimeWarning(true);
+    } else if (!isOvertime && showOvertimeWarning) {
+      setShowOvertimeWarning(false);
+    }
+  }, [absoluteRemainingSeconds, isSessionActive, isOvertime, hasPlayed5MinWarning, hasPlayed0MinWarning, lastOvertimeSoundMinute, remainingMinutes, remainingSecondsDisplay, remainingSecondsTotal, showOvertimeWarning]);
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-12">
+    <>
+      <div className="mx-auto max-w-7xl px-6 py-12 relative z-0">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
         <motion.div 
@@ -284,8 +498,29 @@ export const KidDashboard = () => {
           </Button>
           {!isSessionActive ? (
             <Button 
-              onClick={handleStartSession}
-              className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-12 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)] hover:scale-105 transition-transform"
+              onClick={() => {
+                const today = format(new Date(), 'EEE');
+                const restrictedDays = (activeKid.screenTime as any)?.restrictedDays || [];
+                const usedToday = activeKid.screenTime?.usedToday || 0;
+                const allowanceToday = activeKid.screenTime?.dailyAllowance || 0;
+
+                if (restrictedDays.includes(today)) {
+                  setErrorMessage("Today is a restricted day. No gaming sessions allowed!");
+                  return;
+                }
+                if (usedToday >= allowanceToday) {
+                  setErrorMessage('You have no screen time left today!');
+                  return;
+                }
+                handleStartSession();
+              }}
+              disabled={((activeKid.screenTime as any)?.restrictedDays || []).includes(format(new Date(), 'EEE')) || (activeKid.screenTime?.usedToday || 0) >= (activeKid.screenTime?.dailyAllowance || 0)}
+              className={cn(
+                "font-bold uppercase tracking-widest px-12 py-6 transition-transform",
+                ((activeKid.screenTime as any)?.restrictedDays || []).includes(format(new Date(), 'EEE')) || (activeKid.screenTime?.usedToday || 0) >= (activeKid.screenTime?.dailyAllowance || 0)
+                  ? "bg-white/5 text-white/20 cursor-not-allowed"
+                  : "bg-plaeen-green text-black shadow-[0_0_20px_rgba(118,233,0,0.4)] hover:scale-105"
+              )}
             >
               <Gamepad2 size={20} className="mr-2" /> Start Playing
             </Button>
@@ -356,7 +591,13 @@ export const KidDashboard = () => {
                     strokeDasharray={552.92}
                     initial={{ strokeDashoffset: 552.92 }}
                     animate={{ strokeDashoffset: 552.92 - (552.92 * progress) / 100 }}
-                    className="text-plaeen-green"
+                    className={cn(
+                      "transition-colors duration-500",
+                      isOvertime ? "text-red-500" : 
+                      isTimeUp && !isSessionActive ? "text-white/10" :
+                      remainingMinutes <= 5 ? "text-yellow-500" : 
+                      "text-plaeen-green"
+                    )}
                     strokeLinecap="round"
                   />
                 </svg>
@@ -370,17 +611,19 @@ export const KidDashboard = () => {
                     <span className={cn(
                       "font-bold tracking-tighter leading-none transition-colors",
                       isSessionActive ? "text-4xl" : "text-5xl",
-                      isOvertime ? "text-red-500" : "text-white"
+                      isOvertime ? "text-red-500" : 
+                      isTimeUp && !isSessionActive ? "text-white/20" : "text-white"
                     )}>
                       {isSessionActive ? (
                         `${isOvertime ? '-' : ''}${remainingMinutes}:${remainingSecondsDisplay.toString().padStart(2, '0')}`
                       ) : (
-                        remainingMinutes
+                        `${isOvertime ? '-' : ''}${remainingMinutes}`
                       )}
                     </span>
                     <span className={cn(
                       "text-[10px] font-bold uppercase tracking-widest mt-1",
-                      isOvertime ? "text-red-500/60" : "text-white/40"
+                      isOvertime ? "text-red-500/60" : 
+                      isTimeUp && !isSessionActive ? "text-white/10" : "text-white/40"
                     )}>
                       {isOvertime ? 'Overtime' : isSessionActive ? 'Remaining' : 'Minutes Left'}
                     </span>
@@ -400,7 +643,7 @@ export const KidDashboard = () => {
               </div>
             </div>
 
-            {activeKid.screenTime?.accumulatedTime && activeKid.screenTime.accumulatedTime > 0 && (
+            {Boolean(activeKid.screenTime?.accumulatedTime && activeKid.screenTime.accumulatedTime > 0) && (
               <div className="mt-6 p-4 rounded-2xl bg-plaeen-purple/10 border border-plaeen-purple/20 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Star size={16} className="text-plaeen-purple" />
@@ -455,6 +698,96 @@ export const KidDashboard = () => {
 
           <section className="space-y-6">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+              <Bell size={16} /> Notifications
+            </h2>
+            <div className="space-y-4">
+              {notifications.map(notif => (
+                <Card key={notif.id} className={cn(
+                  "bg-white/5 border-white/10 p-4 transition-all",
+                  !notif.read && "border-l-2 border-l-plaeen-green bg-plaeen-green/5"
+                )}>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center",
+                        notif.type === 'decision' ? "bg-plaeen-purple/10 text-plaeen-purple" : 
+                        notif.type === 'team_invite' ? "bg-plaeen-green/10 text-plaeen-green" :
+                        "bg-plaeen-green/10 text-plaeen-green"
+                      )}>
+                        {notif.type === 'decision' ? <Shield size={20} /> : 
+                         notif.type === 'team_invite' ? <Users size={20} /> :
+                         <Bell size={20} />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-white uppercase tracking-tight">{notif.title || 'Notification'}</p>
+                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{notif.message}</p>
+                      </div>
+                    </div>
+                    
+                    {notif.type === 'team_invite' && !notif.read && (
+                      <div className="flex gap-2 pl-14">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleTeamInvite(notif, true)}
+                          className="bg-plaeen-green text-black text-[8px] font-bold uppercase tracking-widest px-4 py-2"
+                        >
+                          Accept
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleTeamInvite(notif, false)}
+                          className="border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest px-4 py-2"
+                        >
+                          Decline
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+              {notifications.length === 0 && (
+                <Card className="bg-white/5 border-dashed border-white/10 p-8 text-center">
+                  <p className="text-white/20 font-bold uppercase tracking-widest">No new notifications</p>
+                </Card>
+              )}
+            </div>
+          </section>
+
+          {( (activeKid.screenTime?.scheduledDeductions?.length || 0) > 0 || (activeKid.screenTime?.bannedDates?.length || 0) > 0 ) && (
+            <section className="space-y-6">
+              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-500 flex items-center gap-3">
+                <Shield size={16} /> Active Penalties
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {activeKid.screenTime?.scheduledDeductions?.map((deduction, idx) => (
+                  <Card key={`deduction-${idx}`} className="bg-red-500/5 border-red-500/20 p-4 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                      <Clock size={20} className="text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase tracking-tight">-{deduction.minutes} Minutes</p>
+                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Scheduled for {format(new Date(deduction.date + 'T12:00:00'), 'MMM d')}</p>
+                    </div>
+                  </Card>
+                ))}
+                {activeKid.screenTime?.bannedDates?.map((date, idx) => (
+                  <Card key={`ban-${idx}`} className="bg-red-500/5 border-red-500/20 p-4 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                      <Lock size={20} className="text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white uppercase tracking-tight">Access Restricted</p>
+                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">On {format(new Date(date + 'T12:00:00'), 'MMM d')}</p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="space-y-6">
+            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
               <Activity size={16} /> Recent Activity
             </h2>
             <Card className="bg-white/5 border-white/10 p-8">
@@ -477,6 +810,8 @@ export const KidDashboard = () => {
         </div>
       </div>
 
+      </div>
+
       {/* Chore Modal */}
       <AnimatePresence>
         {isChoreModalOpen && (
@@ -484,9 +819,9 @@ export const KidDashboard = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md"
           >
-            <Card className="w-full max-w-md bg-plaeen-dark border-plaeen-purple/30 p-10">
+            <div className="w-full max-w-md bg-plaeen-dark border border-plaeen-purple/30 p-10 rounded-2xl shadow-2xl">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">Log Activity</h2>
                 <button onClick={() => setIsChoreModalOpen(false)} className="text-white/40 hover:text-white"><X size={24} /></button>
@@ -530,22 +865,26 @@ export const KidDashboard = () => {
                   </Button>
                 </form>
               )}
-            </Card>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
       {/* Overtime Warning Overlay */}
       <AnimatePresence>
         {showOvertimeWarning && (
           <motion.div 
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-6"
+            exit={{ opacity: 0, y: 100 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-6 pointer-events-none"
           >
-            <Card className="bg-red-500 border-red-400 p-6 shadow-[0_0_50px_rgba(239,68,68,0.4)] flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center animate-pulse">
+            <div className="bg-red-600 rounded-2xl p-6 shadow-2xl flex items-center justify-between pointer-events-auto relative overflow-hidden border border-red-500/50">
+              {/* Solid background to prevent backdrop-blur artifacts from elements behind */}
+              <div className="absolute inset-0 bg-red-600" />
+              
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
                   <Bell size={24} className="text-white" />
                 </div>
                 <div>
@@ -559,14 +898,14 @@ export const KidDashboard = () => {
               </div>
               <Button 
                 onClick={handleEndSession}
-                className="bg-white text-red-500 hover:bg-white/90 font-bold uppercase tracking-widest text-[10px] px-6"
+                className="bg-white text-red-600 hover:bg-white/90 font-bold uppercase tracking-widest text-[10px] px-6 relative z-10"
               >
                 End Now
               </Button>
-            </Card>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };

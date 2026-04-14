@@ -17,6 +17,7 @@ interface Team {
 interface Friend {
   uid: string;
   displayName: string;
+  username: string;
   photoURL?: string;
 }
 
@@ -66,6 +67,7 @@ export const TeamsPage = () => {
 
     // Fetch friends for the modal
     const fetchFriends = async () => {
+      if (!activeUid) return;
       const userDoc = await getDoc(doc(db, 'users', activeUid));
       if (userDoc.exists()) {
         const friendIds = userDoc.data().friends || [];
@@ -73,6 +75,8 @@ export const TeamsPage = () => {
           const friendsQuery = query(collection(db, 'users_public'), where('uid', 'in', friendIds));
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map(d => d.data() as Friend));
+        } else {
+          setFriends([]);
         }
       }
     };
@@ -86,25 +90,50 @@ export const TeamsPage = () => {
 
     try {
       const parentId = kidData?.parentId || user?.uid;
+      let groupId = editingTeam?.id;
+
       if (editingTeam) {
         await updateDoc(doc(db, 'groups', editingTeam.id), {
           name: teamName,
           imageURL: selectedAvatar,
-          members: [activeUid, ...selectedFriends],
-          parentIds: arrayUnion(parentId)
+          // We don't change members here, only owner can edit basic info
+          // Invitations are handled separately or we could add new friends to pending
+          pendingMembers: arrayUnion(...selectedFriends)
         });
       } else {
-        await addDoc(collection(db, 'groups'), {
+        const docRef = await addDoc(collection(db, 'groups'), {
           name: teamName,
           ownerId: activeUid,
-          members: [activeUid, ...selectedFriends],
+          members: [activeUid],
+          pendingMembers: selectedFriends,
           parentIds: [parentId],
           isPublic: false,
           games: [],
           imageURL: selectedAvatar,
           createdAt: new Date().toISOString()
         });
+        groupId = docRef.id;
       }
+
+      // Send notifications to all invited friends
+      const notificationPromises = selectedFriends.map(friendId => 
+        addDoc(collection(db, 'notifications'), {
+          userId: friendId,
+          type: 'team_invite',
+          title: 'Team Invitation',
+          message: `${kidData?.displayName || 'A friend'} (@${kidData?.username || 'unknown'}) invited you to join the team "${teamName}"`,
+          data: {
+            groupId: groupId,
+            teamName: teamName,
+            invitedBy: activeUid,
+            invitedByName: kidData?.displayName || 'A friend'
+          },
+          read: false,
+          createdAt: new Date().toISOString()
+        })
+      );
+      await Promise.all(notificationPromises);
+
       setIsModalOpen(false);
       setTeamName('');
       setSelectedFriends([]);
@@ -353,7 +382,10 @@ export const TeamsPage = () => {
                         }`}
                       >
                         <img src={friend.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.uid}`} className="h-10 w-10 rounded-full" />
-                        <span className="text-sm font-bold uppercase truncate">{friend.displayName}</span>
+                        <div className="flex flex-col text-left truncate">
+                          <span className="text-sm font-bold uppercase truncate">{friend.displayName}</span>
+                          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest truncate">@{friend.username}</span>
+                        </div>
                         {selectedFriends.includes(friend.uid) ? <Check size={20} className="ml-auto" /> : <Plus size={20} className="ml-auto" />}
                       </button>
                     ))}

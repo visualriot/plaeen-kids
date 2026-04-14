@@ -22,6 +22,7 @@ import { Search, UserPlus, UserMinus, Check, X, Clock } from 'lucide-react';
 interface UserProfile {
   uid: string;
   displayName: string;
+  username: string;
   photoURL?: string;
 }
 
@@ -80,16 +81,23 @@ export const FriendsPage = () => {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setLoading(true);
+    setSearchResults([]);
+    setMessage(null);
     try {
+      const cleanSearch = searchQuery.toLowerCase().trim().replace(/^@/, '');
       const q = query(
         collection(db, 'users_public'), 
-        where('displayName', '>=', searchQuery),
-        where('displayName', '<=', searchQuery + '\uf8ff')
+        where('username', '==', cleanSearch)
       );
       const snapshot = await getDocs(q);
-      setSearchResults(snapshot.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== activeUid));
+      const results = snapshot.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== activeUid);
+      setSearchResults(results);
+      if (results.length === 0) {
+        setMessage({ text: 'No user found with that exact username.', type: 'error' });
+      }
     } catch (err) {
       console.error('Search error:', err);
+      setMessage({ text: 'Search failed. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -191,7 +199,7 @@ export const FriendsPage = () => {
             <div className="flex gap-4 mb-8">
               <input
                 type="text"
-                placeholder="Search by name..."
+                placeholder="Search by exact username (e.g. @aleks2)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -210,14 +218,17 @@ export const FriendsPage = () => {
                       <img 
                         src={u.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.uid}`} 
                         alt={u.displayName} 
-                        className="h-12 w-12 rounded-full"
+                        className="h-12 w-12 rounded-full border-2 border-plaeen-green/20"
                       />
-                      <span className="font-bold text-white">{u.displayName}</span>
+                      <div>
+                        <p className="font-bold text-white uppercase tracking-tight">{u.displayName}</p>
+                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">@{u.username}</p>
+                      </div>
                     </div>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="h-10 w-10 p-0 rounded-full"
+                      className="h-10 w-10 p-0 rounded-full border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green hover:text-black"
                       onClick={() => sendRequest(u)}
                     >
                       <UserPlus size={18} />
@@ -245,9 +256,12 @@ export const FriendsPage = () => {
                       <img 
                         src={friend.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.uid}`} 
                         alt={friend.displayName} 
-                        className="h-12 w-12 rounded-full"
+                        className="h-12 w-12 rounded-full border-2 border-plaeen-green/20"
                       />
-                      <span className="font-bold text-white">{friend.displayName}</span>
+                      <div>
+                        <p className="font-bold text-white uppercase tracking-tight">{friend.displayName}</p>
+                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">@{friend.username}</p>
+                      </div>
                     </div>
                     <button 
                       onClick={() => setConfirmDelete(friend.uid)}

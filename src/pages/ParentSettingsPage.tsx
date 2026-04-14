@@ -4,13 +4,15 @@ import { Button } from '@/components/Button';
 import { db } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useProfile } from '@/contexts/ProfileContext';
-import { Shield, Lock, Check, X, ChevronLeft } from 'lucide-react';
+import { Shield, Lock, Check, X, ChevronLeft, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export const ParentSettingsPage = () => {
   const { parentProfile, isLoading } = useProfile();
   const [pin, setPin] = useState('');
+  const [firstDayOfWeek, setFirstDayOfWeek] = useState<'Mon' | 'Sun'>('Mon');
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
@@ -18,6 +20,9 @@ export const ParentSettingsPage = () => {
   useEffect(() => {
     if (parentProfile?.guardianPin) {
       setPin(parentProfile.guardianPin);
+    }
+    if (parentProfile?.firstDayOfWeek) {
+      setFirstDayOfWeek(parentProfile.firstDayOfWeek);
     }
   }, [parentProfile]);
 
@@ -31,12 +36,13 @@ export const ParentSettingsPage = () => {
     setIsSaving(true);
     try {
       await updateDoc(doc(db, 'users', parentProfile.uid), {
-        guardianPin: pin
+        guardianPin: pin,
+        firstDayOfWeek: firstDayOfWeek
       });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      console.error('Error saving PIN:', err);
+      console.error('Error saving settings:', err);
     } finally {
       setIsSaving(false);
     }
@@ -69,17 +75,38 @@ export const ParentSettingsPage = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-8">
-          <div className="max-w-xs">
-            <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">4-Digit PIN</label>
-            <input 
-              type="password"
-              maxLength={4}
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              placeholder="0000"
-              className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-4xl font-bold tracking-[1em] text-white focus:border-plaeen-green focus:outline-none transition-all"
-            />
+        <form onSubmit={handleSave} className="space-y-12">
+          <div className="grid md:grid-cols-2 gap-12">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">4-Digit PIN</label>
+              <input 
+                type="password"
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                placeholder="0000"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-4xl font-bold tracking-[1em] text-white focus:border-plaeen-green focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">First Day of Week</label>
+              <div className="flex bg-white/5 rounded-2xl p-2 h-[88px]">
+                {(['Mon', 'Sun'] as const).map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setFirstDayOfWeek(day)}
+                    className={cn(
+                      "flex-1 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+                      firstDayOfWeek === day ? "bg-plaeen-green text-black" : "text-white/40 hover:text-white"
+                    )}
+                  >
+                    {day === 'Mon' ? 'Monday' : 'Sunday'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">

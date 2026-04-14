@@ -18,6 +18,10 @@ interface KidProfile {
     monthlyAllowance?: number;
     usedMonthly?: number;
     accumulatedTime?: number;
+    bannedDates?: string[];
+    scheduledDeductions?: { date: string; minutes: number }[];
+    isSessionActive?: boolean;
+    sessionStartTime?: number;
   };
   allowedGames: string[];
 }
