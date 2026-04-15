@@ -6,7 +6,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDo
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Plus, Users, Clock, Gamepad2, Bell, Shield, Lock, Unlock, ChevronRight, Check, X, Star, Zap, Trash2, Settings } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, isSameWeek, isSameMonth } from 'date-fns';
 import { useProfile } from '@/contexts/ProfileContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { validateUsername } from '@/lib/validation';
@@ -41,7 +41,7 @@ interface ApprovalRequest {
 
 export const ParentDashboard = () => {
   const [user] = useAuthState(auth);
-  const { setActiveKid, setParentAuthenticated } = useProfile();
+  const { setActiveKid, setParentAuthenticated, parentProfile } = useProfile();
   const [kids, setKids] = useState<KidProfile[]>([]);
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [isAddKidOpen, setIsAddKidOpen] = useState(false);
@@ -175,9 +175,22 @@ export const ParentDashboard = () => {
 
       if (status === 'approved') {
         if (reward > 0) {
-          await updateDoc(doc(db, 'users', req.childId), {
-            'screenTime.dailyAllowance': increment(reward)
-          });
+          const firstDayOfWeekIndex = parentProfile?.firstDayOfWeek === 'Sun' ? 0 : 1;
+          const now = new Date();
+          
+          const kidUpdates: any = {
+            'screenTime.todayAdjustments': arrayUnion({
+              id: Math.random().toString(36).substr(2, 9),
+              type: 'reward',
+              minutes: reward,
+              reason: req.title || 'Activity Reward',
+              timestamp: now.toISOString()
+            }),
+            'screenTime.weeklyAdjustments': increment(reward),
+            'screenTime.monthlyAdjustments': increment(reward)
+          };
+
+          await updateDoc(doc(db, 'users', req.childId), kidUpdates);
         }
         
         // Handle friend request approval
@@ -384,38 +397,41 @@ export const ParentDashboard = () => {
                   </div>
 
                   <div className="flex flex-col justify-between items-end gap-4">
-                        <div className="flex gap-2">
-                          <Button 
-                            onClick={() => handleSwitchProfile(kid.uid)}
-                            className="bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] px-6"
-                          >
-                            Switch to Profile
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            onClick={() => handleDeleteKid(kid.uid)}
-                            className="border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold uppercase tracking-widest text-[10px] px-4"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </div>
-                        <Link to={`/parent/child/${kid.uid}`}>
-                          <Button variant="outline" className="border-white/10 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] px-6">
-                            Manage <ChevronRight size={14} className="ml-2" />
-                          </Button>
-                        </Link>
-                        {!kid.username && (
-                          <Button 
-                            onClick={() => {
-                              setRepairKid(kid);
-                              setRepairUsername('');
-                            }}
-                            className="bg-amber-500 text-black font-bold uppercase tracking-widest text-[8px] px-4 py-2"
-                          >
-                            Set Username
-                          </Button>
-                        )}
-                      </div>
+                    <div className="flex gap-2">
+                      <Link to={`/parent/child/${kid.uid}`}>
+                        <Button className="bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] px-6">
+                          Manage <ChevronRight size={14} className="ml-2" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleDeleteKid(kid.uid)}
+                        className="border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold uppercase tracking-widest text-[10px] px-4"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                    
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleSwitchProfile(kid.uid)}
+                      className="w-full border-white/10 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] px-6"
+                    >
+                      Switch to Profile
+                    </Button>
+
+                    {!kid.username && (
+                      <Button 
+                        onClick={() => {
+                          setRepairKid(kid);
+                          setRepairUsername('');
+                        }}
+                        className="bg-amber-500 text-black font-bold uppercase tracking-widest text-[8px] px-4 py-2"
+                      >
+                        Set Username
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))}

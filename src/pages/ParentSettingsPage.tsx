@@ -4,7 +4,7 @@ import { Button } from '@/components/Button';
 import { db } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useProfile } from '@/contexts/ProfileContext';
-import { Shield, Lock, Check, X, ChevronLeft, Calendar } from 'lucide-react';
+import { Shield, Lock, Check, X, ChevronLeft, Calendar, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 export const ParentSettingsPage = () => {
   const { parentProfile, isLoading } = useProfile();
   const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [firstDayOfWeek, setFirstDayOfWeek] = useState<'Mon' | 'Sun'>('Mon');
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -59,7 +60,7 @@ export const ParentSettingsPage = () => {
 
       <div className="mb-12">
         <h1 className="text-5xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
-          Security <span className="text-plaeen-green">Settings</span>
+          <span className="text-plaeen-green">Settings</span>
         </h1>
         <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">Manage your parental access</p>
       </div>
@@ -79,14 +80,27 @@ export const ParentSettingsPage = () => {
           <div className="grid md:grid-cols-2 gap-12">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">4-Digit PIN</label>
-              <input 
-                type="password"
-                maxLength={4}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="0000"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-4xl font-bold tracking-[1em] text-white focus:border-plaeen-green focus:outline-none transition-all"
-              />
+              <div className="relative group">
+                <input 
+                  type={showPin ? "text" : "password"}
+                  maxLength={4}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                  placeholder="0000"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-4xl font-bold tracking-[1em] text-white focus:border-plaeen-green focus:outline-none transition-all pr-16"
+                />
+                <button
+                  type="button"
+                  onMouseDown={() => setShowPin(true)}
+                  onMouseUp={() => setShowPin(false)}
+                  onMouseLeave={() => setShowPin(false)}
+                  onTouchStart={() => setShowPin(true)}
+                  onTouchEnd={() => setShowPin(false)}
+                  className="absolute right-6 top-1/2 -translate-y-1/2 text-white/20 hover:text-plaeen-green transition-colors p-2"
+                >
+                  {showPin ? <EyeOff size={24} /> : <Eye size={24} />}
+                </button>
+              </div>
             </div>
 
             <div>

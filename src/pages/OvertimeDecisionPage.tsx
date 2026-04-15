@@ -3,14 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { db } from '@/firebase';
-import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, increment, arrayUnion, query, where, getDocs } from 'firebase/firestore';
 import { Clock, Shield, X, ArrowLeft, Zap, Bell, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isSameWeek, isSameMonth, parseISO } from 'date-fns';
 import { motion } from 'framer-motion';
+import { useProfile } from '@/contexts/ProfileContext';
 
 export const OvertimeDecisionPage = () => {
   const { approvalId } = useParams();
   const navigate = useNavigate();
+  const { parentProfile } = useProfile();
   const [approval, setApproval] = useState<any>(null);
   const [kid, setKid] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -22,7 +24,8 @@ export const OvertimeDecisionPage = () => {
   useEffect(() => {
     if (!approvalId) return;
 
-    const unsub = onSnapshot(doc(db, 'approvals', approvalId), (snap) => {
+    // First, try to fetch the approval document directly
+    const unsub = onSnapshot(doc(db, 'approvals', approvalId), async (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setApproval({ id: snap.id, ...data });
@@ -33,8 +36,59 @@ export const OvertimeDecisionPage = () => {
           if (kidSnap.exists()) {
             setKid({ uid: kidSnap.id, ...kidSnap.data() });
           }
+        }, (error) => {
+          console.error('Firestore Error in kid listener (A):', error);
         });
       } else {
+        // Fallback: If not found by ID, maybe the ID passed was a notificationId?
+        // Try to find an approval that points to this notificationId
+        const q = query(collection(db, 'approvals'), where('notificationId', '==', approvalId));
+        const qSnap = await getDocs(q);
+        
+        if (!qSnap.empty) {
+          const d = qSnap.docs[0];
+          const data = d.data();
+          setApproval({ id: d.id, ...data });
+          setDeductionAmount(data.data?.overtimeMinutes || 0);
+          
+          onSnapshot(doc(db, 'users', data.childId), (kidSnap) => {
+            if (kidSnap.exists()) {
+              setKid({ uid: kidSnap.id, ...kidSnap.data() });
+            }
+          }, (error) => {
+            console.error('Firestore Error in kid listener (B):', error);
+          });
+        } else {
+          // Truly not found
+          console.error('Approval not found for ID:', approvalId);
+          navigate('/parent-dashboard');
+        }
+      }
+    }, async (error) => {
+      // If we get a permission error, it might be because the document doesn't exist 
+      // and the rules are strict. Try the fallback query immediately.
+      console.warn('Approval listener failed, attempting fallback query...', error);
+      
+      const q = query(collection(db, 'approvals'), where('notificationId', '==', approvalId));
+      try {
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          const d = qSnap.docs[0];
+          const data = d.data();
+          setApproval({ id: d.id, ...data });
+          setDeductionAmount(data.data?.overtimeMinutes || 0);
+          
+          onSnapshot(doc(db, 'users', data.childId), (kidSnap) => {
+            if (kidSnap.exists()) {
+              setKid({ uid: kidSnap.id, ...kidSnap.data() });
+            }
+          });
+        } else {
+          console.error('Fallback query also failed or returned no results');
+          navigate('/parent-dashboard');
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback query failed:', fallbackErr);
         navigate('/parent-dashboard');
       }
     });
@@ -56,8 +110,12 @@ export const OvertimeDecisionPage = () => {
       };
 
       if (action === 'forgive') {
-        // Reset usedToday to dailyAllowance (effectively 0 remaining)
-        await updateDoc(kidRef, { 'screenTime.usedToday': kid.screenTime?.dailyAllowance || 60 });
+        // Calculate current daily allowance (including adjustments) to set usedToday to it
+        const todayAdjSum = (kid.screenTime?.todayAdjustments || [])
+          .reduce((acc: number, adj: any) => acc + (adj.type === 'reward' ? adj.minutes : -adj.minutes), 0);
+        const currentAllowance = (kid.screenTime?.dailyAllowance || 60) + todayAdjSum;
+        
+        await updateDoc(kidRef, { 'screenTime.usedToday': currentAllowance });
         decisionData.message = "Your overtime was forgiven! No penalty applied.";
       } else if (action === 'extract') {
         const amount = deductionAmount || approval.data.overtimeMinutes;
@@ -67,9 +125,35 @@ export const OvertimeDecisionPage = () => {
           id: Math.random().toString(36).substr(2, 9)
         };
         const currentDeductions = kid.screenTime?.scheduledDeductions || [];
-        await updateDoc(kidRef, { 
-          'screenTime.scheduledDeductions': [...currentDeductions, newDeduction] 
-        });
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        
+        const updates: any = {
+          'screenTime.scheduledDeductions': [...currentDeductions, newDeduction]
+        };
+
+        // Update weekly and monthly adjustments if the date falls in the current period
+        const firstDayOfWeekIndex = parentProfile?.firstDayOfWeek === 'Sun' ? 0 : 1;
+        const deductionDateObj = parseISO(deductionDate);
+        const now = new Date();
+        const isThisWeek = isSameWeek(deductionDateObj, now, { weekStartsOn: firstDayOfWeekIndex });
+        const isThisMonth = isSameMonth(deductionDateObj, now);
+
+        if (isThisWeek) updates['screenTime.weeklyAdjustments'] = increment(-amount);
+        if (isThisMonth) updates['screenTime.monthlyAdjustments'] = increment(-amount);
+
+        // If deduction is for today, also add to todayAdjustments for immediate feedback
+        if (deductionDate === todayStr) {
+          updates['screenTime.todayAdjustments'] = arrayUnion({
+            id: newDeduction.id,
+            type: 'penalty',
+            minutes: amount,
+            reason: 'Overtime Penalty',
+            timestamp: new Date().toISOString()
+          });
+          // Do NOT increment usedToday anymore, as we now subtract from allowance calculation
+        }
+
+        await updateDoc(kidRef, updates);
         decisionData.message = `${amount} minutes will be deducted on ${format(new Date(deductionDate), 'MMM do')}.`;
         decisionData.minutes = amount;
         decisionData.date = deductionDate;
@@ -89,6 +173,57 @@ export const OvertimeDecisionPage = () => {
         userId: kid.uid,
         ...decisionData
       });
+
+      // Update the original notification for the parent
+      // We try multiple ways to find the correct notification to mark as handled
+      const updatePayload = {
+        handled: true,
+        read: true,
+        decision: {
+          action,
+          timestamp: new Date(),
+          message: decisionData.message,
+          date: decisionData.date || null
+        }
+      };
+
+      let notifUpdated = false;
+
+      // Path A: Use the notificationId stored in the approval
+      if (approval.notificationId) {
+        try {
+          await updateDoc(doc(db, 'notifications', approval.notificationId), updatePayload);
+          notifUpdated = true;
+        } catch (e) {
+          console.warn('Failed to update notification by notificationId', e);
+        }
+      }
+
+      // Path B: If we were passed a notificationId as the URL param, update it directly
+      if (!notifUpdated && approvalId) {
+        try {
+          const notifSnap = await getDocs(query(collection(db, 'notifications'), where('__name__', '==', approvalId)));
+          if (!notifSnap.empty) {
+            await updateDoc(doc(db, 'notifications', approvalId), updatePayload);
+            notifUpdated = true;
+          }
+        } catch (e) {
+          // Ignore, might not be a notification ID
+        }
+      }
+
+      // Path C: Fallback query by approvalId field in notifications
+      if (!notifUpdated) {
+        const parentNotifQuery = query(
+          collection(db, 'notifications'),
+          where('approvalId', '==', approval.id)
+        );
+        const parentNotifSnap = await getDocs(parentNotifQuery);
+        if (!parentNotifSnap.empty) {
+          await updateDoc(doc(db, 'notifications', parentNotifSnap.docs[0].id), updatePayload);
+          notifUpdated = true;
+        }
+      }
 
       // Mark approval as handled (or delete it)
       await deleteDoc(doc(db, 'approvals', approval.id));

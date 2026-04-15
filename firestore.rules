@@ -154,19 +154,19 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Users can read their own profile, and parents can read their kids' profiles
-      allow read: if isOwner(userId) || (isAuthenticated() && getUserData(request.auth.uid).role == 'parent' && resource != null && resource.data.parentId == request.auth.uid);
+      allow read: if isOwner(userId) || (isAuthenticated() && resource != null && resource.data.parentId == request.auth.uid);
       
       // Parents can create kid accounts, or users can create their own parent account
       allow create: if isAuthenticated() && isValidUser(request.resource.data) &&
                       (isOwner(userId) || (request.resource.data.role == 'kid' && request.resource.data.parentId == request.auth.uid));
       
       // Parents can update their kids' settings, or users can update their own basic info
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) &&
-                      (isOwner(userId) || (isAuthenticated() && resource != null && resource.data.parentId == request.auth.uid));
+      allow update: if isAuthenticated() && 
+                      (isOwner(userId) || (resource != null && resource.data.parentId == request.auth.uid));
     }
 
     match /approvals/{approvalId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.parentId || request.auth.uid == resource.data.childId);
+      allow read: if isAuthenticated() && (resource == null || request.auth.uid == resource.data.parentId || request.auth.uid == resource.data.childId);
       allow create: if isAuthenticated() && isValidApprovalRequest(request.resource.data) && 
                       (request.auth.uid == request.resource.data.childId || request.auth.uid == request.resource.data.parentId);
       allow update: if isAuthenticated() && request.auth.uid == resource.data.parentId && 
@@ -217,15 +217,12 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       // Public groups are readable by authenticated users
-      // Parents can read groups where their kids are members
+      // Parents can read groups where their parentId is listed
       allow read: if isAuthenticated() && (
         resource.data.isPublic == true || 
         request.auth.uid in resource.data.members ||
         (resource.data.parentIds != null && request.auth.uid in resource.data.parentIds) ||
-        (getUserData(resource.data.ownerId).parentId == request.auth.uid) ||
-        (getUserData(request.auth.uid).role == 'parent' && 
-         'linkedKids' in getUserData(request.auth.uid) && 
-         resource.data.members.hasAny(getUserData(request.auth.uid).linkedKids))
+        (getUserData(resource.data.ownerId).parentId == request.auth.uid)
       );
       
       // Kids can only create private groups, parents can create for their kids
@@ -270,19 +267,18 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.userId ||
-        (getUserData(resource.data.userId).parentId == request.auth.uid)
+        (resource.data.userId != null && getUserData(resource.data.userId).parentId == request.auth.uid)
       );
       allow create: if isAuthenticated() && (
         request.auth.uid == request.resource.data.userId || 
-        (getUserData(request.auth.uid).role == 'kid' && 
-         (getUserData(request.auth.uid).parentId == request.resource.data.userId || 
-          request.resource.data.userId in getUserData(request.auth.uid).friends)) ||
-        (getUserData(request.auth.uid).role == 'parent' && 
-         get(/databases/$(database)/documents/users/$(request.resource.data.userId)).data.parentId == request.auth.uid)
+        // Parent creating for kid
+        (getUserData(request.resource.data.userId).parentId == request.auth.uid) ||
+        // Kid creating for parent
+        (getUserData(request.auth.uid).parentId == request.resource.data.userId)
       );
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId && 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || getUserData(resource.data.userId).parentId == request.auth.uid) && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'handled', 'decision']);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || getUserData(resource.data.userId).parentId == request.auth.uid);
     }
   }
 }

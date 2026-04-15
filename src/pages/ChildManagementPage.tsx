@@ -7,9 +7,10 @@ import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, deleteDo
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Shield, Clock, Gamepad2, Users, Trash2, Save, ArrowLeft, Plus, X, Search, Star, Zap, Info, Bell, History, RefreshCw, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isSameWeek, isSameMonth, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { validateUsername } from '@/lib/validation';
+import { useProfile } from '@/contexts/ProfileContext';
 
 interface KidProfile {
   uid: string;
@@ -23,20 +24,31 @@ interface KidProfile {
     usedWeekly?: number;
     monthlyAllowance?: number;
     usedMonthly?: number;
+    weeklyAdjustments?: number;
+    monthlyAdjustments?: number;
     accumulatedTime?: number;
     lastReset: any;
     bannedDates?: string[];
     scheduledDeductions?: { date: string; minutes: number }[];
     isSessionActive?: boolean;
     sessionStartTime?: number;
+    todayAdjustments?: {
+      id: string;
+      type: 'penalty' | 'reward';
+      minutes: number;
+      reason: string;
+      timestamp: string;
+    }[];
   };
   allowedGames: string[];
   friends: string[];
+  restrictedMode?: boolean;
 }
 
 export const ChildManagementPage = () => {
   const { childId } = useParams();
   const [user] = useAuthState(auth);
+  const { parentProfile } = useProfile();
   const [kid, setKid] = useState<KidProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -45,6 +57,7 @@ export const ChildManagementPage = () => {
   const [dailyAllowance, setDailyAllowance] = useState(60);
   const [allowanceType, setAllowanceType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [restrictedDays, setRestrictedDays] = useState<string[]>([]);
+  const [restrictedMode, setRestrictedMode] = useState(false);
   const [accumulatedTime, setAccumulatedTime] = useState(0);
   const [gameSearch, setGameSearch] = useState('');
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
@@ -78,6 +91,7 @@ export const ChildManagementPage = () => {
         setDailyAllowance(data.screenTime?.dailyAllowance || 60);
         setAllowanceType((data.screenTime as any)?.allowanceType || 'daily');
         setRestrictedDays((data.screenTime as any)?.restrictedDays || []);
+        setRestrictedMode(data.restrictedMode || false);
         setAccumulatedTime(data.screenTime?.accumulatedTime || 0);
       }
     });
@@ -131,16 +145,21 @@ export const ChildManagementPage = () => {
         
         const updates: any = { 'screenTime.scheduledDeductions': newDeductions };
         
-        // If the deduction was for today, also reverse it from usedToday
+        // Reverse from weekly/monthly adjustments if applicable
+        const firstDayOfWeekIndex = parentProfile?.firstDayOfWeek === 'Sun' ? 0 : 1;
+        const deductionDateObj = parseISO(value.date);
+        const now = new Date();
+        const isThisWeek = isSameWeek(deductionDateObj, now, { weekStartsOn: firstDayOfWeekIndex });
+        const isThisMonth = isSameMonth(deductionDateObj, now);
+
+        if (isThisWeek) updates['screenTime.weeklyAdjustments'] = increment(value.minutes);
+        if (isThisMonth) updates['screenTime.monthlyAdjustments'] = increment(value.minutes);
+
+        // If the deduction was for today, also remove from todayAdjustments
         const todayStr = format(new Date(), 'yyyy-MM-dd');
         if (value.date === todayStr) {
-          const currentUsed = kid.screenTime?.usedToday || 0;
-          updates['screenTime.usedToday'] = Math.max(0, currentUsed - value.minutes);
-          
-          // Also reverse from weekly/monthly if they were already incremented
-          // (Though usually they are incremented when session ends, but reset logic might have added them)
-          updates['screenTime.usedWeekly'] = Math.max(0, (kid.screenTime?.usedWeekly || 0) - value.minutes);
-          updates['screenTime.usedMonthly'] = Math.max(0, (kid.screenTime?.usedMonthly || 0) - value.minutes);
+          const currentAdjustments = kid.screenTime?.todayAdjustments || [];
+          updates['screenTime.todayAdjustments'] = currentAdjustments.filter((a: any) => a.id !== value.id);
         }
 
         await updateDoc(kidRef, updates);
@@ -150,6 +169,30 @@ export const ChildManagementPage = () => {
       }
     } catch (err) {
       console.error('Error removing penalty:', err);
+    }
+  };
+
+  const removeAdjustment = async (adjId: string) => {
+    if (!childId || !kid) return;
+    try {
+      const kidRef = doc(db, 'users', childId);
+      const currentAdjustments = kid.screenTime?.todayAdjustments || [];
+      const adjToRemove = currentAdjustments.find((a: any) => a.id === adjId);
+      
+      if (!adjToRemove) return;
+
+      const updates: any = {
+        'screenTime.todayAdjustments': currentAdjustments.filter((a: any) => a.id !== adjId)
+      };
+
+      // Reverse the effect on weekly/monthly totals
+      const change = adjToRemove.type === 'penalty' ? adjToRemove.minutes : -adjToRemove.minutes;
+      updates['screenTime.weeklyAdjustments'] = increment(change);
+      updates['screenTime.monthlyAdjustments'] = increment(change);
+
+      await updateDoc(kidRef, updates);
+    } catch (err) {
+      console.error('Error removing adjustment:', err);
     }
   };
 
@@ -204,7 +247,7 @@ export const ChildManagementPage = () => {
     }
   };
 
-  const handleSaveSettings = async () => {
+  const handleSaveIdentity = async () => {
     if (!childId || !kid) return;
     setIsSaving(true);
     setError(null);
@@ -232,12 +275,7 @@ export const ChildManagementPage = () => {
       await updateDoc(doc(db, 'users', childId), {
         displayName,
         username: cleanUsername,
-        'screenTime.dailyAllowance': dailyAllowance,
-        'screenTime.weeklyAllowance': weeklyAllowance,
-        'screenTime.monthlyAllowance': monthlyAllowance,
-        'screenTime.allowanceType': allowanceType,
-        'screenTime.restrictedDays': restrictedDays,
-        'screenTime.accumulatedTime': accumulatedTime
+        restrictedMode
       });
 
       // Sync with users_public
@@ -252,8 +290,40 @@ export const ChildManagementPage = () => {
 
       setError(null);
     } catch (err) {
-      console.error('Error saving settings:', err);
-      setError('Failed to save settings.');
+      console.error('Error saving identity:', err);
+      setError('Failed to save identity.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveAllowance = async () => {
+    if (!childId || !kid) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(doc(db, 'users', childId), {
+        'screenTime.dailyAllowance': dailyAllowance,
+        'screenTime.weeklyAllowance': weeklyAllowance,
+        'screenTime.monthlyAllowance': monthlyAllowance,
+        'screenTime.allowanceType': allowanceType,
+        'screenTime.restrictedDays': restrictedDays,
+      });
+    } catch (err) {
+      console.error('Error saving allowance:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveBonus = async () => {
+    if (!childId || !kid) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(doc(db, 'users', childId), {
+        'screenTime.accumulatedTime': accumulatedTime
+      });
+    } catch (err) {
+      console.error('Error saving bonus:', err);
     } finally {
       setIsSaving(false);
     }
@@ -283,16 +353,6 @@ export const ChildManagementPage = () => {
             <h1 className="text-5xl font-bold text-white uppercase tracking-tighter">{kid.displayName}</h1>
             <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-1">@{kid.username}</p>
           </div>
-        </div>
-        <div className="flex gap-4">
-          {error && <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest self-center mr-4">{error}</p>}
-          <Button 
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
-          >
-            <Save size={20} className="mr-2" /> {isSaving ? 'Syncing...' : 'Save Settings'}
-          </Button>
         </div>
       </div>
 
@@ -328,36 +388,6 @@ export const ChildManagementPage = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         {/* Left Column: Screen Time Settings */}
         <div className="space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
-            <Shield size={16} /> Profile Identity
-          </h2>
-          <Card className="bg-white/5 border-white/10 p-8 space-y-6">
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block mb-2">Display Name</label>
-              <input 
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green block mb-2">Unique Username</label>
-              <input 
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="SET_USERNAME"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
-              />
-              {!kid.username && (
-                <p className="text-[8px] text-amber-500 font-bold uppercase tracking-widest mt-2">
-                  <Info size={10} className="inline mr-1" /> Username required for social features
-                </p>
-              )}
-            </div>
-          </Card>
-
           <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
             <Clock size={16} /> Screen Time Control
           </h2>
@@ -438,10 +468,17 @@ export const ChildManagementPage = () => {
               </div>
             </div>
 
+            <Button 
+              onClick={handleSaveAllowance}
+              className="w-full bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] py-4"
+            >
+              Apply Allowance Settings
+            </Button>
+
             <div className="pt-8 border-t border-white/5 space-y-8">
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">Bonus / Accumulated Time</label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 mb-6">
                   <Button 
                     size="sm" 
                     variant="outline" 
@@ -462,6 +499,13 @@ export const ChildManagementPage = () => {
                     +5m
                   </Button>
                 </div>
+                <Button 
+                  onClick={handleSaveBonus}
+                  variant="outline"
+                  className="w-full border-plaeen-green/30 text-plaeen-green font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-plaeen-green/10"
+                >
+                  Apply Bonus Time
+                </Button>
               </div>
 
               <div className="pt-8 border-t border-white/5">
@@ -488,10 +532,136 @@ export const ChildManagementPage = () => {
               Unused screen time will automatically roll over to the next period.
             </p>
           </Card>
+
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+            <Shield size={16} /> Profile Identity
+          </h2>
+          <Card className="bg-white/5 border-white/10 p-8 space-y-6">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block mb-2">Display Name</label>
+              <input 
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green block mb-2">Unique Username</label>
+              <input 
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="SET_USERNAME"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+              />
+              {!kid.username && (
+                <p className="text-[8px] text-amber-500 font-bold uppercase tracking-widest mt-2">
+                  <Info size={10} className="inline mr-1" /> Username required for social features
+                </p>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-white/5">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                <div>
+                  <p className="text-[10px] font-bold text-white uppercase tracking-tight">Restricted Mode (Child Friendly)</p>
+                  <p className="text-[8px] text-white/40 mt-1 uppercase tracking-widest font-bold">Only show child-friendly games</p>
+                </div>
+                <button
+                  onClick={() => setRestrictedMode(!restrictedMode)}
+                  className={`h-6 w-11 rounded-full p-1 transition-colors duration-300 ${
+                    restrictedMode ? 'bg-plaeen-green' : 'bg-white/10'
+                  }`}
+                >
+                  <div className={`h-4 w-4 rounded-full bg-white transition-transform duration-300 ${
+                    restrictedMode ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
+            {error && <p className="text-red-500 text-[8px] font-bold uppercase tracking-widest">{error}</p>}
+            <Button 
+              onClick={handleSaveIdentity}
+              className="w-full bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-[10px] py-4 hover:border-plaeen-green hover:text-plaeen-green"
+            >
+              Save Profile Changes
+            </Button>
+          </Card>
         </div>
 
         {/* Right Column: Action Required & Session History (Spans 2 columns) */}
         <div className="lg:col-span-2 space-y-12">
+          {/* Today's Active Feedback */}
+          {(() => {
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            const adjustments = [...(kid?.screenTime?.todayAdjustments || [])];
+            
+            // Add scheduled deductions for today that aren't already in adjustments (for legacy support)
+            const scheduledToday = (kid?.screenTime?.scheduledDeductions || [])
+              .filter(d => d.date === todayStr)
+              .filter(d => !adjustments.some(a => a.id === d.id));
+            
+            scheduledToday.forEach(d => {
+              adjustments.push({
+                id: d.id,
+                type: 'penalty',
+                minutes: d.minutes,
+                reason: 'Scheduled Penalty',
+                timestamp: new Date().toISOString(),
+                isScheduled: true,
+                data: d
+              });
+            });
+
+            if (adjustments.length === 0) return null;
+
+            return (
+              <section className="space-y-6">
+                <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+                  <Zap size={16} /> Today's Active Feedback
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {adjustments.map((adj: any) => (
+                    <Card 
+                      key={adj.id} 
+                      className={cn(
+                        "p-6 flex items-center justify-between group border-2",
+                        adj.type === 'penalty' ? "bg-red-500/5 border-red-500/20" : "bg-plaeen-green/5 border-plaeen-green/20"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "h-12 w-12 rounded-xl flex items-center justify-center",
+                          adj.type === 'penalty' ? "bg-red-500/10" : "bg-plaeen-green/10"
+                        )}>
+                          {adj.type === 'penalty' ? <Clock size={20} className="text-red-500" /> : <Zap size={20} className="text-plaeen-green" />}
+                        </div>
+                        <div>
+                          <p className={cn(
+                            "text-xs font-bold uppercase tracking-tight",
+                            adj.type === 'penalty' ? "text-red-500" : "text-plaeen-green"
+                          )}>
+                            {adj.minutes}m {adj.type} applied today
+                          </p>
+                          <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">{adj.reason}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => adj.isScheduled ? removePenalty('deduction', adj.data) : removeAdjustment(adj.id)}
+                        variant="ghost"
+                        className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-red-500"
+                      >
+                        Cancel
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
           {/* Active Penalties */}
           <section className="space-y-6">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-500 flex items-center gap-3">

@@ -40,7 +40,10 @@ const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, 
     return <Navigate to="/select-profile" />;
   }
 
+  // If role doesn't match the page's requirement
   if (allowedRole && role !== allowedRole) {
+    if (role === 'kid') return <Navigate to="/kid-dashboard" />;
+    if (role === 'parent') return <Navigate to="/parent-dashboard" />;
     return <Navigate to="/select-profile" />;
   }
 

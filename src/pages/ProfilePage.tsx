@@ -21,7 +21,6 @@ export const ProfilePage = () => {
   const [displayName, setDisplayName] = useState('');
   const [photoURL, setPhotoURL] = useState('');
   const [selectedSystems, setSelectedSystems] = useState<string[]>([]);
-  const [restrictedMode, setRestrictedMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
@@ -36,7 +35,6 @@ export const ProfilePage = () => {
         setDisplayName(data.displayName || user.displayName || '');
         setPhotoURL(data.photoURL || user.photoURL || '');
         setSelectedSystems(data.systems || []);
-        setRestrictedMode(data.restrictedMode || false);
       }
       setLoading(false);
     };
@@ -58,8 +56,7 @@ export const ProfilePage = () => {
       await updateDoc(doc(db, 'users', user.uid), {
         displayName,
         photoURL,
-        systems: selectedSystems,
-        restrictedMode
+        systems: selectedSystems
       });
 
       // Update public profile if it exists
@@ -97,7 +94,7 @@ export const ProfilePage = () => {
     <div className="mx-auto max-w-4xl px-6 py-12">
       <div className="mb-12">
         <h1 className="font-display text-5xl font-bold text-white uppercase tracking-tight mb-2">
-          Account <span className="text-plaeen-green">Settings</span>
+          <span className="text-plaeen-green">Settings</span>
         </h1>
         <p className="text-white/40 font-bold uppercase tracking-widest text-xs">Manage your profile and preferences</p>
       </div>
@@ -172,29 +169,6 @@ export const ProfilePage = () => {
                 </button>
               );
             })}
-          </div>
-        </Card>
-
-        {/* Preferences */}
-        <Card className="p-8 bg-plaeen-purple/20 border-white/10">
-          <h2 className="text-xl font-bold text-white uppercase tracking-tight mb-6 flex items-center gap-2">
-            <ShieldCheck size={20} className="text-plaeen-green" /> Preferences
-          </h2>
-          <div className="flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/10">
-            <div>
-              <p className="font-bold text-white uppercase tracking-tight">Restricted Mode (Child Friendly)</p>
-              <p className="text-xs text-white/40 mt-1">Only show child-friendly games and private groups</p>
-            </div>
-            <button
-              onClick={() => setRestrictedMode(!restrictedMode)}
-              className={`h-8 w-14 rounded-full p-1 transition-colors duration-300 ${
-                restrictedMode ? 'bg-plaeen-green' : 'bg-white/10'
-              }`}
-            >
-              <div className={`h-6 w-6 rounded-full bg-white transition-transform duration-300 ${
-                restrictedMode ? 'translate-x-6' : 'translate-x-0'
-              }`} />
-            </button>
           </div>
         </Card>
 

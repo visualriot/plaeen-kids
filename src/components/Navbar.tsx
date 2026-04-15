@@ -143,7 +143,7 @@ export const Navbar = () => {
                       to={role === 'kid' ? '/profile' : '/parent/settings'}
                       className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
                     >
-                      <UserIcon size={16} /> Profile Settings
+                      <UserIcon size={16} /> Settings
                     </Link>
 
                     <div className="h-px bg-white/5 my-2 mx-4" />

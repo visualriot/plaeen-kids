@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, Timestamp, addDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, Timestamp, addDoc, serverTimestamp, orderBy, limit, writeBatch } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { 
   Plus, 
@@ -80,10 +80,18 @@ export const KidDashboard = () => {
     if (!user || !activeKid) return;
 
     // Fetch upcoming sessions from groups the kid is in
-    const q = query(collection(db, 'groups'), where('members', 'array-contains', activeKid.uid));
+    const isParent = parentProfile?.role === 'parent';
+    const q = isParent 
+      ? query(collection(db, 'groups'), where('parentIds', 'array-contains', user.uid))
+      : query(collection(db, 'groups'), where('members', 'array-contains', activeKid.uid));
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allSessions: any[] = [];
-      snapshot.docs.forEach(groupDoc => {
+      const relevantDocs = isParent 
+        ? snapshot.docs.filter(doc => doc.data().members?.includes(activeKid.uid))
+        : snapshot.docs;
+
+      relevantDocs.forEach(groupDoc => {
         const groupData = groupDoc.data();
         // This is a simplified fetch, ideally sessions are in a subcollection or separate collection
         // For now, let's assume we fetch from a 'sessions' collection where groupId is in kid's groups
@@ -135,9 +143,11 @@ export const KidDashboard = () => {
     }
 
     const usedToday = activeKid.screenTime?.usedToday || 0;
-    const allowanceToday = activeKid.screenTime?.dailyAllowance || 0;
+    const todayAdjSum = (activeKid.screenTime?.todayAdjustments || [])
+      .reduce((acc: number, adj: any) => acc + (adj.type === 'reward' ? adj.minutes : -adj.minutes), 0);
+    const allowanceTodayTotal = (activeKid.screenTime?.dailyAllowance || 0) + todayAdjSum;
     
-    if (usedToday >= allowanceToday) {
+    if (usedToday >= allowanceTodayTotal) {
       setErrorMessage('You have no screen time left today!');
       return;
     }
@@ -242,14 +252,35 @@ export const KidDashboard = () => {
 
       if (activeKid.parentId && startTimeVal) {
         if (overtimeMin > 1) {
-          // Create approval request for punishment decision
-          await addDoc(collection(db, 'approvals'), {
+          // Use a batch to create both with cross-references
+          const notifRef = doc(collection(db, 'notifications'));
+          const approvalRef = doc(collection(db, 'approvals'));
+          const batch = writeBatch(db);
+
+          batch.set(notifRef, {
+            userId: activeKid.parentId,
+            type: 'time_warning',
+            childId: activeKid.uid,
+            childName: activeKid.displayName,
+            title: 'Overtime Alert',
+            message: `${activeKid.displayName} finished their session. (Overtime: ${overtimeMin}m - Action Required)`,
+            duration: durationMin,
+            overtime: overtimeMin,
+            createdAt: serverTimestamp(),
+            read: false,
+            rewardEligible: false,
+            handled: false,
+            approvalId: approvalRef.id
+          });
+
+          batch.set(approvalRef, {
             parentId: activeKid.parentId,
             childId: activeKid.uid,
             childName: activeKid.displayName,
             type: 'overtime',
             title: `Overtime: ${overtimeMin}m`,
             status: 'pending',
+            notificationId: notifRef.id,
             data: {
               overtimeMinutes: overtimeMin,
               sessionDuration: durationMin,
@@ -258,21 +289,23 @@ export const KidDashboard = () => {
             },
             createdAt: serverTimestamp()
           });
-        }
 
-        await addDoc(collection(db, 'notifications'), {
-          userId: activeKid.parentId,
-          type: overtimeMin > 1 ? 'time_warning' : 'session_end',
-          childId: activeKid.uid,
-          childName: activeKid.displayName,
-          title: overtimeMin > 1 ? 'Overtime Alert' : 'Session Ended',
-          message: `${activeKid.displayName} finished their session.${overtimeMin > 1 ? ` (Overtime: ${overtimeMin}m - Action Required)` : overtimeMin > 0 ? ' (Within grace period)' : ''}`,
-          duration: durationMin,
-          overtime: overtimeMin,
-          createdAt: serverTimestamp(),
-          read: false,
-          rewardEligible: overtimeMin === 0
-        });
+          await batch.commit();
+        } else {
+          await addDoc(collection(db, 'notifications'), {
+            userId: activeKid.parentId,
+            type: 'session_end',
+            childId: activeKid.uid,
+            childName: activeKid.displayName,
+            title: 'Session Ended',
+            message: `${activeKid.displayName} finished their session.${overtimeMin > 0 ? ' (Within grace period)' : ''}`,
+            duration: durationMin,
+            overtime: overtimeMin,
+            createdAt: serverTimestamp(),
+            read: false,
+            rewardEligible: overtimeMin === 0
+          });
+        }
 
         // Add to session history
         await addDoc(collection(db, 'sessions'), {
@@ -329,9 +362,13 @@ export const KidDashboard = () => {
   
   const restrictedDays = (activeKid.screenTime as any)?.restrictedDays || [];
   const dailyAllowance = activeKid.screenTime?.dailyAllowance || 0;
+  const todayAdjSum = (activeKid.screenTime?.todayAdjustments || [])
+    .reduce((acc: number, adj: any) => acc + (adj.type === 'reward' ? adj.minutes : -adj.minutes), 0);
+  
+  const dailyAllowanceTotal = dailyAllowance + todayAdjSum;
 
   // Calculate Synced Allowances
-  const weeklyAllowance = dailyAllowance * (7 - restrictedDays.length);
+  const weeklyAllowance = (dailyAllowance * (7 - restrictedDays.length)) + (activeKid.screenTime?.weeklyAdjustments || 0);
   
   // Monthly calculation: non-restricted days in current month
   const getMonthlyAllowance = () => {
@@ -342,10 +379,10 @@ export const KidDashboard = () => {
       const dayName = format(new Date(now.getFullYear(), now.getMonth(), i), 'EEE');
       if (!restrictedDays.includes(dayName)) total += dailyAllowance;
     }
-    return total;
+    return total + (activeKid.screenTime?.monthlyAdjustments || 0);
   };
 
-  const allowance = screenTimeView === 'daily' ? dailyAllowance : 
+  const allowance = screenTimeView === 'daily' ? dailyAllowanceTotal : 
                     screenTimeView === 'weekly' ? weeklyAllowance : 
                     getMonthlyAllowance();
 
@@ -375,17 +412,30 @@ export const KidDashboard = () => {
       // Daily Reset
       if (format(now, 'yyyy-MM-dd') !== format(lastReset, 'yyyy-MM-dd')) {
         updates['screenTime.usedToday'] = 0;
+        updates['screenTime.todayAdjustments'] = [];
         
-        // Apply scheduled deductions for today
         const todayStr = format(now, 'yyyy-MM-dd');
         const deductions = activeKid.screenTime?.scheduledDeductions || [];
+        
+        // Clean up old deductions (older than today)
+        const activeDeductions = deductions.filter(d => d.date >= todayStr);
+        if (activeDeductions.length !== deductions.length) {
+          updates['screenTime.scheduledDeductions'] = activeDeductions;
+        }
+
+        // Apply scheduled deductions for today
         const todayDeductions = deductions.filter(d => d.date === todayStr);
         
         if (todayDeductions.length > 0) {
           const totalDeduction = todayDeductions.reduce((acc, d) => acc + d.minutes, 0);
           updates['screenTime.usedToday'] = totalDeduction;
-          // Remove only today's deductions from the list
-          updates['screenTime.scheduledDeductions'] = deductions.filter(d => d.date !== todayStr);
+          updates['screenTime.todayAdjustments'] = todayDeductions.map(d => ({
+            id: d.id || Math.random().toString(36).substr(2, 9),
+            type: 'penalty',
+            minutes: d.minutes,
+            reason: 'Scheduled Penalty',
+            timestamp: new Date().toISOString()
+          }));
         }
 
         // Clean up old banned dates
@@ -401,18 +451,18 @@ export const KidDashboard = () => {
       // Weekly Reset
       const firstDay = parentProfile?.firstDayOfWeek || 'Mon';
       const currentDay = format(now, 'EEE');
-      const lastResetDay = format(lastReset, 'EEE');
       
       // If today is the first day of week and we haven't reset this week yet
-      // A simple way: check if more than 6 days passed OR if it's the first day and last reset was a different day
       const daysSinceReset = Math.floor((now.getTime() - lastReset.getTime()) / (1000 * 60 * 60 * 24));
       if (currentDay === firstDay && (daysSinceReset >= 1 || format(now, 'yyyy-ww') !== format(lastReset, 'yyyy-ww'))) {
         updates['screenTime.usedWeekly'] = 0;
+        updates['screenTime.weeklyAdjustments'] = 0;
       }
 
       // Monthly Reset
       if (now.getDate() === 1 && now.getMonth() !== lastReset.getMonth()) {
         updates['screenTime.usedMonthly'] = 0;
+        updates['screenTime.monthlyAdjustments'] = 0;
       }
 
       if (Object.keys(updates).length > 0) {
@@ -502,22 +552,24 @@ export const KidDashboard = () => {
                 const today = format(new Date(), 'EEE');
                 const restrictedDays = (activeKid.screenTime as any)?.restrictedDays || [];
                 const usedToday = activeKid.screenTime?.usedToday || 0;
-                const allowanceToday = activeKid.screenTime?.dailyAllowance || 0;
+                const todayAdjSum = (activeKid.screenTime?.todayAdjustments || [])
+                  .reduce((acc: number, adj: any) => acc + (adj.type === 'reward' ? adj.minutes : -adj.minutes), 0);
+                const allowanceTodayTotal = (activeKid.screenTime?.dailyAllowance || 0) + todayAdjSum;
 
                 if (restrictedDays.includes(today)) {
                   setErrorMessage("Today is a restricted day. No gaming sessions allowed!");
                   return;
                 }
-                if (usedToday >= allowanceToday) {
+                if (usedToday >= allowanceTodayTotal) {
                   setErrorMessage('You have no screen time left today!');
                   return;
                 }
                 handleStartSession();
               }}
-              disabled={((activeKid.screenTime as any)?.restrictedDays || []).includes(format(new Date(), 'EEE')) || (activeKid.screenTime?.usedToday || 0) >= (activeKid.screenTime?.dailyAllowance || 0)}
+              disabled={restrictedDays.includes(format(new Date(), 'EEE')) || (activeKid.screenTime?.usedToday || 0) >= dailyAllowanceTotal}
               className={cn(
                 "font-bold uppercase tracking-widest px-12 py-6 transition-transform",
-                ((activeKid.screenTime as any)?.restrictedDays || []).includes(format(new Date(), 'EEE')) || (activeKid.screenTime?.usedToday || 0) >= (activeKid.screenTime?.dailyAllowance || 0)
+                restrictedDays.includes(format(new Date(), 'EEE')) || (activeKid.screenTime?.usedToday || 0) >= dailyAllowanceTotal
                   ? "bg-white/5 text-white/20 cursor-not-allowed"
                   : "bg-plaeen-green text-black shadow-[0_0_20px_rgba(118,233,0,0.4)] hover:scale-105"
               )}
@@ -642,6 +694,67 @@ export const KidDashboard = () => {
                 <p className="text-xl font-bold text-plaeen-green">{allowance}m</p>
               </div>
             </div>
+
+            {/* Today's Adjustments Feedback */}
+            {(() => {
+              const todayStr = format(new Date(), 'yyyy-MM-dd');
+              const adjustments = [...(activeKid.screenTime?.todayAdjustments || [])];
+              
+              // Add scheduled deductions for today that aren't already in adjustments (for legacy support)
+              const scheduledToday = (activeKid.screenTime?.scheduledDeductions || [])
+                .filter(d => d.date === todayStr)
+                .filter(d => !adjustments.some(a => a.id === d.id));
+              
+              scheduledToday.forEach(d => {
+                adjustments.push({
+                  id: d.id,
+                  type: 'penalty',
+                  minutes: d.minutes,
+                  reason: 'Scheduled Penalty',
+                  timestamp: new Date().toISOString()
+                });
+              });
+
+              if (adjustments.length === 0) return null;
+
+              return (
+                <div className="mt-6 space-y-3">
+                  {adjustments.map((adj, idx) => (
+                    <motion.div
+                      key={adj.id || idx}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={cn(
+                        "p-4 rounded-2xl border-2 flex items-center justify-between shadow-lg",
+                        adj.type === 'penalty' 
+                          ? "bg-red-500/10 border-red-500/20 text-red-500" 
+                          : "bg-plaeen-green/10 border-plaeen-green/20 text-plaeen-green"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-8 w-8 rounded-lg flex items-center justify-center",
+                          adj.type === 'penalty' ? "bg-red-500/20" : "bg-plaeen-green/20"
+                        )}>
+                          {adj.type === 'penalty' ? <Clock size={16} /> : <Zap size={16} />}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest leading-none mb-1">
+                            {adj.minutes}m {adj.type} applied today
+                          </p>
+                          <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">
+                            {adj.reason}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-sm font-black tracking-tighter">
+                        {adj.type === 'penalty' ? '-' : '+'}{adj.minutes}m
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {Boolean(activeKid.screenTime?.accumulatedTime && activeKid.screenTime.accumulatedTime > 0) && (
               <div className="mt-6 p-4 rounded-2xl bg-plaeen-purple/10 border border-plaeen-purple/20 flex items-center justify-between">

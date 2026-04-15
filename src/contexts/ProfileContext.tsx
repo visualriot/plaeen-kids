@@ -17,11 +17,20 @@ interface KidProfile {
     usedWeekly?: number;
     monthlyAllowance?: number;
     usedMonthly?: number;
+    weeklyAdjustments?: number;
+    monthlyAdjustments?: number;
     accumulatedTime?: number;
     bannedDates?: string[];
     scheduledDeductions?: { date: string; minutes: number }[];
     isSessionActive?: boolean;
     sessionStartTime?: number;
+    todayAdjustments?: {
+      id: string;
+      type: 'penalty' | 'reward';
+      minutes: number;
+      reason: string;
+      timestamp: string;
+    }[];
   };
   allowedGames: string[];
 }
@@ -35,6 +44,7 @@ interface ProfileContextType {
     role: 'parent';
     onboardingComplete?: boolean;
     guardianPin?: string;
+    firstDayOfWeek?: 'Mon' | 'Sun';
     linkedKids: string[];
   } | null;
   role: 'parent' | 'kid' | 'none';
@@ -107,6 +117,9 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [activeKidId, parentProfile]);
 
   const handleSetActiveKid = (kidId: string | null) => {
+    if (kidId) {
+      setKidLoading(true);
+    }
     setActiveKidId(kidId);
     setIsParentAuthenticated(false);
     sessionStorage.removeItem('isParentAuth');
@@ -135,7 +148,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     sessionStorage.removeItem('isParentAuth');
   };
 
-  const role = activeKid ? 'kid' : (isParentAuthenticated ? 'parent' : 'none');
+  const role = React.useMemo(() => {
+    if (activeKidId || localStorage.getItem('activeKidId')) return 'kid';
+    if (isParentAuthenticated || sessionStorage.getItem('isParentAuth') === 'true') return 'parent';
+    return 'none';
+  }, [activeKidId, isParentAuthenticated]);
+
   const isLoading = parentLoading || kidLoading;
 
   return (
