@@ -55,13 +55,12 @@ export const TeamsPage = () => {
 
     const q = query(
       collection(db, 'groups'), 
-      where('members', 'array-contains', activeUid),
       where('parentIds', 'array-contains', user?.uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
       // Filter client-side to avoid multiple array-contains
-      setTeams(allTeams.filter((t: any) => (t as any).members.includes(activeUid)));
+      setTeams(allTeams.filter((t: any) => t.members?.includes(activeUid)));
       setLoading(false);
     });
 
