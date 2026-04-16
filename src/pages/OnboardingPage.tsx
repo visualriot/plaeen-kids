@@ -5,6 +5,7 @@ import { collection, doc, setDoc, updateDoc, query, where, getDocs, serverTimest
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { validateUsername } from '@/lib/validation';
 import { 
   UserPlus, 
   Shield, 
@@ -23,7 +24,7 @@ import { cn } from '@/lib/utils';
 interface KidForm {
   name: string;
   username: string;
-  age: string;
+  birthDate: string;
   dailyAllowance: number;
   allowanceType: 'daily' | 'weekly' | 'monthly';
   restrictedDays: string[];
@@ -40,7 +41,7 @@ export const OnboardingPage = () => {
   const [currentKid, setCurrentKid] = useState<KidForm>({
     name: '',
     username: '',
-    age: '',
+    birthDate: '',
     dailyAllowance: 60,
     allowanceType: 'daily',
     restrictedDays: [],
@@ -52,24 +53,32 @@ export const OnboardingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddKid = async () => {
-    if (!currentKid.name || !currentKid.username || !currentKid.age) {
+    if (!currentKid.name || !currentKid.username || !currentKid.birthDate) {
       setError('Please fill in all required fields');
       return;
     }
 
+    const validation = validateUsername(currentKid.username);
+    if (!validation.isValid) {
+      setError(validation.error || 'Invalid username');
+      return;
+    }
+
+    const cleanUsername = currentKid.username.toLowerCase().trim().replace(/^@/, '');
+
     // Check if username is unique - Query users_public instead of users to avoid permission issues
-    const q = query(collection(db, 'users_public'), where('username', '==', currentKid.username.toLowerCase()));
+    const q = query(collection(db, 'users_public'), where('username', '==', cleanUsername));
     const snap = await getDocs(q);
     if (!snap.empty) {
       setError('Username already taken');
       return;
     }
 
-    setKids([...kids, currentKid]);
+    setKids([...kids, { ...currentKid, username: cleanUsername }]);
     setCurrentKid({
       name: '',
       username: '',
-      age: '',
+      birthDate: '',
       dailyAllowance: 60,
       allowanceType: 'daily',
       restrictedDays: [],
@@ -128,7 +137,7 @@ export const OnboardingPage = () => {
           uid: kidId,
           displayName: kid.name,
           username: kid.username.toLowerCase(),
-          age: parseInt(kid.age),
+          birthDate: kid.birthDate,
           parentId: user.uid,
           role: 'kid',
           screenTime: {
@@ -266,21 +275,32 @@ export const OnboardingPage = () => {
                   <input 
                     type="text"
                     value={currentKid.username}
-                    onChange={e => setCurrentKid({...currentKid, username: e.target.value})}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setCurrentKid({...currentKid, username: val});
+                      if (val) {
+                        const v = validateUsername(val);
+                        setError(v.isValid ? '' : v.error || 'Invalid username');
+                      } else {
+                        setError('');
+                      }
+                    }}
                     placeholder="e.g. CYBER_MAX"
-                    className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                    className={cn(
+                      "w-full rounded-xl border-2 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:outline-none transition-all uppercase tracking-widest",
+                      error && currentKid.username ? "border-red-500 focus:border-red-500" : "border-white/5 focus:border-plaeen-green"
+                    )}
                   />
                 </div>
 
                 <div className="flex gap-6">
-                  <div className="space-y-4 w-24">
-                    <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">Age</label>
+                  <div className="space-y-4 flex-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">Date of Birth</label>
                     <input 
-                      type="number"
-                      value={currentKid.age}
-                      onChange={e => setCurrentKid({...currentKid, age: e.target.value})}
-                      placeholder="10"
-                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      type="date"
+                      value={currentKid.birthDate}
+                      onChange={e => setCurrentKid({...currentKid, birthDate: e.target.value})}
+                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
                     />
                   </div>
                   <div className="space-y-4 flex-1">

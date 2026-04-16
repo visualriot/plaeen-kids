@@ -21,6 +21,7 @@ import { ParentActivityPage } from './pages/ParentActivityPage';
 import { OvertimeDecisionPage } from './pages/OvertimeDecisionPage';
 import { ProfileSelectionPage } from './pages/ProfileSelectionPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { ProfileProvider, useProfile } from './contexts/ProfileContext';
 
 import { ParentSettingsPage } from './pages/ParentSettingsPage';
@@ -89,6 +90,7 @@ function AppContent() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/onboarding" element={user ? <OnboardingPage /> : <Navigate to="/auth" />} />
           <Route path="/select-profile" element={user ? <ProfileSelectionPage /> : <Navigate to="/auth" />} />
+          <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/auth" />} />
           
           {/* Kid Routes */}
           <Route

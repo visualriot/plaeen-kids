@@ -76,7 +76,11 @@ service cloud.firestore {
     }
 
     function isParentOf(childId) {
-      return isAuthenticated() && resource.data.parentId == request.auth.uid;
+      let parent = getUserData(request.auth.uid);
+      return isAuthenticated() && (
+        (parent.role == 'parent' && 'linkedKids' in parent && childId in parent.linkedKids) ||
+        (getUserData(childId).parentId == request.auth.uid)
+      );
     }
 
     function isGroupMember(groupId) {
@@ -154,7 +158,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       // Users can read their own profile, and parents can read their kids' profiles
-      allow read: if isOwner(userId) || (isAuthenticated() && resource != null && resource.data.parentId == request.auth.uid);
+      allow read: if isOwner(userId) || (isAuthenticated() && (
+        (resource != null && resource.data.parentId == request.auth.uid) ||
+        isParentOf(userId)
+      ));
       
       // Parents can create kid accounts, or users can create their own parent account
       allow create: if isAuthenticated() && isValidUser(request.resource.data) &&
@@ -183,18 +190,43 @@ service cloud.firestore {
     }
 
     match /friendRequests/{requestId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.fromId || request.auth.uid == resource.data.toId);
-      allow create: if isAuthenticated() && isValidFriendRequest(request.resource.data) && request.resource.data.fromId == request.auth.uid;
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.toId || request.auth.uid == resource.data.fromId) && 
-                      isValidFriendRequest(request.resource.data);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.fromId || request.auth.uid == resource.data.toId);
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.fromId || 
+        request.auth.uid == resource.data.toId ||
+        isParentOf(resource.data.fromId) ||
+        isParentOf(resource.data.toId)
+      );
+      allow create: if isAuthenticated() && isValidFriendRequest(request.resource.data) && (
+        request.resource.data.fromId == request.auth.uid ||
+        isParentOf(request.resource.data.fromId)
+      );
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.toId || 
+        request.auth.uid == resource.data.fromId ||
+        isParentOf(resource.data.toId) ||
+        isParentOf(resource.data.fromId)
+      ) && isValidFriendRequest(request.resource.data);
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.fromId || 
+        request.auth.uid == resource.data.toId ||
+        isParentOf(resource.data.fromId) ||
+        isParentOf(resource.data.toId)
+      );
     }
 
     match /sessions/{sessionId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.parentId || request.auth.uid == resource.data.childId);
-      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.childId || request.auth.uid == request.resource.data.parentId);
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.parentId);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.parentId);
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.parentId || 
+        request.auth.uid == resource.data.childId ||
+        isParentOf(resource.data.childId)
+      );
+      allow create: if isAuthenticated() && (
+        request.auth.uid == request.resource.data.childId || 
+        request.auth.uid == request.resource.data.parentId ||
+        isParentOf(request.resource.data.childId)
+      );
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.parentId || isParentOf(resource.data.childId));
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.parentId || isParentOf(resource.data.childId));
     }
 
     function isValidGroupGame(data) {
@@ -217,12 +249,13 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       // Public groups are readable by authenticated users
-      // Parents can read groups where their parentId is listed
+      // Parents can read groups where their parentId is listed or their kid is a member
       allow read: if isAuthenticated() && (
         resource.data.isPublic == true || 
         request.auth.uid in resource.data.members ||
         (resource.data.parentIds != null && request.auth.uid in resource.data.parentIds) ||
-        (getUserData(resource.data.ownerId).parentId == request.auth.uid)
+        (getUserData(resource.data.ownerId).parentId == request.auth.uid) ||
+        (resource.data.members.hasAny(getUserData(request.auth.uid).linkedKids))
       );
       
       // Kids can only create private groups, parents can create for their kids
@@ -267,18 +300,31 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.userId ||
-        (resource.data.userId != null && getUserData(resource.data.userId).parentId == request.auth.uid)
+        (resource.data.userId != null && (
+          resource.data.parentId == request.auth.uid ||
+          isParentOf(resource.data.userId)
+        ))
       );
       allow create: if isAuthenticated() && (
         request.auth.uid == request.resource.data.userId || 
         // Parent creating for kid
-        (getUserData(request.resource.data.userId).parentId == request.auth.uid) ||
+        (request.resource.data.parentId == request.auth.uid) ||
+        isParentOf(request.resource.data.userId) ||
         // Kid creating for parent
-        (getUserData(request.auth.uid).parentId == request.resource.data.userId)
+        (getUserData(request.auth.uid).parentId == request.resource.data.userId) ||
+        // Friend requests/acceptances between kids
+        (request.resource.data.type in ['friend_request', 'friend_accepted'])
       );
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || getUserData(resource.data.userId).parentId == request.auth.uid) && 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'handled', 'decision']);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || getUserData(resource.data.userId).parentId == request.auth.uid);
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId || 
+        resource.data.parentId == request.auth.uid ||
+        isParentOf(resource.data.userId)
+      ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'handled', 'decision']);
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId || 
+        resource.data.parentId == request.auth.uid ||
+        isParentOf(resource.data.userId)
+      );
     }
   }
 }

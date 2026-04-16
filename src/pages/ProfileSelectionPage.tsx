@@ -8,11 +8,14 @@ import { Button } from '../components/Button';
 import { Lock, LogOut, Pencil, Settings, Shield, User, X, Camera, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn, calculateAge, formatName } from '../lib/utils';
+import { validateUsername } from '@/lib/validation';
 
 interface KidProfile {
   uid: string;
   displayName: string;
+  username: string;
+  birthDate?: string;
   photoURL?: string;
 }
 
@@ -92,11 +95,19 @@ export const ProfileSelectionPage = () => {
       return;
     }
 
+    const validation = validateUsername(editUsername);
+    if (!validation.isValid) {
+      setEditError(validation.error || 'Invalid username');
+      return;
+    }
+
     setIsSaving(true);
     try {
+      const cleanUsername = editUsername.toLowerCase().trim().replace(/^@/, '');
+      
       // Check if username is taken (if changed)
-      if (editUsername.toLowerCase() !== (editingKid as any).username?.toLowerCase()) {
-        const q = query(collection(db, 'users_public'), where('username', '==', editUsername.toLowerCase()));
+      if (cleanUsername !== (editingKid as any).username?.toLowerCase()) {
+        const q = query(collection(db, 'users_public'), where('username', '==', cleanUsername));
         const snap = await getDocs(q);
         if (!snap.empty) {
           setEditError('Username already taken');
@@ -107,14 +118,14 @@ export const ProfileSelectionPage = () => {
 
       const updates = {
         displayName: editName,
-        username: editUsername.toLowerCase(),
+        username: cleanUsername,
         photoURL: editAvatar
       };
 
       await updateDoc(doc(db, 'users', editingKid.uid), updates);
       await updateDoc(doc(db, 'users_public', editingKid.uid), {
         displayName: editName,
-        username: editUsername.toLowerCase(),
+        username: cleanUsername,
         photoURL: editAvatar
       });
 
@@ -188,9 +199,14 @@ export const ProfileSelectionPage = () => {
                   )}
                 </div>
               </div>
-              <span className="text-xl md:text-2xl font-bold text-white/60 group-hover:text-white uppercase tracking-widest transition-colors">
-                {kid.displayName}
-              </span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xl md:text-2xl font-bold text-white/60 group-hover:text-white uppercase tracking-widest transition-colors">
+                  {formatName(kid.displayName)}
+                </span>
+                <span className="text-xs md:text-sm font-bold text-white/20 group-hover:text-white/30 lowercase tracking-widest transition-colors">
+                  @{kid.username} {kid.birthDate && `• ${calculateAge(kid.birthDate)}Y`}
+                </span>
+              </div>
             </motion.button>
           ))}
 
@@ -299,8 +315,22 @@ export const ProfileSelectionPage = () => {
                     <input 
                       type="text"
                       value={editUsername}
-                      onChange={e => setEditUsername(e.target.value)}
-                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditUsername(val);
+                        if (val) {
+                          const v = validateUsername(val);
+                          setEditError(v.isValid ? '' : v.error || 'Invalid username');
+                        } else {
+                          setEditError('');
+                        }
+                      }}
+                      className={cn(
+                        "w-full rounded-xl border-2 bg-white/5 px-6 py-4 text-white font-bold focus:outline-none transition-all uppercase tracking-widest",
+                        editError && editError !== 'Name and username are required' && editError !== 'Username already taken' && editError !== 'Failed to save changes'
+                          ? "border-red-500 focus:border-red-500" 
+                          : "border-white/5 focus:border-plaeen-green"
+                      )}
                     />
                   </div>
 

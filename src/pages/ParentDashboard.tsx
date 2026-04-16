@@ -10,6 +10,7 @@ import { format, isSameWeek, isSameMonth } from 'date-fns';
 import { useProfile } from '@/contexts/ProfileContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { validateUsername } from '@/lib/validation';
+import { cn, formatName } from '@/lib/utils';
 
 interface KidProfile {
   uid: string;
@@ -31,7 +32,7 @@ interface ApprovalRequest {
   id: string;
   childId: string;
   childName: string;
-  type: 'friend' | 'game' | 'time' | 'team' | 'activity' | 'overtime';
+  type: 'game' | 'time' | 'team' | 'activity' | 'overtime';
   status: 'pending' | 'approved' | 'denied';
   title?: string;
   rewardMinutes?: number;
@@ -47,13 +48,24 @@ export const ParentDashboard = () => {
   const [isAddKidOpen, setIsAddKidOpen] = useState(false);
   const [newKidName, setNewKidName] = useState('');
   const [newKidUsername, setNewKidUsername] = useState('');
+  const [newKidBirthDate, setNewKidBirthDate] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAlert, setActiveAlert] = useState<{message: string, childName: string} | null>(null);
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
   const [rewardMinutes, setRewardMinutes] = useState(5);
   const [repairKid, setRepairKid] = useState<KidProfile | null>(null);
   const [repairUsername, setRepairUsername] = useState('');
+  const [repairUsernameError, setRepairUsernameError] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 10000); // Update every 10 seconds for better responsiveness
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -92,7 +104,7 @@ export const ParentDashboard = () => {
 
   const createKidAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newKidName || !newKidUsername) return;
+    if (!user || !newKidName || !newKidUsername || !newKidBirthDate) return;
     setError(null);
 
     try {
@@ -118,6 +130,7 @@ export const ParentDashboard = () => {
         uid: kidUid,
         displayName: newKidName,
         username: cleanUsername,
+        birthDate: newKidBirthDate,
         role: 'kid',
         parentId: user.uid,
         screenTime: {
@@ -150,6 +163,7 @@ export const ParentDashboard = () => {
       setIsAddKidOpen(false);
       setNewKidName('');
       setNewKidUsername('');
+      setNewKidBirthDate('');
       setError(null);
     } catch (err) {
       console.error('Error creating kid account:', err);
@@ -191,19 +205,6 @@ export const ParentDashboard = () => {
           };
 
           await updateDoc(doc(db, 'users', req.childId), kidUpdates);
-        }
-        
-        // Handle friend request approval
-        if (req.type === 'friend' && req.data?.friendId) {
-          const childRef = doc(db, 'users', req.childId);
-          const friendRef = doc(db, 'users', req.data.friendId);
-          
-          await updateDoc(childRef, {
-            friends: arrayUnion(req.data.friendId)
-          });
-          await updateDoc(friendRef, {
-            friends: arrayUnion(req.childId)
-          });
         }
       }
 
@@ -359,7 +360,7 @@ export const ParentDashboard = () => {
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-2xl font-bold text-white uppercase tracking-tight group-hover:text-plaeen-green transition-colors">
-                          {kid.displayName}
+                          {formatName(kid.displayName)}
                         </h3>
                         {kid.screenTime?.isSessionActive && (
                           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-[8px] font-bold text-plaeen-green uppercase tracking-widest animate-pulse">
@@ -369,7 +370,7 @@ export const ParentDashboard = () => {
                         )}
                         {kid.screenTime?.isSessionActive && kid.screenTime.sessionStartTime && (
                           (() => {
-                            const elapsed = Math.ceil((Date.now() - kid.screenTime.sessionStartTime) / 60000);
+                            const elapsed = Math.ceil((now - kid.screenTime.sessionStartTime) / 60000);
                             const remainingAtStart = Math.max(0, kid.screenTime.dailyAllowance - kid.screenTime.usedToday);
                             const currentOvertime = Math.max(0, elapsed - remainingAtStart);
                             if (currentOvertime > 0) {
@@ -386,7 +387,16 @@ export const ParentDashboard = () => {
                       <div className="flex flex-wrap gap-4">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
                           <Clock size={12} className="text-plaeen-green" />
-                          {Math.max(0, (kid.screenTime?.dailyAllowance || 0) - (kid.screenTime?.usedToday || 0))}m Remaining
+                          {(() => {
+                            const usedToday = kid.screenTime?.usedToday || 0;
+                            const allowance = kid.screenTime?.dailyAllowance || 0;
+                            let currentUsed = usedToday;
+                            if (kid.screenTime?.isSessionActive && kid.screenTime.sessionStartTime) {
+                              const elapsed = Math.floor((now - kid.screenTime.sessionStartTime) / 60000);
+                              currentUsed += elapsed;
+                            }
+                            return Math.max(0, allowance - currentUsed);
+                          })()}m Remaining
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
                           <Gamepad2 size={12} className="text-plaeen-green" />
@@ -671,9 +681,34 @@ export const ParentDashboard = () => {
                   <input 
                     type="text"
                     value={newKidUsername}
-                    onChange={(e) => setNewKidUsername(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewKidUsername(val);
+                      if (val) {
+                        const v = validateUsername(val);
+                        setUsernameError(v.isValid ? null : v.error || 'Invalid username');
+                      } else {
+                        setUsernameError(null);
+                      }
+                    }}
                     placeholder="KID_USERNAME"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest text-sm"
+                    className={cn(
+                      "w-full bg-white/5 border rounded-xl p-4 text-white placeholder:text-white/10 focus:outline-none transition-all uppercase tracking-widest text-sm",
+                      usernameError ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-plaeen-green"
+                    )}
+                    required
+                  />
+                  {usernameError && (
+                    <p className="text-red-500 text-[8px] font-bold uppercase tracking-widest mt-2">{usernameError}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-2 block">Date of Birth</label>
+                  <input 
+                    type="date"
+                    value={newKidBirthDate}
+                    onChange={(e) => setNewKidBirthDate(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest text-sm"
                     required
                   />
                 </div>
@@ -715,11 +750,26 @@ export const ParentDashboard = () => {
                   <input 
                     type="text"
                     value={repairUsername}
-                    onChange={(e) => setRepairUsername(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setRepairUsername(val);
+                      if (val) {
+                        const v = validateUsername(val);
+                        setRepairUsernameError(v.isValid ? null : v.error || 'Invalid username');
+                      } else {
+                        setRepairUsernameError(null);
+                      }
+                    }}
                     placeholder="KID_USERNAME"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-amber-500 focus:outline-none transition-all uppercase tracking-widest text-sm"
+                    className={cn(
+                      "w-full bg-white/5 border rounded-xl p-4 text-white placeholder:text-white/10 focus:outline-none transition-all uppercase tracking-widest text-sm",
+                      repairUsernameError ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-amber-500"
+                    )}
                     required
                   />
+                  {repairUsernameError && (
+                    <p className="text-red-500 text-[8px] font-bold uppercase tracking-widest mt-2">{repairUsernameError}</p>
+                  )}
                 </div>
                 {error && (
                   <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest text-center">{error}</p>

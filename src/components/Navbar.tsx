@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -23,14 +23,56 @@ import {
 import { Button } from './Button';
 import { useProfile } from '../contexts/ProfileContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatName } from '../lib/utils';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { NotificationPanel } from './NotificationPanel';
 
 export const Navbar = () => {
   const [user] = useAuthState(auth);
   const { role, activeKid, logoutProfile } = useProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const activeUid = activeKid?.uid || (role === 'parent' ? user?.uid : null);
+
+  useEffect(() => {
+    setUnreadCount(0);
+    if (!activeUid) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', activeUid),
+      where('read', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [activeUid]);
+
+  // Click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isUserMenuOpen && userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+      if (isNotificationsOpen && notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isUserMenuOpen, isNotificationsOpen]);
 
   const handleLogout = () => {
     auth.signOut();
@@ -87,15 +129,28 @@ export const Navbar = () => {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2">
-            <button className="p-2 text-white/40 hover:text-white transition-colors relative">
+          <div className="hidden md:flex items-center gap-2 relative" ref={notificationsRef}>
+            <button 
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className={`p-2 transition-colors relative ${isNotificationsOpen ? 'text-plaeen-green' : 'text-white/40 hover:text-white'}`}
+            >
               <Bell size={20} />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
+              )}
             </button>
+
+            {activeUid && (
+              <NotificationPanel 
+                userId={activeUid}
+                isOpen={isNotificationsOpen}
+                onClose={() => setIsNotificationsOpen(false)}
+              />
+            )}
           </div>
 
           {/* User Profile Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button 
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-3 p-1 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
@@ -109,7 +164,7 @@ export const Navbar = () => {
               </div>
               <div className="hidden sm:block text-left pr-2">
                 <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-none mb-1">
-                  {activeKid?.displayName || user?.displayName || 'User'}
+                  {formatName(activeKid?.displayName || user?.displayName || 'User')}
                 </p>
                 <p className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest leading-none">
                   {role === 'kid' ? 'Gamer' : 'Guardian'}
@@ -120,42 +175,39 @@ export const Navbar = () => {
 
             <AnimatePresence>
               {isUserMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setIsUserMenuOpen(false)} />
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-4 w-64 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl p-2 z-20 backdrop-blur-xl"
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute right-0 mt-4 w-64 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl p-2 z-[70] backdrop-blur-xl"
+                >
+                  <div className="p-4 border-b border-white/5 mb-2">
+                    <p className="text-xs font-bold text-white uppercase tracking-widest">Account Settings</p>
+                  </div>
+                  
+                  <button 
+                    onClick={handleSwitchProfile}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
                   >
-                    <div className="p-4 border-b border-white/5 mb-2">
-                      <p className="text-xs font-bold text-white uppercase tracking-widest">Account Settings</p>
-                    </div>
-                    
-                    <button 
-                      onClick={handleSwitchProfile}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
-                    >
-                      <RefreshCw size={16} /> Switch Profile
-                    </button>
-                    
-                    <Link 
-                      to={role === 'kid' ? '/profile' : '/parent/settings'}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
-                    >
-                      <UserIcon size={16} /> Settings
-                    </Link>
+                    <RefreshCw size={16} /> Switch Profile
+                  </button>
+                  
+                  <Link 
+                    to={role === 'kid' ? '/profile' : '/parent/settings'}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
+                  >
+                    <UserIcon size={16} /> Settings
+                  </Link>
 
-                    <div className="h-px bg-white/5 my-2 mx-4" />
+                  <div className="h-px bg-white/5 my-2 mx-4" />
 
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
-                    >
-                      <LogOut size={16} /> Sign Out
-                    </button>
-                  </motion.div>
-                </>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
+                  >
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>

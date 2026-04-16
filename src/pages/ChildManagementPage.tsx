@@ -6,7 +6,7 @@ import { auth, db } from '@/firebase';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, deleteDoc, increment, orderBy, limit, setDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Shield, Clock, Gamepad2, Users, Trash2, Save, ArrowLeft, Plus, X, Search, Star, Zap, Info, Bell, History, RefreshCw, Lock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatName } from '@/lib/utils';
 import { format, isSameWeek, isSameMonth, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { validateUsername } from '@/lib/validation';
@@ -16,6 +16,7 @@ interface KidProfile {
   uid: string;
   displayName: string;
   username?: string;
+  birthDate?: string;
   photoURL?: string;
   screenTime: {
     dailyAllowance: number;
@@ -53,6 +54,8 @@ export const ChildManagementPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dailyAllowance, setDailyAllowance] = useState(60);
   const [allowanceType, setAllowanceType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -88,6 +91,7 @@ export const ChildManagementPage = () => {
         setKid(data);
         setDisplayName(data.displayName || '');
         setUsername(data.username || '');
+        setBirthDate(data.birthDate || '');
         setDailyAllowance(data.screenTime?.dailyAllowance || 60);
         setAllowanceType((data.screenTime as any)?.allowanceType || 'daily');
         setRestrictedDays((data.screenTime as any)?.restrictedDays || []);
@@ -101,7 +105,12 @@ export const ChildManagementPage = () => {
 
   useEffect(() => {
     if (!childId || !user) return;
-    const q = query(collection(db, 'approvals'), where('childId', '==', childId), where('status', '==', 'pending'));
+    const q = query(
+      collection(db, 'approvals'), 
+      where('childId', '==', childId), 
+      where('parentId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPendingApprovals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -113,6 +122,7 @@ export const ChildManagementPage = () => {
     const q = query(
       collection(db, 'sessions'), 
       where('childId', '==', childId),
+      where('parentId', '==', user.uid),
       orderBy('endTime', 'desc'),
       limit(10)
     );
@@ -275,6 +285,7 @@ export const ChildManagementPage = () => {
       await updateDoc(doc(db, 'users', childId), {
         displayName,
         username: cleanUsername,
+        birthDate,
         restrictedMode
       });
 
@@ -283,6 +294,7 @@ export const ChildManagementPage = () => {
         uid: childId,
         displayName,
         username: cleanUsername,
+        birthDate,
         photoURL: kid.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${childId}`,
         role: 'kid',
         parentId: user?.uid
@@ -350,7 +362,7 @@ export const ChildManagementPage = () => {
             />
           </div>
           <div>
-            <h1 className="text-5xl font-bold text-white uppercase tracking-tighter">{kid.displayName}</h1>
+            <h1 className="text-5xl font-bold text-white uppercase tracking-tighter">{formatName(kid.displayName)}</h1>
             <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-1">@{kid.username}</p>
           </div>
         </div>
@@ -551,15 +563,41 @@ export const ChildManagementPage = () => {
               <input 
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setUsername(val);
+                  if (val) {
+                    const v = validateUsername(val);
+                    setUsernameError(v.isValid ? null : v.error || 'Invalid username');
+                  } else {
+                    setUsernameError(null);
+                  }
+                }}
                 placeholder="SET_USERNAME"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                className={cn(
+                  "w-full bg-white/5 border rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none transition-all uppercase tracking-widest",
+                  usernameError ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-plaeen-green"
+                )}
               />
-              {!kid.username && (
+              {usernameError && (
+                <p className="text-[8px] text-red-500 font-bold uppercase tracking-widest mt-2">
+                  {usernameError}
+                </p>
+              )}
+              {!kid.username && !usernameError && (
                 <p className="text-[8px] text-amber-500 font-bold uppercase tracking-widest mt-2">
                   <Info size={10} className="inline mr-1" /> Username required for social features
                 </p>
               )}
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block mb-2">Date of Birth</label>
+              <input 
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+              />
             </div>
 
             <div className="pt-4 border-t border-white/5">

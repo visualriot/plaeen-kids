@@ -7,7 +7,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { Clock, Play, Square, AlertTriangle, CheckCircle2, ArrowLeft, Bell, ArrowUpDown, Filter, User, Search, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, subDays, isAfter, isToday } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatName, safeToDate } from '@/lib/utils';
 
 interface Notification {
   id: string;
@@ -113,8 +113,8 @@ export const ParentActivityPage = () => {
       .filter(n => !showUnreadOnly || !n.read)
       .sort((a, b) => {
         if (sortBy === 'date') {
-          const dateA = a.createdAt?.toDate() || new Date(0);
-          const dateB = b.createdAt?.toDate() || new Date(0);
+          const dateA = safeToDate(a.createdAt);
+          const dateB = safeToDate(b.createdAt);
           return sortOrder === 'desc' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
         } else {
           const nameA = a.childName || '';
@@ -130,15 +130,15 @@ export const ParentActivityPage = () => {
     if (filteredAndSortedNotifications.length === 0) return groups;
 
     if (sortBy === 'date') {
-      const today = filteredAndSortedNotifications.filter(n => n.createdAt && isToday(n.createdAt.toDate()));
+      const today = filteredAndSortedNotifications.filter(n => n.createdAt && isToday(safeToDate(n.createdAt)));
       const thisWeek = filteredAndSortedNotifications.filter(n => 
         n.createdAt && 
-        !isToday(n.createdAt.toDate()) && 
-        isAfter(n.createdAt.toDate(), subDays(new Date(), 7))
+        !isToday(safeToDate(n.createdAt)) && 
+        isAfter(safeToDate(n.createdAt), subDays(new Date(), 7))
       );
       const older = filteredAndSortedNotifications.filter(n => 
         n.createdAt && 
-        !isAfter(n.createdAt.toDate(), subDays(new Date(), 7))
+        !isAfter(safeToDate(n.createdAt), subDays(new Date(), 7))
       );
 
       if (sortOrder === 'desc') {
@@ -177,7 +177,7 @@ export const ParentActivityPage = () => {
       const warningsLast30Days = kidNotifications.filter(n => 
         n.type === 'time_warning' && 
         n.createdAt && 
-        isAfter(n.createdAt.toDate(), thirtyDaysAgo)
+        isAfter(safeToDate(n.createdAt), thirtyDaysAgo)
       ).length;
 
       // Calculate sessions today (started and finished)
@@ -185,7 +185,7 @@ export const ParentActivityPage = () => {
       const finishedSessionsToday = kidNotifications.filter(n => 
         (n.type === 'session_end' || n.type === 'time_warning') && 
         n.createdAt && 
-        isToday(n.createdAt.toDate()) &&
+        isToday(safeToDate(n.createdAt)) &&
         n.duration !== undefined
       );
 
@@ -386,7 +386,7 @@ export const ParentActivityPage = () => {
                               <div>
                                 <div className="flex items-center gap-3 mb-1">
                                   <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">{notif.childName}</span>
-                                  <span className="text-[8px] text-white/20 uppercase tracking-widest">• {notif.createdAt ? format(notif.createdAt.toDate(), 'MMM d, HH:mm') : 'Just now'}</span>
+                                  <span className="text-[8px] text-white/20 uppercase tracking-widest">• {notif.createdAt ? format(safeToDate(notif.createdAt), 'MMM d, HH:mm') : 'Just now'}</span>
                                 </div>
                                 <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-1">{notif.title}</h3>
                                 <p className="text-sm text-white/40">{notif.message}</p>

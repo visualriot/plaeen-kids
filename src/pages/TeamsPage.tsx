@@ -53,10 +53,10 @@ export const TeamsPage = () => {
   useEffect(() => {
     if (!activeUid) return;
 
-    const isParent = user?.uid !== activeUid;
     const q = query(
       collection(db, 'groups'), 
-      where(isParent ? 'parentIds' : 'members', 'array-contains', user?.uid)
+      where('members', 'array-contains', activeUid),
+      where('parentIds', 'array-contains', user?.uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));

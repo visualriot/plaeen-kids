@@ -7,12 +7,13 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { Check, X, Bell, UserPlus, Gamepad2, Clock, Users, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { cn, formatName, safeToDate } from '@/lib/utils';
 
 interface ApprovalRequest {
   id: string;
   childId: string;
   childName: string;
-  type: 'friend' | 'game' | 'time' | 'team' | 'overtime' | 'activity';
+  type: 'game' | 'time' | 'team' | 'overtime' | 'activity';
   status: 'pending' | 'approved' | 'denied';
   data: any;
   createdAt: any;
@@ -44,14 +45,6 @@ export const ApprovalsPage = () => {
         if (request.type === 'game') {
           await updateDoc(doc(db, 'users', request.childId), {
             allowedGames: arrayUnion(request.data.gameId)
-          });
-        } else if (request.type === 'friend') {
-          await addDoc(collection(db, 'friendRequests'), {
-            fromId: request.childId,
-            fromName: request.childName,
-            toId: request.data.friendId,
-            status: 'pending',
-            createdAt: serverTimestamp()
           });
         } else if (request.type === 'time') {
           const kidDoc = await getDoc(doc(db, 'users', request.childId));
@@ -149,7 +142,7 @@ export const ApprovalsPage = () => {
                     <div>
                       <div className="flex items-center gap-3 mb-1">
                         <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">{req.childName}</span>
-                        <span className="text-[8px] text-white/20 uppercase tracking-widest">• {format(req.createdAt.toDate(), 'MMM d, HH:mm')}</span>
+                        <span className="text-[8px] text-white/20 uppercase tracking-widest">• {format(safeToDate(req.createdAt), 'MMM d, HH:mm')}</span>
                       </div>
                       <h3 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
                         {req.type === 'friend' ? `Friend Request: ${req.data.friendName}` : 

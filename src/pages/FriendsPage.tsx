@@ -18,12 +18,14 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { Search, UserPlus, UserMinus, Check, X, Clock } from 'lucide-react';
+import { formatName } from '@/lib/utils';
 
 interface UserProfile {
   uid: string;
   displayName: string;
   username: string;
   photoURL?: string;
+  parentId?: string;
 }
 
 interface FriendRequest {
@@ -31,6 +33,7 @@ interface FriendRequest {
   fromId: string;
   fromName: string;
   toId: string;
+  toName?: string;
   status: 'pending' | 'accepted' | 'rejected';
 }
 
@@ -52,10 +55,24 @@ export const FriendsPage = () => {
   useEffect(() => {
     if (!activeUid) return;
 
-    // Listen to friend requests
-    const q = query(collection(db, 'friendRequests'), where('toId', '==', activeUid), where('status', '==', 'pending'));
-    const unsubscribeRequests = onSnapshot(q, (snapshot) => {
-      setRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest)));
+    // Listen to incoming friend requests
+    const qIncoming = query(collection(db, 'friendRequests'), where('toId', '==', activeUid), where('status', '==', 'pending'));
+    const unsubscribeIncoming = onSnapshot(qIncoming, (snapshot) => {
+      const incoming = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
+      setRequests(prev => {
+        const outgoing = prev.filter(r => r.fromId === activeUid);
+        return [...incoming, ...outgoing];
+      });
+    });
+
+    // Listen to outgoing friend requests
+    const qOutgoing = query(collection(db, 'friendRequests'), where('fromId', '==', activeUid), where('status', '==', 'pending'));
+    const unsubscribeOutgoing = onSnapshot(qOutgoing, (snapshot) => {
+      const outgoing = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
+      setRequests(prev => {
+        const incoming = prev.filter(r => r.toId === activeUid);
+        return [...incoming, ...outgoing];
+      });
     });
 
     // Listen to user's friends list
@@ -73,7 +90,8 @@ export const FriendsPage = () => {
     });
 
     return () => {
-      unsubscribeRequests();
+      unsubscribeIncoming();
+      unsubscribeOutgoing();
       unsubscribeUser();
     };
   }, [activeUid]);
@@ -106,31 +124,30 @@ export const FriendsPage = () => {
   const sendRequest = async (targetUser: UserProfile) => {
     if (!activeUid) return;
     try {
-      if (role === 'kid' && kidData?.parentId) {
-        // Create approval request for parent
-        await addDoc(collection(db, 'approvals'), {
-          parentId: kidData.parentId,
-          childId: kidData.uid,
-          childName: kidData.displayName || 'Anonymous',
-          type: 'friend',
-          status: 'pending',
-          data: {
-            friendId: targetUser.uid,
-            friendName: targetUser.displayName
-          },
-          createdAt: serverTimestamp()
+      await addDoc(collection(db, 'friendRequests'), {
+        fromId: activeUid,
+        fromName: kidData?.displayName || user?.displayName || 'Anonymous',
+        toId: targetUser.uid,
+        toName: targetUser.displayName,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+
+      // Create notification for recipient
+      if (targetUser.parentId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: targetUser.uid,
+          parentId: targetUser.parentId,
+          type: 'friend_request',
+          title: 'New Friend Request',
+          message: `${kidData?.displayName || user?.displayName || 'Anonymous'} wants to be friends!`,
+          createdAt: serverTimestamp(),
+          read: false,
+          fromId: activeUid
         });
-        setMessage({ text: 'Friend request submitted for parent approval!', type: 'success' });
-      } else {
-        await addDoc(collection(db, 'friendRequests'), {
-          fromId: activeUid,
-          fromName: kidData?.displayName || user?.displayName || 'Anonymous',
-          toId: targetUser.uid,
-          status: 'pending',
-          createdAt: serverTimestamp()
-        });
-        setMessage({ text: 'Request sent!', type: 'success' });
       }
+
+      setMessage({ text: 'Request sent!', type: 'success' });
     } catch (err) {
       console.error('Error sending request:', err);
     }
@@ -150,6 +167,24 @@ export const FriendsPage = () => {
         await updateDoc(doc(db, 'users', request.fromId), {
           friends: arrayUnion(activeUid)
         });
+
+        // Create notification for sender
+        const senderPublicDoc = await getDoc(doc(db, 'users_public', request.fromId));
+        if (senderPublicDoc.exists()) {
+          const senderData = senderPublicDoc.data();
+          if (senderData.parentId) {
+            await addDoc(collection(db, 'notifications'), {
+              userId: request.fromId,
+              parentId: senderData.parentId,
+              type: 'friend_accepted',
+              title: 'Friend Request Accepted',
+              message: `${kidData?.displayName || user?.displayName || 'Anonymous'} accepted your friend request!`,
+              createdAt: serverTimestamp(),
+              read: false,
+              fromId: activeUid
+            });
+          }
+        }
       } else {
         await updateDoc(requestRef, { status: 'rejected' });
       }
@@ -221,7 +256,7 @@ export const FriendsPage = () => {
                         className="h-12 w-12 rounded-full border-2 border-plaeen-green/20"
                       />
                       <div>
-                        <p className="font-bold text-white uppercase tracking-tight">{u.displayName}</p>
+                        <p className="font-bold text-white uppercase tracking-tight">{formatName(u.displayName)}</p>
                         <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">@{u.username}</p>
                       </div>
                     </div>
@@ -259,7 +294,7 @@ export const FriendsPage = () => {
                         className="h-12 w-12 rounded-full border-2 border-plaeen-green/20"
                       />
                       <div>
-                        <p className="font-bold text-white uppercase tracking-tight">{friend.displayName}</p>
+                        <p className="font-bold text-white uppercase tracking-tight">{formatName(friend.displayName)}</p>
                         <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">@{friend.username}</p>
                       </div>
                     </div>
@@ -310,30 +345,50 @@ export const FriendsPage = () => {
               <p className="text-sm text-white/40 text-center py-4">No pending requests</p>
             ) : (
               <div className="space-y-4">
-                {requests.map((req) => (
-                  <div key={req.id} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-sm font-medium text-white mb-3">
-                      <span className="text-plaeen-green">{req.fromName}</span> wants to be friends
-                    </p>
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        className="flex-1 h-8 bg-plaeen-green text-black"
-                        onClick={() => handleRequest(req, true)}
-                      >
-                        Accept
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="flex-1 h-8 border border-white/10"
-                        onClick={() => handleRequest(req, false)}
-                      >
-                        Decline
-                      </Button>
+                {requests.map((req) => {
+                  const isIncoming = req.toId === activeUid;
+                  return (
+                    <div key={req.id} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex justify-between items-start mb-3">
+                        <p className="text-sm font-medium text-white">
+                          {isIncoming ? (
+                            <>
+                              <span className="text-plaeen-green">{req.fromName}</span>
+                              <span className="text-white/40 ml-1">Invited You</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-white/40 mr-1">Sent to</span>
+                              <span className="text-plaeen-green">{req.toName || 'Friend'}</span>
+                            </>
+                          )}
+                        </p>
+                        {!isIncoming && (
+                          <span className="text-[8px] font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">Pending</span>
+                        )}
+                      </div>
+                      {isIncoming && (
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            className="flex-1 h-8 bg-plaeen-green text-black"
+                            onClick={() => handleRequest(req, true)}
+                          >
+                            Accept
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="flex-1 h-8 border border-white/10"
+                            onClick={() => handleRequest(req, false)}
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>

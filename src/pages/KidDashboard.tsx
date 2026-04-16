@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, Timestamp, addDoc, serverTimestamp, orderBy, limit, writeBatch } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, setDoc, getDoc, getDocs, Timestamp, addDoc, serverTimestamp, orderBy, limit, writeBatch, deleteDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { 
   Plus, 
   Users, 
+  UserPlus,
   Clock, 
   Gamepad2, 
   Bell, 
@@ -20,14 +21,16 @@ import {
   Zap,
   Star,
   Trophy,
-  Activity
+  Activity,
+  MoreVertical,
+  Trash2
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useProfile } from '@/contexts/ProfileContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { cn } from '@/lib/utils';
+import { cn, calculateAge, formatName } from '@/lib/utils';
 
 export const KidDashboard = () => {
   const [user] = useAuthState(auth);
@@ -47,8 +50,19 @@ export const KidDashboard = () => {
   const [isSubmittingChore, setIsSubmittingChore] = useState(false);
   const [choreSuccess, setChoreSuccess] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationLimit, setNotificationLimit] = useState(5);
+  const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
+  const [activeNotifMenu, setActiveNotifMenu] = useState<string | null>(null);
   const [screenTimeView, setScreenTimeView] = useState<'daily' | 'weekly' | 'monthly'>((activeKid?.screenTime as any)?.allowanceType || 'daily');
   const navigate = useNavigate();
+
+  // Sync session state from activeKid
+  useEffect(() => {
+    if (activeKid?.screenTime) {
+      setIsSessionActive(!!activeKid.screenTime.isSessionActive);
+      setSessionStartTime(activeKid.screenTime.sessionStartTime || null);
+    }
+  }, [activeKid?.uid, activeKid?.screenTime?.isSessionActive, activeKid?.screenTime?.sessionStartTime]);
 
   useEffect(() => {
     if (activeKid?.screenTime) {
@@ -79,17 +93,18 @@ export const KidDashboard = () => {
   useEffect(() => {
     if (!user || !activeKid) return;
 
-    // Fetch upcoming sessions from groups the kid is in
-    const isParent = parentProfile?.role === 'parent';
-    const q = isParent 
-      ? query(collection(db, 'groups'), where('parentIds', 'array-contains', user.uid))
-      : query(collection(db, 'groups'), where('members', 'array-contains', activeKid.uid));
+    const isParent = user?.uid !== activeKid?.uid;
+    const q = query(
+      collection(db, 'groups'), 
+      where(isParent ? 'parentIds' : 'members', 'array-contains', user?.uid)
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allSessions: any[] = [];
-      const relevantDocs = isParent 
-        ? snapshot.docs.filter(doc => doc.data().members?.includes(activeKid.uid))
-        : snapshot.docs;
+      const relevantDocs = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.members && data.members.includes(activeKid.uid);
+      });
 
       relevantDocs.forEach(groupDoc => {
         const groupData = groupDoc.data();
@@ -111,17 +126,70 @@ export const KidDashboard = () => {
       collection(db, 'notifications'), 
       where('userId', '==', activeKid.uid),
       orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(notificationLimit + 1)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setHasMoreNotifications(docs.length > notificationLimit);
+      setNotifications(docs.slice(0, notificationLimit));
     }, (error) => {
       console.error("Notification listener error:", error);
     });
 
     return () => unsubscribe();
-  }, [user, activeKid]);
+  }, [user, activeKid, notificationLimit]);
+
+  // Cleanup old notifications (older than 30 days)
+  useEffect(() => {
+    if (!activeKid) return;
+    
+    const cleanupOldNotifications = async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', activeKid.uid),
+        where('createdAt', '<', Timestamp.fromDate(thirtyDaysAgo))
+      );
+      
+      try {
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const batch = writeBatch(db);
+          snapshot.docs.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+        }
+      } catch (err) {
+        console.error('Error cleaning up notifications:', err);
+      }
+    };
+    
+    cleanupOldNotifications();
+  }, [activeKid?.uid]);
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'notifications', id), { read: true });
+      setActiveNotifMenu(null);
+    } catch (err) {
+      console.error('Error marking as read:', err);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+      setActiveNotifMenu(null);
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
+  };
+
+  const requiresAction = (type: string) => {
+    return ['friend_request', 'team_invite', 'overtime'].includes(type);
+  };
 
   const handleStartSession = async () => {
     if (!activeKid) return;
@@ -533,7 +601,12 @@ export const KidDashboard = () => {
           animate={{ opacity: 1, x: 0 }}
         >
           <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
-            Welcome, <span className="text-plaeen-green">{activeKid.displayName}</span>
+            Welcome, <span className="text-plaeen-green">{formatName(activeKid.displayName)}</span>
+            {activeKid.birthDate && (
+              <span className="ml-4 text-2xl text-white/20 font-bold">
+                {calculateAge(activeKid.birthDate)}Y
+              </span>
+            )}
           </h1>
           <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">Your Gaming Hub is Online</p>
         </motion.div>
@@ -810,13 +883,23 @@ export const KidDashboard = () => {
           </section>
 
           <section className="space-y-6">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
-              <Bell size={16} /> Notifications
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+                <Bell size={16} /> Notifications
+              </h2>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/notifications')}
+                className="text-[8px] font-bold uppercase tracking-widest text-white/40 hover:text-white"
+              >
+                See All
+              </Button>
+            </div>
             <div className="space-y-4">
               {notifications.map(notif => (
                 <Card key={notif.id} className={cn(
-                  "bg-white/5 border-white/10 p-4 transition-all",
+                  "bg-white/5 border-white/10 p-4 transition-all relative group",
                   !notif.read && "border-l-2 border-l-plaeen-green bg-plaeen-green/5"
                 )}>
                   <div className="flex flex-col gap-4">
@@ -825,17 +908,80 @@ export const KidDashboard = () => {
                         "h-10 w-10 rounded-xl flex items-center justify-center",
                         notif.type === 'decision' ? "bg-plaeen-purple/10 text-plaeen-purple" : 
                         notif.type === 'team_invite' ? "bg-plaeen-green/10 text-plaeen-green" :
+                        notif.type === 'friend_request' ? "bg-amber-500/10 text-amber-500" :
+                        notif.type === 'friend_accepted' ? "bg-plaeen-green/10 text-plaeen-green" :
                         "bg-plaeen-green/10 text-plaeen-green"
                       )}>
                         {notif.type === 'decision' ? <Shield size={20} /> : 
                          notif.type === 'team_invite' ? <Users size={20} /> :
+                         notif.type === 'friend_request' ? <UserPlus size={20} /> :
+                         notif.type === 'friend_accepted' ? <Star size={20} /> :
                          <Bell size={20} />}
                       </div>
                       <div className="flex-1">
-                        <p className="text-xs font-bold text-white uppercase tracking-tight">{notif.title || 'Notification'}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-xs font-bold text-white uppercase tracking-tight">{notif.title || 'Notification'}</p>
+                          {!notif.read && (
+                            <span className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest bg-plaeen-green/10 px-2 py-0.5 rounded">New</span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{notif.message}</p>
                       </div>
+
+                      {/* 3-dots menu */}
+                      {!requiresAction(notif.type) && (
+                        <div className="relative">
+                          <button 
+                            onClick={() => setActiveNotifMenu(activeNotifMenu === notif.id ? null : notif.id)}
+                            className="p-2 text-white/20 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+
+                          <AnimatePresence>
+                            {activeNotifMenu === notif.id && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => setActiveNotifMenu(null)} />
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                  className="absolute right-0 mt-2 w-40 rounded-xl bg-plaeen-dark border border-white/10 shadow-2xl p-1 z-20"
+                                >
+                                  {!notif.read && (
+                                    <button
+                                      onClick={() => handleMarkAsRead(notif.id)}
+                                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[8px] font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
+                                    >
+                                      <Check size={12} /> Mark as Read
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDeleteNotification(notif.id)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[8px] font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
+                                  >
+                                    <Trash2 size={12} /> Delete
+                                  </button>
+                                </motion.div>
+                              </>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
                     </div>
+                    
+                    {notif.type === 'friend_request' && (
+                      <div className="pl-14">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => navigate('/friends')}
+                          className="w-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10 font-bold uppercase tracking-widest text-[8px] py-2"
+                        >
+                          View Friend Requests
+                        </Button>
+                      </div>
+                    )}
                     
                     {notif.type === 'team_invite' && !notif.read && (
                       <div className="flex gap-2 pl-14">
@@ -859,6 +1005,7 @@ export const KidDashboard = () => {
                   </div>
                 </Card>
               ))}
+              
               {notifications.length === 0 && (
                 <Card className="bg-white/5 border-dashed border-white/10 p-8 text-center">
                   <p className="text-white/20 font-bold uppercase tracking-widest">No new notifications</p>
