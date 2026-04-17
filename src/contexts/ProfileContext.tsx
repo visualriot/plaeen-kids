@@ -33,6 +33,7 @@ interface KidProfile {
     }[];
   };
   allowedGames: string[];
+  teamAliases?: Record<string, string>;
 }
 
 interface ProfileContextType {
@@ -46,6 +47,7 @@ interface ProfileContextType {
     guardianPin?: string;
     firstDayOfWeek?: 'Mon' | 'Sun';
     linkedKids: string[];
+    teamAliases?: Record<string, string>;
   } | null;
   role: 'parent' | 'kid' | 'none';
   setActiveKid: (kidId: string | null) => void;

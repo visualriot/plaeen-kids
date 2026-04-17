@@ -1,10 +1,10 @@
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { auth, db } from '@/firebase';
-import { collection, query, where, onSnapshot, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Plus, Edit2, X, Check, UserPlus, Sparkles, Trash2, Settings, Shield } from 'lucide-react';
+import { Plus, Edit2, X, Check, UserPlus, Sparkles, Trash2, Settings, Shield, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,8 @@ interface Team {
   id: string;
   name: string;
   imageURL?: string;
+  adminIds: string[];
+  members: string[];
 }
 
 interface Friend {
@@ -34,34 +36,50 @@ import { useProfile } from '@/contexts/ProfileContext';
 
 export const TeamsPage = () => {
   const [user] = useAuthState(auth);
-  const { role, activeKid: kidData } = useProfile();
+  const { role, activeKid: kidData, parentProfile } = useProfile();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ type: 'leave' | 'delete', teamId: string } | null>(null);
   
   // Create Team State
   const [teamName, setTeamName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [members, setMembers] = useState<Friend[]>([]); // New state for member management
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const activeUid = kidData ? kidData.uid : user?.uid;
 
   useEffect(() => {
     if (!activeUid) return;
 
+    const isParent = role === 'parent';
     const q = query(
       collection(db, 'groups'), 
-      where('parentIds', 'array-contains', user?.uid)
+      where(isParent ? 'parentIds' : 'members', 'array-contains', activeUid)
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-      // Filter client-side to avoid multiple array-contains
-      setTeams(allTeams.filter((t: any) => t.members?.includes(activeUid)));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const allTeams = snapshot.docs
+        .map(docSnap => {
+          const data = docSnap.data() as any;
+          const adminIds = data.adminIds || (data.ownerId ? [data.ownerId] : []);
+          return { id: docSnap.id, ...data, adminIds } as Team;
+        })
+        .filter(t => (t.members || []).includes(activeUid) || (t.adminIds || []).includes(activeUid));
+      
+      setTeams(allTeams);
       setLoading(false);
+
+      // Extract all member UIDs from all teams to fetch their basic profiles
+      const allMemberIds = Array.from(new Set(allTeams.flatMap(t => t.members || [])));
+      if (allMemberIds.length > 0) {
+        // Fetch public profiles for member management in modal
+        const membersQuery = query(collection(db, 'users_public'), where('uid', 'in', allMemberIds));
+        const membersSnap = await getDocs(membersQuery);
+        setMembers(membersSnap.docs.map(d => d.data() as any));
+      }
     });
 
     // Fetch friends for the modal
@@ -87,24 +105,25 @@ export const TeamsPage = () => {
   const handleCreateTeam = async () => {
     if (!activeUid || !teamName.trim()) return;
 
+    // Check for duplicate names for this user
+    const nameExists = teams.some(t => t.name.toLowerCase() === teamName.trim().toLowerCase());
+    if (nameExists) {
+      alert(`You already have a team named "${teamName}". Please choose a different name.`);
+      return;
+    }
+
     try {
       const parentId = kidData?.parentId || user?.uid;
-      let groupId = editingTeam?.id;
+      let groupId = '';
 
-      if (editingTeam) {
-        await updateDoc(doc(db, 'groups', editingTeam.id), {
-          name: teamName,
-          imageURL: selectedAvatar,
-          // We don't change members here, only owner can edit basic info
-          // Invitations are handled separately or we could add new friends to pending
-          pendingMembers: arrayUnion(...selectedFriends)
-        });
-      } else {
+      // Send invitations
+      const finalInvites = [...selectedFriends];
         const docRef = await addDoc(collection(db, 'groups'), {
           name: teamName,
           ownerId: activeUid,
           members: [activeUid],
-          pendingMembers: selectedFriends,
+          adminIds: [activeUid],
+          pendingMembers: finalInvites,
           parentIds: [parentId],
           isPublic: false,
           games: [],
@@ -112,10 +131,9 @@ export const TeamsPage = () => {
           createdAt: new Date().toISOString()
         });
         groupId = docRef.id;
-      }
 
-      // Send notifications to all invited friends
-      const notificationPromises = selectedFriends.map(friendId => 
+      // Send notifications ONLY to the newly invited friends
+      const notificationPromises = finalInvites.map(friendId => 
         addDoc(collection(db, 'notifications'), {
           userId: friendId,
           type: 'team_invite',
@@ -136,7 +154,6 @@ export const TeamsPage = () => {
       setIsModalOpen(false);
       setTeamName('');
       setSelectedFriends([]);
-      setEditingTeam(null);
       setSelectedAvatar(AVATARS[0]);
     } catch (err) {
       console.error('Error saving team:', err);
@@ -145,22 +162,65 @@ export const TeamsPage = () => {
 
   const handleDeleteTeam = async (teamId: string) => {
     try {
-      await deleteDoc(doc(db, 'groups', teamId));
-      setConfirmDelete(null);
+      const batch = writeBatch(db);
+      
+      // Delete the group itself
+      batch.delete(doc(db, 'groups', teamId));
+      
+      // Cleanup associated notifications (invites)
+      const q = query(
+        collection(db, 'notifications'), 
+        where('type', '==', 'team_invite'),
+        where('data.groupId', '==', teamId)
+      );
+      const inviteSnaps = await getDocs(q);
+      inviteSnaps.forEach(d => {
+        batch.delete(d.ref);
+      });
+
+      await batch.commit();
+
+      setTeams(prev => prev.filter(t => t.id !== teamId));
+      setConfirmModal(null);
     } catch (err) {
       console.error('Error deleting team:', err);
+      setConfirmModal(null);
     }
   };
 
-  const openEditModal = (e: React.MouseEvent, team: Team) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEditingTeam(team);
-    setTeamName(team.name);
-    setSelectedAvatar(team.imageURL || AVATARS[0]);
-    // Note: We'd need to fetch members to pre-select friends, but for now we'll just reset
-    setSelectedFriends([]); 
-    setIsModalOpen(true);
+  const handleLeaveTeam = async (teamId: string) => {
+    if (!activeUid) return;
+    try {
+      await updateDoc(doc(db, 'groups', teamId), {
+        members: arrayRemove(activeUid),
+        adminIds: arrayRemove(activeUid)
+      });
+      setTeams(prev => prev.filter(t => t.id !== teamId));
+      setConfirmModal(null);
+    } catch (err) {
+      console.error('Error leaving team:', err);
+    }
+  };
+
+  const handleRemoveMember = async (teamId: string, memberId: string) => {
+    try {
+      await updateDoc(doc(db, 'groups', teamId), {
+        members: arrayRemove(memberId),
+        adminIds: arrayRemove(memberId)
+      });
+    } catch (err) {
+      console.error('Error removing member:', err);
+    }
+  };
+
+  const handleToggleAdmin = async (teamId: string, memberId: string, isCurrentlyAdmin: boolean) => {
+    try {
+      await updateDoc(doc(db, 'groups', teamId), {
+        adminIds: isCurrentlyAdmin ? arrayRemove(memberId) : arrayUnion(memberId)
+      });
+    } catch (err) {
+      console.error('Error toggling admin:', err);
+    }
   };
 
   const toggleFriend = (uid: string) => {
@@ -207,36 +267,61 @@ export const TeamsPage = () => {
         </div>
       ) : (
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl mx-auto">
-          {teams.map((team) => (
-            <Link key={team.id} to={`/teams/${team.id}`} className="group relative">
+          {teams.map((team) => {
+            const alias = (kidData?.teamAliases?.[team.id]) || (parentProfile?.teamAliases?.[team.id]);
+            const displayName = alias || team.name;
+
+            const cardContent = (
               <Card className="p-0 overflow-hidden border-none bg-transparent hover:bg-transparent transition-all">
                 <div className="relative aspect-square max-w-[200px] mx-auto overflow-hidden rounded-[2rem] border-2 border-transparent group-hover:border-plaeen-green group-hover:shadow-[0_0_30px_rgba(118,233,0,0.2)] transition-all duration-500">
                   <img
                     src={team.imageURL || `https://picsum.photos/seed/${team.id}/600/600`}
-                    alt={team.name}
+                    alt={displayName}
                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-plaeen-dark via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                   
                   {isEditMode ? (
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center gap-4 opacity-100 transition-opacity">
-                      <button 
-                        onClick={(e) => openEditModal(e, team)}
-                        className="h-10 w-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center gap-3 opacity-100 transition-opacity p-2">
+                      <Link 
+                        to={`/teams/${team.id}/settings`}
+                        className="h-10 w-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-transform shadow-xl shrink-0"
+                        title="Team Settings"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Settings size={20} />
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setConfirmDelete(team.id);
-                        }}
-                        className="h-10 w-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                      >
-                        <Trash2 size={20} />
-                      </button>
+                      </Link>
+                      
+                      {/* Leave Button: visible if not admin, OR if admin but multiple admins exist */}
+                      {(!(team.adminIds || []).includes(activeUid || '') || (team.adminIds || []).length > 1) && (
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmModal({ type: 'leave', teamId: team.id });
+                          }}
+                          className="h-10 w-10 rounded-full bg-amber-500 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-xl shrink-0"
+                          title="Leave Team"
+                        >
+                          <LogOut size={20} />
+                        </button>
+                      )}
+
+                      {/* Delete Button: only for admins */}
+                      {(team.adminIds || []).includes(activeUid || '') && (
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmModal({ type: 'delete', teamId: team.id });
+                          }}
+                          className="h-10 w-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-xl shrink-0"
+                          title="Delete Team"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -245,11 +330,25 @@ export const TeamsPage = () => {
                   )}
                 </div>
                 <h3 className="mt-4 text-lg font-bold text-white uppercase tracking-tight group-hover:text-plaeen-green transition-colors">
-                  {team.name}
+                  {displayName}
                 </h3>
               </Card>
-            </Link>
-          ))}
+            );
+
+            if (isEditMode) {
+              return (
+                <div key={team.id} className="group relative">
+                  {cardContent}
+                </div>
+              );
+            }
+
+            return (
+              <Link key={team.id} to={`/teams/${team.id}`} className="group relative">
+                {cardContent}
+              </Link>
+            );
+          })}
         </div>
       )}
 
@@ -257,7 +356,6 @@ export const TeamsPage = () => {
         <div className="mt-16 flex justify-center">
           <Button 
             onClick={() => {
-              setEditingTeam(null);
               setTeamName('');
               setSelectedAvatar(AVATARS[0]);
               setIsModalOpen(true);
@@ -269,33 +367,50 @@ export const TeamsPage = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {confirmDelete && (
+      {/* Confirmation Modals */}
+      {confirmModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-          <Card className="w-full max-w-md bg-plaeen-dark border-red-500/30 p-10 text-center">
-            <div className="h-16 w-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Trash2 size={32} className="text-red-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">Delete Team?</h2>
-            <p className="text-white/40 text-sm mb-8 font-bold uppercase tracking-widest leading-relaxed">
-              This will permanently remove the team and all its history.
-            </p>
-            <div className="flex gap-4">
-              <Button 
-                onClick={() => handleDeleteTeam(confirmDelete)}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-6 font-bold uppercase tracking-widest"
-              >
-                Confirm
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setConfirmDelete(null)}
-                className="flex-1 border-white/10 text-white hover:bg-white/5 py-6 font-bold uppercase tracking-widest"
-              >
-                Cancel
-              </Button>
-            </div>
-          </Card>
+          {(() => {
+            const team = teams.find(t => t.id === confirmModal.teamId);
+            const isDeleting = confirmModal.type === 'delete';
+            
+            return (
+              <Card className="w-full max-w-md bg-plaeen-dark border-red-500/30 p-10 text-center">
+                <div className={cn(
+                  "h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-6",
+                  isDeleting ? "bg-red-500/10" : "bg-amber-500/10"
+                )}>
+                  {isDeleting ? <Trash2 size={32} className="text-red-500" /> : <LogOut size={32} className="text-amber-500" />}
+                </div>
+                <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">
+                  {isDeleting ? 'Delete Team?' : 'Leave Team?'}
+                </h2>
+                <p className="text-white/40 text-sm mb-8 font-bold uppercase tracking-widest leading-relaxed">
+                  {isDeleting 
+                    ? "This will permanently remove the team and all its history." 
+                    : "You will no longer be able to access this team's sessions and games."}
+                </p>
+                <div className="flex gap-4">
+                  <Button 
+                    onClick={() => isDeleting ? handleDeleteTeam(confirmModal.teamId) : handleLeaveTeam(confirmModal.teamId)}
+                    className={cn(
+                      "flex-1 py-6 font-bold uppercase tracking-widest",
+                      isDeleting ? "bg-red-500 hover:bg-red-600 text-white" : "bg-amber-500 hover:bg-amber-600 text-white"
+                    )}
+                  >
+                    Confirm
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setConfirmModal(null)}
+                    className="flex-1 border-white/10 text-white hover:bg-white/5 py-6 font-bold uppercase tracking-widest"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </Card>
+            );
+          })()}
         </div>
       )}
 
@@ -306,7 +421,7 @@ export const TeamsPage = () => {
             <div className="flex justify-between items-center mb-12">
               <div>
                 <h2 className="text-4xl font-bold text-white uppercase tracking-tighter">
-                  {editingTeam ? 'Edit Team' : 'Create New Team'}
+                  Create New Team
                 </h2>
                 {role === 'kid' && (
                   <div className="flex items-center gap-2 mt-2 text-plaeen-green font-bold uppercase tracking-widest text-[10px]">
@@ -317,7 +432,6 @@ export const TeamsPage = () => {
               <button 
                 onClick={() => {
                   setIsModalOpen(false);
-                  setEditingTeam(null);
                 }} 
                 className="text-white/40 hover:text-white transition-colors"
               >
@@ -398,7 +512,7 @@ export const TeamsPage = () => {
                   className="w-full py-8 text-xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]" 
                   disabled={!teamName.trim()}
                 >
-                  {editingTeam ? 'Save Changes' : 'Create Team'}
+                  Create Team
                 </Button>
               </div>
             </div>

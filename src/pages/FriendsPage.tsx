@@ -12,7 +12,8 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Card } from '@/components/Card';
@@ -124,7 +125,20 @@ export const FriendsPage = () => {
   const sendRequest = async (targetUser: UserProfile) => {
     if (!activeUid) return;
     try {
-      await addDoc(collection(db, 'friendRequests'), {
+      // Check if a request already exists
+      const existingQuery = query(
+        collection(db, 'friendRequests'),
+        where('fromId', '==', activeUid),
+        where('toId', '==', targetUser.uid),
+        where('status', '==', 'pending')
+      );
+      const existingSnap = await getDocs(existingQuery);
+      if (!existingSnap.empty) {
+        setMessage({ text: 'Request already pending.', type: 'error' });
+        return;
+      }
+
+      const docRef = await addDoc(collection(db, 'friendRequests'), {
         fromId: activeUid,
         fromName: kidData?.displayName || user?.displayName || 'Anonymous',
         toId: targetUser.uid,
@@ -143,7 +157,8 @@ export const FriendsPage = () => {
           message: `${kidData?.displayName || user?.displayName || 'Anonymous'} wants to be friends!`,
           createdAt: serverTimestamp(),
           read: false,
-          fromId: activeUid
+          fromId: activeUid,
+          requestId: docRef.id
         });
       }
 
@@ -188,6 +203,18 @@ export const FriendsPage = () => {
       } else {
         await updateDoc(requestRef, { status: 'rejected' });
       }
+
+      // Delete the corresponding notification
+      const notifQuery = query(
+        collection(db, 'notifications'),
+        where('userId', '==', activeUid),
+        where('fromId', '==', request.fromId),
+        where('type', '==', 'friend_request')
+      );
+      const notifSnap = await getDocs(notifQuery);
+      const deletePromises = notifSnap.docs.map(d => deleteDoc(doc(db, 'notifications', d.id)));
+      await Promise.all(deletePromises);
+
     } catch (err) {
       console.error('Error handling request:', err);
     }

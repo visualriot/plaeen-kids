@@ -7,6 +7,7 @@ import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { TeamsPage } from './pages/TeamsPage';
 import { TeamDetailPage } from './pages/TeamDetailPage';
+import { TeamSettingsPage } from './pages/TeamSettingsPage';
 import { TeamGameDetailPage } from './pages/TeamGameDetailPage';
 import { GameSearchPage } from './pages/GameSearchPage';
 import { FriendsPage } from './pages/FriendsPage';
@@ -114,6 +115,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRole="kid">
                 <TeamDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams/:teamId/settings"
+            element={
+              <ProtectedRoute allowedRole="kid">
+                <TeamSettingsPage />
               </ProtectedRoute>
             }
           />

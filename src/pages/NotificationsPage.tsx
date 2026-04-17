@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { db, auth } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, limit, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, limit, serverTimestamp, arrayUnion, arrayRemove, getDoc, addDoc, getDocs, Timestamp, writeBatch } from 'firebase/firestore';
 import { Bell, X, Check, Trash2, Shield, Users, UserPlus, Star, Gamepad2, ArrowLeft, Clock, MoreVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { useProfile } from '../contexts/ProfileContext';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { formatName, safeToDate } from '../lib/utils';
+import { cn, formatName, safeToDate } from '../lib/utils';
 import { format, isToday, isYesterday, subDays, isAfter } from 'date-fns';
 
 interface Notification {
@@ -24,8 +24,9 @@ interface Notification {
 
 export const NotificationsPage = () => {
   const [user] = useAuthState(auth);
-  const { activeKid, role } = useProfile();
+  const { activeKid, role, parentProfile } = useProfile();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [feedback, setFeedback] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -75,16 +76,179 @@ export const NotificationsPage = () => {
     }
   };
 
+  const showFeedback = (message: string, type: 'success' | 'info' = 'success') => {
+    setFeedback({ message, type });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   const handleTeamInvite = async (notif: any, accept: boolean) => {
+    // Optimistic UI update - filter all related ones locally
+    const gid = notif.data?.groupId || notif.data?.teamId || notif.groupId || notif.teamId;
+    const teamName = notif.data?.teamName || notif.teamName || 'New Team';
+
+    setNotifications(prev => prev.filter(n => {
+      const nGid = n.data?.groupId || n.data?.teamId || n.groupId || n.teamId;
+      return !(n.type === 'team_invite' && nGid === gid);
+    }));
+
     try {
-      if (accept) {
-        await updateDoc(doc(db, 'groups', notif.data.teamId), {
-          members: arrayUnion(activeUid)
+      if (gid) {
+        const groupRef = doc(db, 'groups', gid);
+        if (accept) {
+          // Check for name collision in user's existing teams
+          const teamsQuery = query(
+            collection(db, 'groups'),
+            where('members', 'array-contains', activeUid)
+          );
+          const teamsSnap = await getDocs(teamsQuery);
+          const existingNames = teamsSnap.docs.map(d => d.data().name.toLowerCase());
+          
+          if (existingNames.includes(teamName.toLowerCase())) {
+            // Collision detected! Find a unique name
+            let suffix = 2;
+            let alias = `${teamName}-${suffix}`;
+            while (existingNames.includes(alias.toLowerCase())) {
+              suffix++;
+              alias = `${teamName}-${suffix}`;
+            }
+            
+            // Store alias in user document
+            await updateDoc(doc(db, 'users', activeUid), {
+              [`teamAliases.${gid}`]: alias
+            });
+          }
+
+          await updateDoc(groupRef, {
+            members: arrayUnion(activeUid),
+            pendingMembers: arrayRemove(activeUid)
+          });
+
+          // Add team event for member joined
+          await addDoc(collection(db, 'groups', gid, 'events'), {
+            type: 'member_joined',
+            userId: activeUid,
+            userName: activeKid?.displayName || parentProfile?.displayName || 'Anonymous',
+            createdAt: serverTimestamp(),
+            expiresAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+          });
+          showFeedback('You just joined the team!');
+        } else {
+          await updateDoc(groupRef, {
+            pendingMembers: arrayRemove(activeUid)
+          });
+          showFeedback('Invitation declined', 'info');
+        }
+
+        // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
+        const qClean = query(
+          collection(db, 'notifications'),
+          where('userId', '==', activeUid),
+          where('type', '==', 'team_invite')
+        );
+        const snap = await getDocs(qClean);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => {
+          const dData = d.data();
+          const dGid = dData.data?.groupId || dData.data?.teamId || dData.groupId || dData.teamId;
+          if (dGid === gid) {
+            batch.delete(d.ref);
+          }
         });
+        await batch.commit();
+      } else {
+        await deleteDoc(doc(db, 'notifications', notif.id));
       }
-      await deleteDoc(doc(db, 'notifications', notif.id));
     } catch (err) {
       console.error('Error handling team invite:', err);
+      showFeedback('Update failed. Please try again.', 'info');
+    }
+  };
+
+  const handleFriendRequest = async (notif: any, accept: boolean) => {
+    const fromId = notif.fromId || notif.data?.fromId;
+
+    // Optimistic UI update
+    setNotifications(prev => prev.filter(n => {
+      const nFromId = n.fromId || n.data?.fromId;
+      return !(n.type === 'friend_request' && nFromId === fromId);
+    }));
+
+    try {
+      if (accept) {
+        let requestId = notif.requestId || notif.data?.requestId;
+        if (!requestId && fromId) {
+          const q = query(
+            collection(db, 'friendRequests'),
+            where('fromId', '==', fromId),
+            where('toId', '==', activeUid),
+            where('status', '==', 'pending')
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) requestId = snap.docs[0].id;
+        }
+
+        if (requestId && fromId) {
+          await updateDoc(doc(db, 'friendRequests', requestId), { status: 'accepted' });
+          await updateDoc(doc(db, 'users', activeUid), { friends: arrayUnion(fromId) });
+          await updateDoc(doc(db, 'users', fromId), { friends: arrayUnion(activeUid) });
+
+          // Send acceptance notification
+          const senderPublicDoc = await getDoc(doc(db, 'users_public', fromId));
+          if (senderPublicDoc.exists()) {
+            const senderData = senderPublicDoc.data();
+            await addDoc(collection(db, 'notifications'), {
+              userId: fromId,
+              parentId: senderData.parentId || null,
+              type: 'friend_accepted',
+              title: 'Friend Request Accepted',
+              message: `${activeKid?.displayName || parentProfile?.displayName || 'Anonymous'} accepted your friend request!`,
+              createdAt: serverTimestamp(),
+              read: false,
+              fromId: activeUid
+            });
+          }
+          showFeedback('Friend request accepted!');
+        }
+      } else if (fromId) {
+        let requestId = notif.requestId || notif.data?.requestId;
+        if (!requestId) {
+          const q = query(
+            collection(db, 'friendRequests'),
+            where('fromId', '==', fromId),
+            where('toId', '==', activeUid),
+            where('status', '==', 'pending')
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) requestId = snap.docs[0].id;
+        }
+        if (requestId) {
+          await updateDoc(doc(db, 'friendRequests', requestId), { status: 'rejected' });
+        }
+        showFeedback('Request declined', 'info');
+      }
+      
+      // AGGRESSIVE CLEANUP: Find all notifications for this friend request
+      if (fromId) {
+        const qClean = query(
+          collection(db, 'notifications'),
+          where('userId', '==', activeUid),
+          where('type', '==', 'friend_request')
+        );
+        const snap = await getDocs(qClean);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => {
+          const dData = d.data();
+          const dFromId = dData.fromId || dData.data?.fromId;
+          if (dFromId === fromId) {
+            batch.delete(d.ref);
+          }
+        });
+        await batch.commit();
+      } else {
+        await deleteDoc(doc(db, 'notifications', notif.id));
+      }
+    } catch (err) {
+      console.error('Error handling friend request:', err);
     }
   };
 
@@ -184,6 +348,22 @@ export const NotificationsPage = () => {
         )}
       </div>
 
+      <AnimatePresence>
+        {feedback && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -20 }}
+            className={cn(
+                  "mb-8 p-4 rounded-2xl border font-bold uppercase tracking-widest text-xs text-center shadow-lg",
+                  feedback.type === 'success' ? "bg-plaeen-green/10 text-plaeen-green border-plaeen-green/20" : "bg-white/5 text-white/40 border-white/10"
+                )}
+          >
+            {feedback.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="space-y-12">
         {Object.keys(groupedNotifications).length === 0 ? (
           <Card className="bg-white/5 border-dashed border-white/10 p-20 text-center">
@@ -204,7 +384,7 @@ export const NotificationsPage = () => {
                 {items.map((notif: Notification) => (
                   <Card 
                     key={notif.id}
-                    className={`group relative bg-white/5 border-white/10 p-6 transition-all hover:bg-white/[0.07] ${!notif.read ? 'border-l-4 border-l-plaeen-green' : 'opacity-60'}`}
+                    className={`group relative bg-white/5 border-white/10 p-6 transition-all hover:bg-white/[0.07] ${!notif.read ? 'border-l-4 border-l-plaeen-green' : 'opacity-60'} ${activeMenu === notif.id ? 'z-50' : 'z-0'}`}
                   >
                     <div className="flex justify-between items-start gap-6">
                       <div className="flex gap-6 flex-1" onClick={() => handleNotificationClick(notif)} style={{ cursor: 'pointer' }}>
@@ -226,8 +406,8 @@ export const NotificationsPage = () => {
                           </div>
                           <p className="text-sm text-white/60 font-medium leading-relaxed mb-4">{notif.message}</p>
                           
-                          {/* Action Buttons */}
-                          {notif.type === 'team_invite' && !notif.read && (
+                           {/* Action Buttons - Always show if notification exists, as it's deleted upon fulfillment */}
+                          {notif.type === 'team_invite' && (
                             <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 size="sm" 
@@ -247,15 +427,30 @@ export const NotificationsPage = () => {
                             </div>
                           )}
 
-                          {notif.type === 'friend_request' && !notif.read && (
+                          {notif.type === 'friend_request' && (
                             <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 size="sm" 
-                                variant="outline"
-                                onClick={() => navigate('/friends')}
-                                className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10 text-[10px] font-bold uppercase tracking-widest px-6 py-2"
+                                onClick={() => handleFriendRequest(notif, true)}
+                                className="bg-plaeen-green text-black text-[10px] font-bold uppercase tracking-widest px-6 py-2"
                               >
-                                View Request
+                                Accept
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleFriendRequest(notif, false)}
+                                className="border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest px-6 py-2"
+                              >
+                                Decline
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => navigate('/friends')}
+                                className="text-white/20 text-[8px] font-bold uppercase tracking-widest px-4 py-2 ml-auto"
+                              >
+                                View
                               </Button>
                             </div>
                           )}

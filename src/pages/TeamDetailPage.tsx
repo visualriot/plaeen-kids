@@ -1,18 +1,21 @@
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { auth, db } from '@/firebase';
-import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc, addDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, getDoc, addDoc, deleteDoc, Timestamp, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Plus, Edit2, X, ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Trash2, Bell, UserPlus, Gamepad2, Sparkles, Check, HelpCircle, MessageSquare, RotateCcw } from 'lucide-react';
-import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Plus, Edit2, X, ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Trash2, Bell, UserPlus, Gamepad2, Sparkles, Check, HelpCircle, MessageSquare, RotateCcw, Clock, Shield, Settings } from 'lucide-react';
+import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, isAfter, subDays } from 'date-fns';
+import { cn, safeToDate } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Team {
   id: string;
   name: string;
   members: string[];
+  adminIds: string[];
+  pendingMembers?: string[];
   ownerId: string;
   imageURL?: string;
   teamAvailability?: Record<string, string>;
@@ -48,15 +51,35 @@ interface Session {
 
 import { useProfile } from '@/contexts/ProfileContext';
 
+interface TeamEvent {
+  id: string;
+  type: 'member_joined';
+  userId: string;
+  userName: string;
+  createdAt: any;
+}
+
+const AVATARS = [
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Milo',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Oscar',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Ruby',
+];
+
 export const TeamDetailPage = () => {
   const { teamId } = useParams();
   const [user] = useAuthState(auth);
-  const { role, activeKid: kidData } = useProfile();
+  const { role, activeKid: kidData, parentProfile } = useProfile();
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<UserProfile[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<UserProfile[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [teamGames, setTeamGames] = useState<GroupGame[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [events, setEvents] = useState<TeamEvent[]>([]);
+  const [dismissedEvents, setDismissedEvents] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isProposeOpen, setIsProposeOpen] = useState(false);
@@ -76,7 +99,9 @@ export const TeamDetailPage = () => {
 
     const unsubscribe = onSnapshot(doc(db, 'groups', teamId), (docSnap) => {
       if (docSnap.exists()) {
-        setTeam({ id: docSnap.id, ...docSnap.data() } as Team);
+        const data = docSnap.data() as Team;
+        const adminIds = data.adminIds || (data.ownerId ? [data.ownerId] : []);
+        setTeam({ id: docSnap.id, ...data, adminIds });
       } else {
         navigate('/teams');
       }
@@ -91,10 +116,18 @@ export const TeamDetailPage = () => {
       setTeamGames(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GroupGame)));
     });
 
+    const eventsUnsubscribe = onSnapshot(
+      query(collection(db, 'groups', teamId, 'events'), orderBy('createdAt', 'desc'), limit(10)),
+      (snapshot) => {
+        setEvents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TeamEvent)));
+      }
+    );
+
     return () => {
       unsubscribe();
       sessionsUnsubscribe();
       gamesUnsubscribe();
+      eventsUnsubscribe();
     };
   }, [teamId, navigate]);
 
@@ -111,12 +144,28 @@ export const TeamDetailPage = () => {
   }, [team?.members]);
 
   useEffect(() => {
+    if (!team?.pendingMembers || team.pendingMembers.length === 0) {
+      setPendingMembers([]);
+      return;
+    }
+
+    const q = query(collection(db, 'users_public'), where('uid', 'in', team.pendingMembers));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPendingMembers(snapshot.docs.map(doc => doc.data() as UserProfile));
+    });
+
+    return () => unsubscribe();
+  }, [team?.pendingMembers]);
+
+  useEffect(() => {
     if (!activeUid) return;
     const fetchFriends = async () => {
       const userDoc = await getDoc(doc(db, 'users', activeUid));
       if (userDoc.exists()) {
         const friendIds = userDoc.data().friends || [];
-        const nonMemberFriends = friendIds.filter((id: string) => !team?.members.includes(id));
+        const nonMemberFriends = friendIds.filter((id: string) => 
+          !team?.members.includes(id) && !(team?.pendingMembers || []).includes(id)
+        );
         if (nonMemberFriends.length > 0) {
           const friendsQuery = query(collection(db, 'users_public'), where('uid', 'in', nonMemberFriends));
           const friendsSnap = await getDocs(friendsQuery);
@@ -136,26 +185,40 @@ export const TeamDetailPage = () => {
   }, [teamGames]);
 
   const addMember = async (memberId: string) => {
-    if (!teamId) return;
+    if (!teamId || !team) return;
+    
+    // Check if already a member or already has a pending invitation
+    if (team.members.includes(memberId) || (team.pendingMembers || []).includes(memberId)) {
+      return; 
+    }
+
     try {
+      // Find the friend's record to get their name
+      const friend = friends.find(f => f.uid === memberId);
+      
       await updateDoc(doc(db, 'groups', teamId), {
-        members: arrayUnion(memberId)
+        pendingMembers: arrayUnion(memberId)
       });
+
+      // Send notification for invitation
+      await addDoc(collection(db, 'notifications'), {
+        userId: memberId,
+        type: 'team_invite',
+        title: 'Team Invitation',
+        message: `${kidData?.displayName || parentProfile?.displayName || 'A friend'} invited you to join the team "${team.name}"`,
+        data: {
+          groupId: teamId,
+          teamName: team.name,
+          invitedBy: activeUid,
+          invitedByName: kidData?.displayName || parentProfile?.displayName || 'A friend'
+        },
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
       setIsAddMemberOpen(false);
     } catch (err) {
       console.error('Error adding member:', err);
-    }
-  };
-
-  const removeMember = async (memberId: string) => {
-    if (!teamId || !team) return;
-    if (memberId === team.ownerId) return alert('Cannot remove owner');
-    try {
-      await updateDoc(doc(db, 'groups', teamId), {
-        members: arrayRemove(memberId)
-      });
-    } catch (err) {
-      console.error('Error removing member:', err);
     }
   };
 
@@ -208,8 +271,40 @@ export const TeamDetailPage = () => {
 
   const headerImage = teamGames.length > 0 ? teamGames[0].image : 'https://picsum.photos/seed/gaming/1920/1080';
 
+  const activeEvents = events.filter(e => {
+    if (dismissedEvents.includes(e.id)) return false;
+    const created = safeToDate(e.createdAt);
+    return isAfter(created, subDays(new Date(), 1));
+  });
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
+      {/* Team Events Banners */}
+      <div className="space-y-2 mb-8">
+        <AnimatePresence>
+          {activeEvents.map(event => (
+            <motion.div
+              key={event.id}
+              initial={{ opacity: 0, height: 0, mb: 0 }}
+              animate={{ opacity: 1, height: 'auto', mb: 8 }}
+              exit={{ opacity: 0, height: 0, mb: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center justify-between bg-plaeen-green/10 border border-plaeen-green/20 rounded-2xl p-4 cursor-pointer hover:bg-plaeen-green/20 transition-all"
+                   onClick={() => setDismissedEvents(prev => [...prev, event.id])}>
+                <div className="flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)] animate-pulse" />
+                  <p className="text-xs font-bold text-white uppercase tracking-widest">
+                    <span className="text-plaeen-green">{event.userName}</span> joined the team!
+                  </p>
+                </div>
+                <X size={16} className="text-white/20 hover:text-white transition-colors" />
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Header Section */}
       <div className="relative h-[400px] rounded-[3rem] overflow-hidden mb-12 group">
         <img src={headerImage} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
@@ -219,7 +314,7 @@ export const TeamDetailPage = () => {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-8xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
-                {team.name}
+                {((kidData?.teamAliases?.[team.id]) || (parentProfile?.teamAliases?.[team.id])) || team.name}
               </h1>
               <div className="mt-6 flex items-center gap-4">
                 <Button 
@@ -228,8 +323,12 @@ export const TeamDetailPage = () => {
                 >
                   <Plus size={20} className="mr-2" /> Add Session
                 </Button>
-                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest px-8 py-6">
-                  <Edit2 size={20} className="mr-2" /> Edit Team
+                <Button 
+                  onClick={() => navigate(`/teams/${teamId}/settings`)}
+                  variant="outline" 
+                  className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest px-8 py-6"
+                >
+                  <Settings size={20} className="mr-2" /> Team Settings
                 </Button>
               </div>
             </div>
@@ -247,30 +346,66 @@ export const TeamDetailPage = () => {
             </Card>
           </div>
 
-          <div className="flex items-end justify-between">
-            <div className="flex flex-wrap gap-4">
-              {members.map((member) => (
-                <div key={member.uid} className="relative group/member">
-                  <div className="h-14 w-14 rounded-full border-2 border-plaeen-green p-1 bg-plaeen-dark shadow-[0_0_15px_rgba(118,233,0,0.2)]">
-                    <img
-                      src={member.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.uid}`}
-                      alt={member.displayName}
-                      className="h-full w-full rounded-full object-cover"
-                    />
+            <div className="flex items-end justify-between">
+              <div className="flex flex-wrap gap-4">
+                {[...members].sort((a, b) => {
+                  const aIsAdmin = team.adminIds?.includes(a.uid);
+                  const bIsAdmin = team.adminIds?.includes(b.uid);
+                  if (aIsAdmin && !bIsAdmin) return -1;
+                  if (!aIsAdmin && bIsAdmin) return 1;
+                  return 0;
+                }).map((member) => (
+                  <div key={member.uid} className="relative group/member">
+                    <div className={cn(
+                      "h-14 w-14 rounded-full border-2 p-1 bg-plaeen-dark shadow-[0_0_15px_rgba(118,233,0,0.2)]",
+                      team.adminIds?.includes(member.uid) ? "border-plaeen-green" : "border-white/10"
+                    )}>
+                      <img
+                        src={member.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.uid}`}
+                        alt={member.displayName}
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                      {team.adminIds?.includes(member.uid) && (
+                        <div className="absolute -top-1 -right-1 bg-plaeen-green rounded-full p-1 shadow-lg">
+                          <Shield size={10} className="text-black" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover/member:opacity-100 transition-opacity whitespace-nowrap z-20">
+                      <p className="text-[10px] font-bold text-white uppercase tracking-widest">
+                        {member.displayName} {team.adminIds?.includes(member.uid) && '(Admin)'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover/member:opacity-100 transition-opacity whitespace-nowrap z-20">
-                    <p className="text-[10px] font-bold text-white uppercase tracking-widest">{member.displayName}</p>
+                ))}
+                
+                {/* Pending Members */}
+                {pendingMembers.map((member) => (
+                  <div key={member.uid} className="relative group/member">
+                    <div className="h-14 w-14 rounded-full border-2 border-white/10 p-1 bg-plaeen-dark/60 opacity-60">
+                      <img
+                        src={member.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.uid}`}
+                        alt={member.displayName}
+                        className="h-full w-full rounded-full object-cover grayscale"
+                      />
+                      <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-1 shadow-lg">
+                        <Clock size={10} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover/member:opacity-100 transition-opacity whitespace-nowrap z-20">
+                      <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">{member.displayName} (Pending)</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              <button 
-                onClick={() => setIsAddMemberOpen(true)}
-                className="h-14 w-14 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-white/20 hover:border-plaeen-green hover:text-plaeen-green transition-all"
-              >
-                <Plus size={24} />
-              </button>
+                ))}
+
+                <button 
+                  onClick={() => setIsAddMemberOpen(true)}
+                  className="h-14 w-14 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-white/20 hover:border-plaeen-green hover:text-plaeen-green transition-all"
+                >
+                  <Plus size={24} />
+                </button>
+              </div>
             </div>
-          </div>
         </div>
       </div>
 

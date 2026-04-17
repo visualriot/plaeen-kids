@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, limit, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, limit, serverTimestamp, arrayUnion, arrayRemove, getDoc, addDoc, getDocs, Timestamp, writeBatch } from 'firebase/firestore';
 import { Bell, X, Check, Trash2, MoreVertical, Shield, Users, UserPlus, Star, Gamepad2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
-import { formatName, safeToDate } from '../lib/utils';
+import { cn, formatName, safeToDate } from '../lib/utils';
 import { format } from 'date-fns';
+import { useProfile } from '@/contexts/ProfileContext';
 
 interface Notification {
   id: string;
@@ -27,7 +28,10 @@ interface NotificationPanelProps {
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, isOpen, onClose }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [feedback, setFeedback] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
   const navigate = useNavigate();
+
+  const { activeKid, parentProfile } = useProfile();
 
   useEffect(() => {
     if (!userId || !isOpen) return;
@@ -62,16 +66,180 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
     }
   };
 
+  const showFeedback = (message: string, type: 'success' | 'info' = 'success') => {
+    setFeedback({ message, type });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   const handleTeamInvite = async (notif: any, accept: boolean) => {
+    // Optimistic UI update - filter all related ones locally
+    const gid = notif.data?.groupId || notif.data?.teamId || notif.groupId || notif.teamId;
+    const teamName = notif.data?.teamName || notif.teamName || 'New Team';
+
+    setNotifications(prev => prev.filter(n => {
+      const nGid = n.data?.groupId || n.data?.teamId || n.groupId || n.teamId;
+      return !(n.type === 'team_invite' && nGid === gid);
+    }));
+
     try {
-      if (accept) {
-        await updateDoc(doc(db, 'groups', notif.data.teamId), {
-          members: arrayUnion(userId)
+      if (gid) {
+        const groupRef = doc(db, 'groups', gid);
+        if (accept) {
+          // Check for name collision in user's existing teams
+          const teamsQuery = query(
+            collection(db, 'groups'),
+            where('members', 'array-contains', userId)
+          );
+          const teamsSnap = await getDocs(teamsQuery);
+          const existingNames = teamsSnap.docs.map(d => d.data().name.toLowerCase());
+          
+          if (existingNames.includes(teamName.toLowerCase())) {
+            // Collision detected! Find a unique name
+            let suffix = 2;
+            let alias = `${teamName}-${suffix}`;
+            while (existingNames.includes(alias.toLowerCase())) {
+              suffix++;
+              alias = `${teamName}-${suffix}`;
+            }
+            
+            // Store alias in user document
+            await updateDoc(doc(db, 'users', userId), {
+              [`teamAliases.${gid}`]: alias
+            });
+          }
+
+          await updateDoc(groupRef, {
+            members: arrayUnion(userId),
+            pendingMembers: arrayRemove(userId)
+          });
+
+          await addDoc(collection(db, 'groups', gid, 'events'), {
+            type: 'member_joined',
+            userId: userId,
+            userName: activeKid?.displayName || parentProfile?.displayName || 'Anonymous',
+            createdAt: serverTimestamp(),
+            expiresAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000)
+          });
+          showFeedback('You just joined the team!');
+        } else {
+          await updateDoc(groupRef, {
+            pendingMembers: arrayRemove(userId)
+          });
+          showFeedback('Invitation declined', 'info');
+        }
+
+        // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
+        const qClean = query(
+          collection(db, 'notifications'),
+          where('userId', '==', userId),
+          where('type', '==', 'team_invite')
+        );
+        const snap = await getDocs(qClean);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => {
+          const dData = d.data();
+          const dGid = dData.data?.groupId || dData.data?.teamId || dData.groupId || dData.teamId;
+          if (dGid === gid) {
+            batch.delete(d.ref);
+          }
         });
+        await batch.commit();
+      } else {
+        await deleteDoc(doc(db, 'notifications', notif.id));
       }
-      await deleteDoc(doc(db, 'notifications', notif.id));
     } catch (err) {
       console.error('Error handling team invite:', err);
+      showFeedback('Update failed', 'info');
+    }
+  };
+
+  const handleFriendRequest = async (notif: any, accept: boolean) => {
+    const fromId = notif.fromId || notif.data?.fromId;
+    
+    // Optimistic UI update
+    setNotifications(prev => prev.filter(n => {
+      const nFromId = n.fromId || n.data?.fromId;
+      return !(n.type === 'friend_request' && nFromId === fromId);
+    }));
+
+    try {
+      if (accept) {
+        // Find the friend request document
+        let requestId = notif.requestId || notif.data?.requestId;
+        if (!requestId && fromId) {
+          const q = query(
+            collection(db, 'friendRequests'),
+            where('fromId', '==', fromId),
+            where('toId', '==', userId),
+            where('status', '==', 'pending')
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) requestId = snap.docs[0].id;
+        }
+
+        if (requestId && fromId) {
+          await updateDoc(doc(db, 'friendRequests', requestId), { status: 'accepted' });
+          await updateDoc(doc(db, 'users', userId), { friends: arrayUnion(fromId) });
+          await updateDoc(doc(db, 'users', fromId), { friends: arrayUnion(userId) });
+
+          // Send acceptance notification
+          const senderPublicDoc = await getDoc(doc(db, 'users_public', fromId));
+          if (senderPublicDoc.exists()) {
+            const senderData = senderPublicDoc.data();
+            await addDoc(collection(db, 'notifications'), {
+              userId: fromId,
+              parentId: senderData.parentId || null,
+              type: 'friend_accepted',
+              title: 'Friend Request Accepted',
+              message: `${activeKid?.displayName || parentProfile?.displayName || 'Anonymous'} accepted your friend request!`,
+              createdAt: serverTimestamp(),
+              read: false,
+              fromId: userId
+            });
+          }
+          showFeedback('Friend request accepted!');
+        }
+      } else if (fromId) {
+        // Reject logic
+        let requestId = notif.requestId || notif.data?.requestId;
+        if (!requestId) {
+          const q = query(
+            collection(db, 'friendRequests'),
+            where('fromId', '==', fromId),
+            where('toId', '==', userId),
+            where('status', '==', 'pending')
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) requestId = snap.docs[0].id;
+        }
+        if (requestId) {
+          await updateDoc(doc(db, 'friendRequests', requestId), { status: 'rejected' });
+        }
+        showFeedback('Request declined', 'info');
+      }
+      
+      // AGGRESSIVE CLEANUP: Find all notifications for this friend request
+      if (fromId) {
+        const qClean = query(
+          collection(db, 'notifications'),
+          where('userId', '==', userId),
+          where('type', '==', 'friend_request')
+        );
+        const snap = await getDocs(qClean);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => {
+          const dData = d.data();
+          const dFromId = dData.fromId || dData.data?.fromId;
+          if (dFromId === fromId) {
+            batch.delete(d.ref);
+          }
+        });
+        await batch.commit();
+      } else {
+        await deleteDoc(doc(db, 'notifications', notif.id));
+      }
+    } catch (err) {
+      console.error('Error handling friend request:', err);
     }
   };
 
@@ -136,6 +304,22 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
             <h3 className="text-xs font-bold text-white uppercase tracking-widest">Notifications</h3>
           </div>
 
+          <AnimatePresence>
+            {feedback && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className={cn(
+                  "px-4 py-2 border-b font-bold uppercase tracking-widest text-[8px] text-center",
+                  feedback.type === 'success' ? "bg-plaeen-green/10 text-plaeen-green border-plaeen-green/20" : "bg-white/5 text-white/40 border-white/10"
+                )}
+              >
+                {feedback.message}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
             <div className="max-h-[480px] overflow-y-auto custom-scrollbar">
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
@@ -167,8 +351,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
                             {notif.message}
                           </p>
 
-                          {/* Action Buttons for specific types */}
-                          {notif.type === 'team_invite' && !notif.read && (
+                          {/* Action Buttons for specific types - showing always as fulfilled items are deleted */}
+                          {notif.type === 'team_invite' && (
                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 size="sm" 
@@ -188,15 +372,30 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
                             </div>
                           )}
 
-                          {notif.type === 'friend_request' && !notif.read && (
+                          {notif.type === 'friend_request' && (
                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                               <Button 
                                 size="sm" 
-                                variant="outline"
-                                onClick={() => navigate('/friends')}
-                                className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10 text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
+                                onClick={() => handleFriendRequest(notif, true)}
+                                className="bg-plaeen-green text-black text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
                               >
-                                View Request
+                                Accept
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleFriendRequest(notif, false)}
+                                className="border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
+                              >
+                                Decline
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => navigate('/friends')}
+                                className="text-white/20 text-[6px] font-bold uppercase tracking-widest px-2 py-1.5 h-auto ml-auto"
+                              >
+                                View
                               </Button>
                             </div>
                           )}
