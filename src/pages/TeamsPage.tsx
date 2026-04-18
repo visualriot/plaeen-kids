@@ -45,6 +45,7 @@ export const TeamsPage = () => {
   
   // Create Team State
   const [teamName, setTeamName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [members, setMembers] = useState<Friend[]>([]); // New state for member management
@@ -103,12 +104,13 @@ export const TeamsPage = () => {
   }, [activeUid]);
 
   const handleCreateTeam = async () => {
+    setNameError('');
     if (!activeUid || !teamName.trim()) return;
 
     // Check for duplicate names for this user
     const nameExists = teams.some(t => t.name.toLowerCase() === teamName.trim().toLowerCase());
     if (nameExists) {
-      alert(`You already have a team named "${teamName}". Please choose a different name.`);
+      setNameError('choose a unique name for your team');
       return;
     }
 
@@ -153,6 +155,7 @@ export const TeamsPage = () => {
 
       setIsModalOpen(false);
       setTeamName('');
+      setNameError('');
       setSelectedFriends([]);
       setSelectedAvatar(AVATARS[0]);
     } catch (err) {
@@ -255,13 +258,23 @@ export const TeamsPage = () => {
           <div className="relative group">
             <div className="absolute inset-0 bg-plaeen-green/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setTeamName('');
+                setNameError('');
+                setSelectedAvatar(AVATARS[0]);
+                setIsModalOpen(true);
+              }}
               className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-plaeen-purple/20 border-2 border-dashed border-white/10 transition-all hover:scale-105 hover:border-plaeen-green group"
             >
               <Plus size={64} className="text-white/10 group-hover:text-plaeen-green transition-colors" />
             </button>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} size="lg" className="px-12 py-8 text-xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+          <Button onClick={() => {
+            setTeamName('');
+            setNameError('');
+            setSelectedAvatar(AVATARS[0]);
+            setIsModalOpen(true);
+          }} size="lg" className="px-12 py-8 text-xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             Add new team
           </Button>
         </div>
@@ -357,6 +370,7 @@ export const TeamsPage = () => {
           <Button 
             onClick={() => {
               setTeamName('');
+              setNameError('');
               setSelectedAvatar(AVATARS[0]);
               setIsModalOpen(true);
             }}
@@ -469,10 +483,21 @@ export const TeamsPage = () => {
                 <input
                   type="text"
                   value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
+                  onChange={(e) => {
+                    setTeamName(e.target.value);
+                    setNameError('');
+                  }}
                   placeholder="e.g. DUMBLEDORE'S ARMY"
-                  className="w-full rounded-2xl border-2 border-white/10 bg-white/5 px-8 py-6 text-xl font-bold text-white uppercase focus:outline-none focus:border-plaeen-green transition-all"
+                  className={cn(
+                    "w-full rounded-2xl border-2 bg-white/5 px-8 py-6 text-xl font-bold text-white uppercase focus:outline-none transition-all",
+                    nameError ? "border-red-500 focus:border-red-500" : "border-white/10 focus:border-plaeen-green"
+                  )}
                 />
+                {nameError && (
+                  <p className="mt-2 text-xs font-bold uppercase tracking-widest text-red-500">
+                    {nameError}
+                  </p>
+                )}
               </div>
 
               {/* Add Friends */}

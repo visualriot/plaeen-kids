@@ -61,7 +61,7 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user] = useAuthState(auth);
-  const [activeKidId, setActiveKidId] = useState<string | null>(localStorage.getItem('activeKidId'));
+  const [activeKidId, setActiveKidId] = useState<string | null>(sessionStorage.getItem('activeKidId'));
   const [activeKid, setActiveKid] = useState<KidProfile | null>(null);
   const [parentProfile, setParentProfile] = useState<any | null>(null);
   const [isParentAuthenticated, setIsParentAuthenticated] = useState(sessionStorage.getItem('isParentAuth') === 'true');
@@ -110,7 +110,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setActiveKid({ uid: docSnap.id, ...docSnap.data() } as KidProfile);
       } else {
         setActiveKid(null);
-        localStorage.removeItem('activeKidId');
+        sessionStorage.removeItem('activeKidId');
       }
       setKidLoading(false);
     });
@@ -126,9 +126,9 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsParentAuthenticated(false);
     sessionStorage.removeItem('isParentAuth');
     if (kidId) {
-      localStorage.setItem('activeKidId', kidId);
+      sessionStorage.setItem('activeKidId', kidId);
     } else {
-      localStorage.removeItem('activeKidId');
+      sessionStorage.removeItem('activeKidId');
     }
   };
 
@@ -137,7 +137,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (val) {
       sessionStorage.setItem('isParentAuth', 'true');
       setActiveKidId(null);
-      localStorage.removeItem('activeKidId');
+      sessionStorage.removeItem('activeKidId');
     } else {
       sessionStorage.removeItem('isParentAuth');
     }
@@ -146,12 +146,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const logoutProfile = () => {
     setActiveKidId(null);
     setIsParentAuthenticated(false);
-    localStorage.removeItem('activeKidId');
+    sessionStorage.removeItem('activeKidId');
     sessionStorage.removeItem('isParentAuth');
   };
 
   const role = React.useMemo(() => {
-    if (activeKidId || localStorage.getItem('activeKidId')) return 'kid';
+    if (activeKidId || sessionStorage.getItem('activeKidId')) return 'kid';
     if (isParentAuthenticated || sessionStorage.getItem('isParentAuth') === 'true') return 'parent';
     return 'none';
   }, [activeKidId, isParentAuthenticated]);
