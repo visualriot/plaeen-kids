@@ -41,7 +41,11 @@ service cloud.firestore {
     }
 
     function isParentOf(childId) {
-      return isParent() && getMyDoc().get('linkedKids', []).hasAny([childId]);
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('linkedKids', []).hasAny([childId])) ||
+        (get(/databases/$(database)/documents/users/$(childId)).data.get('parentId', '') == request.auth.uid)
+      );
     }
 
     function isParentOfAnyMember(members) {
@@ -83,13 +87,25 @@ service cloud.firestore {
       );
       
       allow create: if isSignedIn() && (isOwner(userId) || incoming().get('parentId', '') == request.auth.uid);
-      allow update, delete: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
+      allow update: if isSignedIn() && (
+        isOwner(userId) || 
+        isParentOf(userId) || 
+        (existing().get('parentId', '') == request.auth.uid) ||
+        (incoming().get('parentId', '') == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
     }
 
     match /users_public/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && (isOwner(userId) || incoming().get('parentId', '') == request.auth.uid);
-      allow update, delete: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
+      allow update: if isSignedIn() && (
+        isOwner(userId) || 
+        isParentOf(userId) || 
+        (existing().get('parentId', '') == request.auth.uid) ||
+        (incoming().get('parentId', '') == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
     }
 
     match /friendRequests/{requestId} {
