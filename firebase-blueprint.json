@@ -154,6 +154,10 @@
       "schema": "User",
       "description": "User profiles"
     },
+    "/users_public/{userId}": {
+      "schema": "User",
+      "description": "Publicly searchable user profiles"
+    },
     "/friendRequests/{requestId}": {
       "schema": "FriendRequest",
       "description": "Friend requests"

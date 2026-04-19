@@ -23,6 +23,9 @@ import { OvertimeDecisionPage } from './pages/OvertimeDecisionPage';
 import { ProfileSelectionPage } from './pages/ProfileSelectionPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { ResetPinPage } from './pages/ResetPinPage';
+import { KidCalendarPage } from './pages/KidCalendarPage';
+import { ProposeSessionPage } from './pages/ProposeSessionPage';
 import { ProfileProvider, useProfile } from './contexts/ProfileContext';
 
 import { ParentSettingsPage } from './pages/ParentSettingsPage';
@@ -91,6 +94,8 @@ function AppContent() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/onboarding" element={user ? <OnboardingPage /> : <Navigate to="/auth" />} />
           <Route path="/select-profile" element={user ? <ProfileSelectionPage /> : <Navigate to="/auth" />} />
+          <Route path="/reset-pin" element={<ResetPinPage />} />
+          <Route path="/kid-calendar" element={user ? <KidCalendarPage /> : <Navigate to="/auth" />} />
           <Route path="/notifications" element={user ? <NotificationsPage /> : <Navigate to="/auth" />} />
           
           {/* Kid Routes */}
@@ -131,6 +136,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRole="kid">
                 <TeamGameDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams/:teamId/propose"
+            element={
+              <ProtectedRoute allowedRole="kid">
+                <ProposeSessionPage />
               </ProtectedRoute>
             }
           />

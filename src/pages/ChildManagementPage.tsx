@@ -11,6 +11,7 @@ import { format, isSameWeek, isSameMonth, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { validateUsername } from '@/lib/validation';
 import { useProfile } from '@/contexts/ProfileContext';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 interface KidProfile {
   uid: string;
@@ -85,9 +86,9 @@ export const ChildManagementPage = () => {
   useEffect(() => {
     if (!childId) return;
 
-    const unsubscribe = onSnapshot(doc(db, 'users', childId), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data() as KidProfile;
+    const unsubscribe = onSnapshot(doc(db, 'users', childId), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as KidProfile;
         setKid(data);
         setDisplayName(data.displayName || '');
         setUsername(data.username || '');
@@ -98,7 +99,7 @@ export const ChildManagementPage = () => {
         setRestrictedMode(data.restrictedMode || false);
         setAccumulatedTime(data.screenTime?.accumulatedTime || 0);
       }
-    });
+    }, (error) => handleFirestoreError(error, 'get', `users/${childId}`));
 
     return () => unsubscribe();
   }, [childId]);
@@ -113,7 +114,7 @@ export const ChildManagementPage = () => {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPendingApprovals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'approvals'));
     return () => unsubscribe();
   }, [childId, user]);
 
@@ -128,7 +129,7 @@ export const ChildManagementPage = () => {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setSessions(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'sessions'));
     return () => unsubscribe();
   }, [childId, user]);
 

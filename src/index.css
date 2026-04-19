@@ -67,3 +67,18 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@keyframes blink-glow {
+  0%, 100% { 
+    opacity: 1; 
+    box-shadow: 0 0 10px rgba(118, 233, 0, 0.2);
+  }
+  50% { 
+    opacity: 0.6; 
+    box-shadow: 0 0 30px rgba(118, 233, 0, 0.6);
+  }
+}
+
+.animate-blink-glow {
+  animation: blink-glow 2s infinite;
+}

@@ -21,6 +21,8 @@ import { Button } from '@/components/Button';
 import { Search, UserPlus, UserMinus, Check, X, Clock } from 'lucide-react';
 import { formatName } from '@/lib/utils';
 
+import { handleFirestoreError } from '@/lib/firestoreUtils';
+
 interface UserProfile {
   uid: string;
   displayName: string;
@@ -42,7 +44,7 @@ import { useProfile } from '@/contexts/ProfileContext';
 
 export const FriendsPage = () => {
   const [user] = useAuthState(auth);
-  const { role, activeKid: kidData, parentProfile } = useProfile();
+  const { role, userRole, activeKid: kidData, parentProfile, isParentViewingKid, isLoading: profileLoading } = useProfile();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
@@ -53,49 +55,94 @@ export const FriendsPage = () => {
 
   const activeUid = kidData ? kidData.uid : user?.uid;
 
+  // Sync parent email for searchability
   useEffect(() => {
-    if (!activeUid) return;
+    if (!user || user.isAnonymous || role !== 'parent') return;
+    const syncProfile = async () => {
+      try {
+        const publicRef = doc(db, 'users_public', user.uid);
+        const publicSnap = await getDoc(publicRef);
+        if (publicSnap.exists()) {
+          const data = publicSnap.data();
+          if (!data.email && user.email) {
+            await updateDoc(publicRef, { email: user.email.toLowerCase() });
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to sync parent email:", err);
+      }
+    };
+    syncProfile();
+  }, [user, role]);
 
-    // Listen to incoming friend requests
-    const qIncoming = query(collection(db, 'friendRequests'), where('toId', '==', activeUid), where('status', '==', 'pending'));
+  useEffect(() => {
+    if (!activeUid || !user || profileLoading) return;
+
+    const qIncoming = isParentViewingKid
+      ? query(collection(db, 'friendRequests'), 
+          where('toId', '==', activeUid), 
+          where('toParentId', '==', user?.uid), 
+          where('status', '==', 'pending'))
+      : query(collection(db, 'friendRequests'), 
+          where('toId', '==', activeUid), 
+          where('status', '==', 'pending'));
+
     const unsubscribeIncoming = onSnapshot(qIncoming, (snapshot) => {
       const incoming = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
       setRequests(prev => {
         const outgoing = prev.filter(r => r.fromId === activeUid);
         return [...incoming, ...outgoing];
       });
+    }, (error) => {
+      console.error("Error with incoming friend requests query:", error);
+      handleFirestoreError(error, 'list', 'friendRequests');
     });
 
     // Listen to outgoing friend requests
-    const qOutgoing = query(collection(db, 'friendRequests'), where('fromId', '==', activeUid), where('status', '==', 'pending'));
+    const qOutgoing = isParentViewingKid
+      ? query(collection(db, 'friendRequests'), 
+          where('fromId', '==', activeUid), 
+          where('fromParentId', '==', user?.uid), 
+          where('status', '==', 'pending'))
+      : query(collection(db, 'friendRequests'), 
+          where('fromId', '==', activeUid), 
+          where('status', '==', 'pending'));
+
     const unsubscribeOutgoing = onSnapshot(qOutgoing, (snapshot) => {
       const outgoing = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
       setRequests(prev => {
         const incoming = prev.filter(r => r.toId === activeUid);
         return [...incoming, ...outgoing];
       });
+    }, (error) => {
+      console.error("Error with outgoing friend requests query:", error);
+      handleFirestoreError(error, 'list', 'friendRequests');
     });
 
     // Listen to user's friends list
     const unsubscribeUser = onSnapshot(doc(db, 'users', activeUid), async (docSnap) => {
-      if (docSnap.exists()) {
-        const friendIds = docSnap.data()?.friends || [];
-        if (friendIds.length > 0) {
-          const friendsQuery = query(collection(db, 'users_public'), where('uid', 'in', friendIds));
-          const friendsSnap = await getDocs(friendsQuery);
-          setFriends(friendsSnap.docs.map(d => d.data() as UserProfile));
-        } else {
-          setFriends([]);
+      try {
+        if (docSnap.exists()) {
+          const friendIds = docSnap.data()?.friends || [];
+          if (friendIds.length > 0) {
+            const friendsQuery = query(collection(db, 'users_public'), where('uid', 'in', friendIds));
+            const friendsSnap = await getDocs(friendsQuery);
+            setFriends(friendsSnap.docs.map(d => d.data() as UserProfile));
+          } else {
+            setFriends([]);
+          }
         }
+      } catch (err) {
+        console.error("Error processing friends snapshot:", err);
       }
-    });
+    }, (error) => handleFirestoreError(error, 'get', `users/${activeUid}`));
 
     return () => {
       unsubscribeIncoming();
       unsubscribeOutgoing();
       unsubscribeUser();
     };
-  }, [activeUid]);
+  }, [activeUid, user, profileLoading, isParentViewingKid]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -104,15 +151,66 @@ export const FriendsPage = () => {
     setMessage(null);
     try {
       const cleanSearch = searchQuery.toLowerCase().trim().replace(/^@/, '');
-      const q = query(
-        collection(db, 'users_public'), 
-        where('username', '==', cleanSearch)
-      );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== activeUid);
-      setSearchResults(results);
-      if (results.length === 0) {
-        setMessage({ text: 'No user found with that exact username.', type: 'error' });
+      
+      // Check if it's an email search
+      if (cleanSearch.includes('@') && cleanSearch.includes('.')) {
+        // Search by email, without role filter to avoid potential index errors
+        const parentQuery = query(
+          collection(db, 'users_public'),
+          where('email', '==', cleanSearch)
+        );
+        const parentSnap = await getDocs(parentQuery);
+        console.log(`Search for ${cleanSearch} found ${parentSnap.size} docs`);
+        
+        let parentDoc = parentSnap.docs.find(d => d.data().role === 'parent');
+        
+        // Secondary fallback: if nothing found in users_public, some old accounts might only be in users
+        if (!parentDoc) {
+          console.log("Searching fallback for email...");
+          const fallbackQuery = query(
+            collection(db, 'users'),
+            where('email', '==', cleanSearch),
+            where('role', '==', 'parent')
+          );
+          const fallbackSnap = await getDocs(fallbackQuery);
+          if (!fallbackSnap.empty) {
+            parentDoc = fallbackSnap.docs[0];
+          }
+        }
+        
+        if (!parentDoc) {
+          setMessage({ 
+            text: `No guardian found with email: ${cleanSearch}. Note: If they just signed up, they must log in at least once to become searchable.`, 
+            type: 'error' 
+          });
+          setLoading(false);
+          return;
+        }
+
+        const parentUid = parentDoc.id;
+        const kidsQuery = query(
+          collection(db, 'users_public'),
+          where('parentId', '==', parentUid),
+          where('role', '==', 'kid')
+        );
+        const kidsSnap = await getDocs(kidsQuery);
+        const results = kidsSnap.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== activeUid);
+        setSearchResults(results);
+        if (results.length === 0) {
+          setMessage({ text: 'This guardian has no kids registered.', type: 'error' });
+        }
+      } else {
+        // Standard username search
+        const q = query(
+          collection(db, 'users_public'), 
+          where('username', '==', cleanSearch)
+        );
+        const snapshot = await getDocs(q);
+        const results = snapshot.docs.map(doc => doc.data() as UserProfile).filter(u => u.uid !== activeUid);
+        setSearchResults(results);
+        if (results.length === 0) {
+          setMessage({ text: 'No user found with that exact username.', type: 'error' });
+        }
       }
     } catch (err) {
       console.error('Search error:', err);
@@ -126,41 +224,56 @@ export const FriendsPage = () => {
     if (!activeUid) return;
     try {
       // Check if a request already exists
-      const existingQuery = query(
-        collection(db, 'friendRequests'),
-        where('fromId', '==', activeUid),
-        where('toId', '==', targetUser.uid),
-        where('status', '==', 'pending')
-      );
+      const existingQuery = isParentViewingKid
+        ? query(
+            collection(db, 'friendRequests'),
+            where('fromId', '==', activeUid),
+            where('fromParentId', '==', user?.uid),
+            where('toId', '==', targetUser.uid),
+            where('status', '==', 'pending')
+          )
+        : query(
+            collection(db, 'friendRequests'),
+            where('fromId', '==', activeUid),
+            where('toId', '==', targetUser.uid),
+            where('status', '==', 'pending')
+          );
       const existingSnap = await getDocs(existingQuery);
       if (!existingSnap.empty) {
         setMessage({ text: 'Request already pending.', type: 'error' });
         return;
       }
 
+      const parentId = kidData?.parentId || parentProfile?.uid || null;
+      if (!parentId && activeUid !== user?.uid) {
+        setMessage({ text: 'Profile data not fully loaded. Please refresh and try again.', type: 'error' });
+        return;
+      }
+
       const docRef = await addDoc(collection(db, 'friendRequests'), {
         fromId: activeUid,
-        fromName: kidData?.displayName || user?.displayName || 'Anonymous',
+        fromParentId: parentId,
+        fromName: kidData?.displayName || parentProfile?.displayName || user?.displayName || 'Anonymous',
         toId: targetUser.uid,
+        toParentId: targetUser.parentId || null,
         toName: targetUser.displayName,
         status: 'pending',
         createdAt: serverTimestamp()
       });
 
       // Create notification for recipient
-      if (targetUser.parentId) {
-        await addDoc(collection(db, 'notifications'), {
-          userId: targetUser.uid,
-          parentId: targetUser.parentId,
-          type: 'friend_request',
-          title: 'New Friend Request',
-          message: `${kidData?.displayName || user?.displayName || 'Anonymous'} wants to be friends!`,
-          createdAt: serverTimestamp(),
-          read: false,
-          fromId: activeUid,
-          requestId: docRef.id
-        });
-      }
+      await addDoc(collection(db, 'notifications'), {
+        userId: targetUser.uid,
+        parentId: targetUser.parentId || null,
+        fromId: activeUid,
+        fromParentId: parentId,
+        requestId: docRef.id,
+        type: 'friend_request',
+        title: 'New Friend Request',
+        message: `${kidData?.displayName || parentProfile?.displayName || user?.displayName || 'Anonymous'} wants to be friends!`,
+        createdAt: serverTimestamp(),
+        read: false
+      });
 
       setMessage({ text: 'Request sent!', type: 'success' });
     } catch (err) {
@@ -205,12 +318,24 @@ export const FriendsPage = () => {
       }
 
       // Delete the corresponding notification
-      const notifQuery = query(
-        collection(db, 'notifications'),
-        where('userId', '==', activeUid),
-        where('fromId', '==', request.fromId),
-        where('type', '==', 'friend_request')
-      );
+      const isParentViewingKid = role === 'parent' && kidData && activeUid !== user?.uid;
+      let notifQuery;
+      if (isParentViewingKid) {
+        notifQuery = query(
+          collection(db, 'notifications'),
+          where('userId', '==', activeUid),
+          where('parentId', '==', user?.uid),
+          where('fromId', '==', request.fromId),
+          where('type', '==', 'friend_request')
+        );
+      } else {
+        notifQuery = query(
+          collection(db, 'notifications'),
+          where('userId', '==', activeUid),
+          where('fromId', '==', request.fromId),
+          where('type', '==', 'friend_request')
+        );
+      }
       const notifSnap = await getDocs(notifQuery);
       const deletePromises = notifSnap.docs.map(d => deleteDoc(doc(db, 'notifications', d.id)));
       await Promise.all(deletePromises);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, orderBy, limit, serverTimestamp, arrayUnion, arrayRemove, getDoc, addDoc, getDocs, Timestamp, writeBatch } from 'firebase/firestore';
 import { Bell, X, Check, Trash2, MoreVertical, Shield, Users, UserPlus, Star, Gamepad2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './Button';
 import { cn, formatName, safeToDate } from '../lib/utils';
 import { format } from 'date-fns';
+import { handleFirestoreError } from '../lib/firestoreUtils';
 import { useProfile } from '@/contexts/ProfileContext';
 
 interface Notification {
@@ -18,6 +20,10 @@ interface Notification {
   read: boolean;
   createdAt: any;
   data?: any;
+  groupId?: string;
+  teamId?: string;
+  fromId?: string;
+  parentId?: string;
 }
 
 interface NotificationPanelProps {
@@ -31,24 +37,39 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
   const [feedback, setFeedback] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
   const navigate = useNavigate();
 
-  const { activeKid, parentProfile } = useProfile();
+  const { activeKid, parentProfile, role, isParentViewingKid } = useProfile();
+  const [user] = useAuthState(auth);
 
   useEffect(() => {
-    if (!userId || !isOpen) return;
+    if (!userId || !isOpen || !user) return;
 
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(20)
-    );
+    let q;
+    if (isParentViewingKid) {
+      q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        where('parentId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      );
+    } else {
+      q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notification)));
+    }, (err) => {
+      console.error("Notifications listener error:", err);
+      handleFirestoreError(err, 'list', 'notifications');
     });
 
     return () => unsubscribe();
-  }, [userId, isOpen]);
+  }, [userId, isOpen, user, isParentViewingKid]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -129,15 +150,26 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
         }
 
         // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
-        const qClean = query(
-          collection(db, 'notifications'),
-          where('userId', '==', userId),
-          where('type', '==', 'team_invite')
-        );
+        const isParentViewingKid = role === 'parent' && activeKid && userId !== user?.uid;
+        let qClean;
+        if (isParentViewingKid) {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', userId),
+            where('parentId', '==', user?.uid),
+            where('type', '==', 'team_invite')
+          );
+        } else {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', userId),
+            where('type', '==', 'team_invite')
+          );
+        }
         const snap = await getDocs(qClean);
         const batch = writeBatch(db);
         snap.docs.forEach(d => {
-          const dData = d.data();
+          const dData = d.data() as any;
           const dGid = dData.data?.groupId || dData.data?.teamId || dData.groupId || dData.teamId;
           if (dGid === gid) {
             batch.delete(d.ref);
@@ -220,15 +252,26 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ userId, is
       
       // AGGRESSIVE CLEANUP: Find all notifications for this friend request
       if (fromId) {
-        const qClean = query(
-          collection(db, 'notifications'),
-          where('userId', '==', userId),
-          where('type', '==', 'friend_request')
-        );
+        const isParentViewingKid = role === 'parent' && activeKid && userId !== user?.uid;
+        let qClean;
+        if (isParentViewingKid) {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', userId),
+            where('parentId', '==', user?.uid),
+            where('type', '==', 'friend_request')
+          );
+        } else {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', userId),
+            where('type', '==', 'friend_request')
+          );
+        }
         const snap = await getDocs(qClean);
         const batch = writeBatch(db);
         snap.docs.forEach(d => {
-          const dData = d.data();
+          const dData = d.data() as any;
           const dFromId = dData.fromId || dData.data?.fromId;
           if (dFromId === fromId) {
             batch.delete(d.ref);

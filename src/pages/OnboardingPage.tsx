@@ -126,6 +126,7 @@ export const OnboardingPage = () => {
         uid: user.uid,
         displayName: parentData.displayName,
         photoURL: parentData.photoURL,
+        email: user.email?.toLowerCase(),
         role: 'parent'
       });
 

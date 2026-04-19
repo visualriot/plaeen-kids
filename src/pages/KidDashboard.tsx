@@ -29,12 +29,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useProfile } from '@/contexts/ProfileContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 import { cn, calculateAge, formatName } from '@/lib/utils';
 
 export const KidDashboard = () => {
   const [user] = useAuthState(auth);
-  const { activeKid, parentProfile } = useProfile();
+  const { activeKid, parentProfile, isParentViewingKid, isLoading: profileLoading } = useProfile();
   const [sessions, setSessions] = useState<any[]>([]);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
@@ -92,7 +93,7 @@ export const KidDashboard = () => {
   }, [isSessionActive]);
 
   useEffect(() => {
-    if (!user || !activeKid) return;
+    if (!user || !activeKid || profileLoading) return;
 
     const isParent = user?.uid !== activeKid?.uid;
     const q = query(
@@ -100,60 +101,99 @@ export const KidDashboard = () => {
       where(isParent ? 'parentIds' : 'members', 'array-contains', user?.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allSessions: any[] = [];
-      const relevantDocs = snapshot.docs.filter(doc => {
-        const data = doc.data();
-        return data.members && data.members.includes(activeKid.uid);
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const gids = snapshot.docs.map(d => d.id).filter(id => {
+        const data = snapshot.docs.find(doc => doc.id === id)?.data();
+        return data?.members && data.members.includes(activeKid.uid);
       });
 
-      relevantDocs.forEach(groupDoc => {
-        const groupData = groupDoc.data();
-        // This is a simplified fetch, ideally sessions are in a subcollection or separate collection
-        // For now, let's assume we fetch from a 'sessions' collection where groupId is in kid's groups
-      });
-    }, (error) => {
-      console.error("Group listener error:", error);
-    });
+      if (gids.length === 0) {
+        setSessions([]);
+        return;
+      }
+
+      // Fetch sessions for all groups
+      const allSessions: any[] = [];
+      for (const gid of gids) {
+        const qSessions = query(
+          collection(db, 'groups', gid, 'sessions'),
+          where('status', 'in', ['proposed', 'scheduled']),
+          orderBy('startTime', 'asc'),
+          limit(10)
+        );
+        const sSnap = await getDocs(qSessions);
+        sSnap.docs.forEach(d => {
+          const sData = d.data();
+          // Filter rejected
+          const myResp = sData.responses?.[activeKid.uid];
+          if (!myResp || myResp.status !== 'rejected') {
+            allSessions.push({ id: d.id, groupId: gid, ...sData });
+          }
+        });
+      }
+
+      // Sort all combined sessions
+      allSessions.sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis());
+      setSessions(allSessions.slice(0, 5));
+    }, (error) => handleFirestoreError(error, 'list', 'groups'));
 
     return () => unsubscribe();
-  }, [user, activeKid]);
+  }, [user, activeKid, profileLoading]);
 
   // Fetch notifications
   useEffect(() => {
-    if (!user || !activeKid) return;
+    if (!user || !activeKid || profileLoading) return;
 
-    const q = query(
-      collection(db, 'notifications'), 
-      where('userId', '==', activeKid.uid),
-      orderBy('createdAt', 'desc'),
-      limit(notificationLimit + 1)
-    );
+    let q;
+    if (isParentViewingKid) {
+      q = query(
+        collection(db, 'notifications'), 
+        where('userId', '==', activeKid.uid),
+        where('parentId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(notificationLimit + 1)
+      );
+    } else {
+      q = query(
+        collection(db, 'notifications'), 
+        where('userId', '==', activeKid.uid),
+        orderBy('createdAt', 'desc'),
+        limit(notificationLimit + 1)
+      );
+    }
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setHasMoreNotifications(docs.length > notificationLimit);
       setNotifications(docs.slice(0, notificationLimit));
-    }, (error) => {
-      console.error("Notification listener error:", error);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'notifications'));
 
     return () => unsubscribe();
-  }, [user, activeKid, notificationLimit]);
+  }, [user, activeKid, notificationLimit, profileLoading, isParentViewingKid]);
 
   // Cleanup old notifications (older than 30 days)
   useEffect(() => {
-    if (!activeKid) return;
+    if (!activeKid || !user || profileLoading) return;
     
     const cleanupOldNotifications = async () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      const q = query(
-        collection(db, 'notifications'),
-        where('userId', '==', activeKid.uid),
-        where('createdAt', '<', Timestamp.fromDate(thirtyDaysAgo))
-      );
+      let q;
+      if (isParentViewingKid) {
+        q = query(
+          collection(db, 'notifications'),
+          where('userId', '==', activeKid.uid),
+          where('parentId', '==', user.uid),
+          where('createdAt', '<', Timestamp.fromDate(thirtyDaysAgo))
+        );
+      } else {
+        q = query(
+          collection(db, 'notifications'),
+          where('userId', '==', activeKid.uid),
+          where('createdAt', '<', Timestamp.fromDate(thirtyDaysAgo))
+        );
+      }
       
       try {
         const snapshot = await getDocs(q);
@@ -168,7 +208,7 @@ export const KidDashboard = () => {
     };
     
     cleanupOldNotifications();
-  }, [activeKid?.uid]);
+  }, [activeKid?.uid, user, profileLoading, isParentViewingKid]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -296,7 +336,8 @@ export const KidDashboard = () => {
 
           await updateDoc(groupRef, {
             members: arrayUnion(activeKid.uid),
-            pendingMembers: arrayRemove(activeKid.uid)
+            pendingMembers: arrayRemove(activeKid.uid),
+            parentIds: arrayUnion(activeKid.parentId)
           });
 
           await addDoc(collection(db, 'groups', gid, 'events'), {
@@ -315,15 +356,25 @@ export const KidDashboard = () => {
         }
 
         // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
-        const qClean = query(
-          collection(db, 'notifications'),
-          where('userId', '==', activeKid.uid),
-          where('type', '==', 'team_invite')
-        );
+        let qClean;
+        if (isParentViewingKid) {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', activeKid.uid),
+            where('parentId', '==', user.uid),
+            where('type', '==', 'team_invite')
+          );
+        } else {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', activeKid.uid),
+            where('type', '==', 'team_invite')
+          );
+        }
         const snap = await getDocs(qClean);
         const batch = writeBatch(db);
         snap.docs.forEach(d => {
-          const dData = d.data();
+          const dData = d.data() as any;
           const dGid = dData.data?.groupId || dData.data?.teamId || dData.groupId || dData.teamId;
           if (dGid === gid) {
             batch.delete(d.ref);
@@ -379,7 +430,8 @@ export const KidDashboard = () => {
               message: `${activeKid.displayName} accepted your friend request!`,
               createdAt: serverTimestamp(),
               read: false,
-              fromId: activeKid.uid
+              fromId: activeKid.uid,
+              fromParentId: activeKid.parentId
             });
           }
           showFeedback('Friend request accepted!');
@@ -622,7 +674,7 @@ export const KidDashboard = () => {
   const remainingMinutes = Math.floor(absoluteRemainingSeconds / 60);
   const remainingSecondsDisplay = absoluteRemainingSeconds % 60;
 
-  const progress = Math.min(100, (totalUsedSeconds / totalAllowanceSeconds) * 100);
+  const progress = totalAllowanceSeconds > 0 ? Math.min(100, (totalUsedSeconds / totalAllowanceSeconds) * 100) : 0;
 
   // Reset Logic
   useEffect(() => {
@@ -768,6 +820,13 @@ export const KidDashboard = () => {
         </motion.div>
 
         <div className="flex gap-4">
+          <Button 
+            onClick={() => navigate('/kid-calendar')}
+            variant="outline"
+            className="border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green/10 font-bold uppercase tracking-widest px-8 py-6"
+          >
+            <Calendar size={20} className="mr-2" /> Calendar
+          </Button>
           <Button 
             onClick={() => setIsChoreModalOpen(true)}
             variant="outline"
@@ -1040,9 +1099,43 @@ export const KidDashboard = () => {
             <div className="grid md:grid-cols-2 gap-6">
               {sessions.length > 0 ? (
                 sessions.map(session => (
-                  <Card key={session.id} className="bg-white/5 border-white/10 p-6 hover:border-plaeen-green/30 transition-all">
-                    <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Session Details</p>
-                  </Card>
+                  <div 
+                    key={session.id} 
+                    className={cn(
+                      "glass rounded-2xl p-6 transition-all duration-300 bg-white/5 border-white/10 hover:border-plaeen-green/30 transition-all group cursor-pointer relative overflow-hidden",
+                      session.status === 'proposed' && "border-amber-400/30"
+                    )}
+                    onClick={() => navigate(`/teams/${session.groupId}`)}
+                  >
+                    <div className="absolute top-0 right-0 p-3">
+                      {session.status === 'proposed' ? (
+                        <span className="text-[8px] font-bold bg-amber-400 text-black px-2 py-1 rounded-full uppercase tracking-widest animate-pulse">Invitation</span>
+                      ) : (
+                        <span className="text-[8px] font-bold bg-plaeen-green text-black px-2 py-1 rounded-full uppercase tracking-widest">Scheduled</span>
+                      )}
+                    </div>
+
+                    <div className="flex gap-4">
+                      {session.gameImage && (
+                        <img src={session.gameImage} className="h-16 w-16 rounded-xl object-cover border border-white/10" alt="" />
+                      )}
+                      <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-plaeen-green transition-colors">{session.gameName}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock size={12} className="text-white/40" />
+                          <span className="text-[10px] font-bold text-white/40 uppercase">
+                            {format(session.startTime.toDate(), 'EEE d, HH:mm')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Users size={12} className="text-white/40" />
+                          <span className="text-[10px] font-bold text-white/40 uppercase">
+                            {Object.values(session.responses || {}).filter((r: any) => r.status === 'accepted').length} Accepted
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))
               ) : (
                 <Card className="md:col-span-2 bg-white/5 border-dashed border-white/10 p-12 text-center">

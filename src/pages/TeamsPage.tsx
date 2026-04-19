@@ -7,6 +7,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { Plus, Edit2, X, Check, UserPlus, Sparkles, Trash2, Settings, Shield, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 interface Team {
   id: string;
@@ -36,7 +37,7 @@ import { useProfile } from '@/contexts/ProfileContext';
 
 export const TeamsPage = () => {
   const [user] = useAuthState(auth);
-  const { role, activeKid: kidData, parentProfile } = useProfile();
+  const { role, activeKid: kidData, parentProfile, isLoading: profileLoading } = useProfile();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,34 +55,60 @@ export const TeamsPage = () => {
   const activeUid = kidData ? kidData.uid : user?.uid;
 
   useEffect(() => {
-    if (!activeUid) return;
+    if (!activeUid || profileLoading) return;
 
-    const isParent = role === 'parent';
+    const isActuallyParent = role === 'parent';
+    const parentId = kidData?.parentId || parentProfile?.uid;
+    
+    // Parent should query by parentIds regardless of which profile they selected,
+    // to satisfy the Query Enforcer rule. Kid queries by members.
     const q = query(
       collection(db, 'groups'), 
-      where(isParent ? 'parentIds' : 'members', 'array-contains', activeUid)
+      where(isActuallyParent ? 'parentIds' : 'members', 'array-contains', isActuallyParent ? parentId : activeUid)
     );
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const allTeams = snapshot.docs
-        .map(docSnap => {
-          const data = docSnap.data() as any;
-          const adminIds = data.adminIds || (data.ownerId ? [data.ownerId] : []);
-          return { id: docSnap.id, ...data, adminIds } as Team;
-        })
-        .filter(t => (t.members || []).includes(activeUid) || (t.adminIds || []).includes(activeUid));
-      
-      setTeams(allTeams);
-      setLoading(false);
 
-      // Extract all member UIDs from all teams to fetch their basic profiles
-      const allMemberIds = Array.from(new Set(allTeams.flatMap(t => t.members || [])));
-      if (allMemberIds.length > 0) {
-        // Fetch public profiles for member management in modal
-        const membersQuery = query(collection(db, 'users_public'), where('uid', 'in', allMemberIds));
-        const membersSnap = await getDocs(membersQuery);
-        setMembers(membersSnap.docs.map(d => d.data() as any));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      try {
+        let allTeams = snapshot.docs
+          .map(docSnap => {
+            const data = docSnap.data() as any;
+            const adminIds = data.adminIds || (data.ownerId ? [data.ownerId] : []);
+            return { id: docSnap.id, ...data, adminIds } as Team;
+          });
+        
+        // If viewing as a parent for a specific kid, filter locally
+        if (isActuallyParent && kidData) {
+          allTeams = allTeams.filter(t => t.members?.includes(kidData.uid));
+        }
+
+        setTeams(allTeams);
+        setLoading(false);
+
+        // Backfill missing parentIds if we are viewing as a kid
+        if (kidData) {
+          allTeams.forEach(async (t: any) => {
+            if (!t.parentIds?.includes(kidData.parentId)) {
+              console.log(`Backfilling missing parentId for team: ${t.name}`);
+              await updateDoc(doc(db, 'groups', t.id), {
+                parentIds: arrayUnion(kidData.parentId)
+              }).catch(e => console.error("Backfill failed:", e));
+            }
+          });
+        }
+
+        // Extract all member UIDs from all teams to fetch their basic profiles
+        const allMemberIds = Array.from(new Set(allTeams.flatMap(t => t.members || [])));
+        if (allMemberIds.length > 0) {
+          // Fetch public profiles for member management in modal
+          const membersQuery = query(collection(db, 'users_public'), where('uid', 'in', allMemberIds));
+          const membersSnap = await getDocs(membersQuery);
+          setMembers(membersSnap.docs.map(d => d.data() as any));
+        }
+      } catch (err) {
+        console.error('Error in snapshot callback:', err);
+        setLoading(false);
       }
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'groups'));
 
     // Fetch friends for the modal
     const fetchFriends = async () => {

@@ -8,6 +8,7 @@ import { Clock, Play, Square, AlertTriangle, CheckCircle2, ArrowLeft, Bell, Arro
 import { useNavigate } from 'react-router-dom';
 import { format, subDays, isAfter, isToday } from 'date-fns';
 import { cn, formatName, safeToDate } from '@/lib/utils';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 interface Notification {
   id: string;
@@ -62,9 +63,7 @@ export const ParentActivityPage = () => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notification)));
-    }, (error) => {
-      console.error('Firestore Error in notifications listener:', error);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'notifications'));
 
     return () => unsubscribe();
   }, [user]);
@@ -75,9 +74,7 @@ export const ParentActivityPage = () => {
     const q = query(collection(db, 'users'), where('parentId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setKids(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as KidProfile)));
-    }, (error) => {
-      console.error('Firestore Error in kids listener:', error);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'users'));
 
     return () => unsubscribe();
   }, [user]);

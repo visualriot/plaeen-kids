@@ -30,7 +30,7 @@ import { NotificationPanel } from './NotificationPanel';
 
 export const Navbar = () => {
   const [user] = useAuthState(auth);
-  const { role, activeKid, logoutProfile } = useProfile();
+  const { role, activeKid, isParentViewingKid, logoutProfile } = useProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -46,18 +46,28 @@ export const Navbar = () => {
     setUnreadCount(0);
     if (!activeUid) return;
 
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', activeUid),
-      where('read', '==', false)
-    );
+    let q;
+    if (isParentViewingKid) {
+      q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', activeUid),
+        where('parentId', '==', user?.uid),
+        where('read', '==', false)
+      );
+    } else {
+      q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', activeUid),
+        where('read', '==', false)
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUnreadCount(snapshot.size);
     });
 
     return () => unsubscribe();
-  }, [activeUid]);
+  }, [activeUid, user, isParentViewingKid]);
 
   // Click outside handler
   useEffect(() => {
@@ -191,6 +201,13 @@ export const Navbar = () => {
                   >
                     <RefreshCw size={16} /> Switch Profile
                   </button>
+
+                  <Link 
+                    to="/kid-calendar"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
+                  >
+                    <Calendar size={16} /> Calendar
+                  </Link>
                   
                   <Link 
                     to={role === 'kid' ? '/profile' : '/parent/settings'}

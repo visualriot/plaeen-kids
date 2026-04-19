@@ -42,7 +42,11 @@ export const OvertimeDecisionPage = () => {
       } else {
         // Fallback: If not found by ID, maybe the ID passed was a notificationId?
         // Try to find an approval that points to this notificationId
-        const q = query(collection(db, 'approvals'), where('notificationId', '==', approvalId));
+        const q = query(
+          collection(db, 'approvals'), 
+          where('notificationId', '==', approvalId),
+          where('parentId', '==', parentProfile?.uid)
+        );
         const qSnap = await getDocs(q);
         
         if (!qSnap.empty) {
@@ -69,7 +73,11 @@ export const OvertimeDecisionPage = () => {
       // and the rules are strict. Try the fallback query immediately.
       console.warn('Approval listener failed, attempting fallback query...', error);
       
-      const q = query(collection(db, 'approvals'), where('notificationId', '==', approvalId));
+      const q = query(
+        collection(db, 'approvals'), 
+        where('notificationId', '==', approvalId),
+        where('parentId', '==', parentProfile?.uid)
+      );
       try {
         const qSnap = await getDocs(q);
         if (!qSnap.empty) {
@@ -200,9 +208,13 @@ export const OvertimeDecisionPage = () => {
       }
 
       // Path B: If we were passed a notificationId as the URL param, update it directly
-      if (!notifUpdated && approvalId) {
+      if (!notifUpdated && approvalId && parentProfile) {
         try {
-          const notifSnap = await getDocs(query(collection(db, 'notifications'), where('__name__', '==', approvalId)));
+          const notifSnap = await getDocs(query(
+            collection(db, 'notifications'), 
+            where('__name__', '==', approvalId),
+            where('userId', '==', parentProfile.uid)
+          ));
           if (!notifSnap.empty) {
             await updateDoc(doc(db, 'notifications', approvalId), updatePayload);
             notifUpdated = true;
@@ -213,9 +225,10 @@ export const OvertimeDecisionPage = () => {
       }
 
       // Path C: Fallback query by approvalId field in notifications
-      if (!notifUpdated) {
+      if (!notifUpdated && parentProfile) {
         const parentNotifQuery = query(
           collection(db, 'notifications'),
+          where('userId', '==', parentProfile.uid),
           where('approvalId', '==', approval.id)
         );
         const parentNotifSnap = await getDocs(parentNotifQuery);

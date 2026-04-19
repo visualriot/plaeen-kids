@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 interface KidProfile {
   uid: string;
@@ -34,6 +35,10 @@ interface KidProfile {
   };
   allowedGames: string[];
   teamAliases?: Record<string, string>;
+  availability?: {
+    recurring?: Record<string, boolean>;
+    once?: Record<string, boolean>;
+  };
 }
 
 interface ProfileContextType {
@@ -42,14 +47,16 @@ interface ProfileContextType {
     uid: string;
     displayName: string;
     email: string;
-    role: 'parent';
+    role: 'parent' | 'kid'; // Could be a kid account too
     onboardingComplete?: boolean;
     guardianPin?: string;
     firstDayOfWeek?: 'Mon' | 'Sun';
     linkedKids: string[];
     teamAliases?: Record<string, string>;
   } | null;
-  role: 'parent' | 'kid' | 'none';
+  role: 'parent' | 'kid' | 'none'; // Effective UI role
+  userRole: 'parent' | 'kid' | 'none'; // Actual account role
+  isParentViewingKid: boolean;
   setActiveKid: (kidId: string | null) => void;
   isParentAuthenticated: boolean;
   setParentAuthenticated: (val: boolean) => void;
@@ -78,17 +85,63 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    setParentLoading(true);
-    const unsubscribeParent = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setParentProfile({ uid: docSnap.id, ...data });
+    // Sync parent email to users_public once for searchability
+    const syncProfile = async () => {
+      if (!user || user.isAnonymous) return;
+      try {
+        const parentRef = doc(db, 'users', user.uid);
+        const parentSnap = await getDoc(parentRef);
         
-        // If the user is actually a kid account (direct login)
-        if (data.role === 'kid') {
-          setActiveKid({ uid: docSnap.id, ...data } as KidProfile);
+        if (parentSnap.exists()) {
+          const parentData = parentSnap.data();
+          if (parentData.role === 'parent' && user.email) {
+            const emailLower = user.email.toLowerCase();
+            const publicRef = doc(db, 'users_public', user.uid);
+            const publicSnap = await getDoc(publicRef);
+            
+            if (parentData.email !== emailLower) {
+              await updateDoc(parentRef, { email: emailLower });
+            }
+            
+            if (publicSnap.exists()) {
+              if (publicSnap.data().email !== emailLower) {
+                await updateDoc(publicRef, { email: emailLower });
+              }
+            } else {
+              await setDoc(publicRef, {
+                uid: user.uid,
+                displayName: parentData.displayName || user.displayName || 'Parent',
+                email: emailLower,
+                role: 'parent'
+              });
+            }
+          }
         }
+      } catch (err) {
+        console.warn("Email sync failed (silent error):", err);
       }
+    };
+    syncProfile();
+
+    setParentLoading(true);
+    const unsubscribeParent = onSnapshot(doc(db, 'users', user.uid), async (docSnap) => {
+      try {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setParentProfile({ uid: docSnap.id, ...data });
+
+          if (data.role === 'kid') {
+            setActiveKid({ uid: docSnap.id, ...data } as KidProfile);
+            setKidLoading(false);
+          }
+        }
+        setParentLoading(false);
+      } catch (err) {
+        console.error("Error processing parent profile snapshot:", err);
+        setParentLoading(false);
+      }
+    }, (error) => {
+      console.warn("Permission denied for parent profile, user might be new or logging out:", error.message);
       setParentLoading(false);
     });
 
@@ -106,12 +159,20 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setKidLoading(true);
     const unsubscribeKid = onSnapshot(doc(db, 'users', activeKidId), (docSnap) => {
-      if (docSnap.exists()) {
-        setActiveKid({ uid: docSnap.id, ...docSnap.data() } as KidProfile);
-      } else {
-        setActiveKid(null);
-        sessionStorage.removeItem('activeKidId');
+      try {
+        if (docSnap.exists()) {
+          setActiveKid({ uid: docSnap.id, ...docSnap.data() } as KidProfile);
+        } else {
+          setActiveKid(null);
+          sessionStorage.removeItem('activeKidId');
+        }
+        setKidLoading(false);
+      } catch (err) {
+        console.error("Error processing kid profile snapshot:", err);
+        setKidLoading(false);
       }
+    }, (error) => {
+      console.warn("Permission denied for kid profile:", error.message);
       setKidLoading(false);
     });
 
@@ -150,19 +211,34 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     sessionStorage.removeItem('isParentAuth');
   };
 
+  const userRole = React.useMemo(() => {
+    return parentProfile?.role || 'none';
+  }, [parentProfile]);
+
   const role = React.useMemo(() => {
-    if (activeKidId || sessionStorage.getItem('activeKidId')) return 'kid';
-    if (isParentAuthenticated || sessionStorage.getItem('isParentAuth') === 'true') return 'parent';
-    return 'none';
-  }, [activeKidId, isParentAuthenticated]);
+    // If it's a kid account, role is always kid
+    if (userRole === 'kid') return 'kid';
+    // If it's a parent account and a kid is selected, effective role is kid
+    if (activeKidId) return 'kid';
+    // If parent is authenticated, role is parent
+    if (isParentAuthenticated) return 'parent';
+    // Default to account role
+    return userRole;
+  }, [activeKidId, isParentAuthenticated, userRole]);
 
   const isLoading = parentLoading || kidLoading;
+
+  const isParentViewingKid = React.useMemo(() => {
+    return userRole === 'parent' && !!activeKidId;
+  }, [userRole, activeKidId]);
 
   return (
     <ProfileContext.Provider value={{ 
       activeKid, 
       parentProfile, 
       role, 
+      userRole,
+      isParentViewingKid,
       setActiveKid: handleSetActiveKid,
       isParentAuthenticated,
       setParentAuthenticated: handleSetParentAuthenticated,

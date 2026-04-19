@@ -5,7 +5,7 @@ import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query,
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Plus, Edit2, X, ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Trash2, Bell, UserPlus, Gamepad2, Sparkles, Check, HelpCircle, MessageSquare, RotateCcw, Clock, Shield, Settings } from 'lucide-react';
+import { Plus, Edit2, X, ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Trash2, Bell, UserPlus, Gamepad2, Sparkles, Check, HelpCircle, MessageSquare, RotateCcw, Clock, Shield, Settings, Minus, AlertTriangle } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, isAfter, subDays } from 'date-fns';
 import { cn, safeToDate } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,7 +34,16 @@ interface UserProfile {
   uid: string;
   displayName: string;
   photoURL?: string;
-  availability?: Record<string, string>;
+  availability?: {
+    recurring?: Record<string, boolean>;
+    once?: Record<string, boolean>;
+  };
+  screenTime?: {
+    dailyAllowance: number;
+    usedToday: number;
+    lastReset: any;
+  };
+  parentId?: string;
 }
 
 interface Session {
@@ -43,13 +52,23 @@ interface Session {
   gameName: string;
   gameImage?: string;
   startTime: any;
+  endTime: any;
+  duration: number; // in minutes
   proposedBy: string;
   proposedByName: string;
   status: 'proposed' | 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
-  responses?: Record<string, { status: 'accepted' | 'rejected' | 'maybe', note?: string }>;
+  responses?: Record<string, { 
+    status: 'accepted' | 'rejected' | 'maybe'; 
+    note?: string;
+    guardianApprovalPending?: boolean;
+    requestedAllowance?: number;
+  }>;
+  notes?: string;
 }
 
 import { useProfile } from '@/contexts/ProfileContext';
+
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 interface TeamEvent {
   id: string;
@@ -82,14 +101,11 @@ export const TeamDetailPage = () => {
   const [dismissedEvents, setDismissedEvents] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
-  const [isProposeOpen, setIsProposeOpen] = useState(false);
   const [isResponseOpen, setIsResponseOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<{ day: string, hour: number } | null>(null);
-  const [selectedGame, setSelectedGame] = useState<GroupGame | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [proposalNote, setProposalNote] = useState('');
+  const [responseNote, setResponseNote] = useState('');
   const navigate = useNavigate();
 
   const activeUid = kidData ? kidData.uid : user?.uid;
@@ -106,21 +122,22 @@ export const TeamDetailPage = () => {
         navigate('/teams');
       }
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, 'get', `groups/${teamId}`));
 
     const sessionsUnsubscribe = onSnapshot(collection(db, 'groups', teamId, 'sessions'), (snapshot) => {
       setSessions(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Session)));
-    });
+    }, (error) => handleFirestoreError(error, 'list', `groups/${teamId}/sessions`));
 
     const gamesUnsubscribe = onSnapshot(collection(db, 'groups', teamId, 'games'), (snapshot) => {
       setTeamGames(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GroupGame)));
-    });
+    }, (error) => handleFirestoreError(error, 'list', `groups/${teamId}/games`));
 
     const eventsUnsubscribe = onSnapshot(
       query(collection(db, 'groups', teamId, 'events'), orderBy('createdAt', 'desc'), limit(10)),
       (snapshot) => {
         setEvents(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TeamEvent)));
-      }
+      },
+      (error) => handleFirestoreError(error, 'list', `groups/${teamId}/events`)
     );
 
     return () => {
@@ -132,15 +149,30 @@ export const TeamDetailPage = () => {
   }, [teamId, navigate]);
 
   useEffect(() => {
-    if (!team?.members) return;
+    if (!team?.members || team.members.length === 0) {
+      setMembers([]);
+      return;
+    }
 
-    const q = query(collection(db, 'users'), where('uid', 'in', team.members));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const membersData = snapshot.docs.map(doc => doc.data() as UserProfile);
-      setMembers(membersData);
+    const unsubscribes = team.members.map(memberId => {
+      return onSnapshot(
+        doc(db, 'users', memberId),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data() as UserProfile;
+            setMembers(prev => {
+              const otherMembers = prev.filter(m => m.uid !== memberId);
+              return [...otherMembers, data];
+            });
+          }
+        },
+        (error) => handleFirestoreError(error, 'get', `users/${memberId}`)
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
   }, [team?.members]);
 
   useEffect(() => {
@@ -152,7 +184,7 @@ export const TeamDetailPage = () => {
     const q = query(collection(db, 'users_public'), where('uid', 'in', team.pendingMembers));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setPendingMembers(snapshot.docs.map(doc => doc.data() as UserProfile));
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'users_public'));
 
     return () => unsubscribe();
   }, [team?.pendingMembers]);
@@ -177,12 +209,6 @@ export const TeamDetailPage = () => {
     };
     fetchFriends();
   }, [activeUid, team?.members]);
-
-  useEffect(() => {
-    if (teamGames.length > 0 && !selectedGame) {
-      setSelectedGame(teamGames[0]);
-    }
-  }, [teamGames]);
 
   const addMember = async (memberId: string) => {
     if (!teamId || !team) return;
@@ -222,33 +248,6 @@ export const TeamDetailPage = () => {
     }
   };
 
-  const proposeSession = async () => {
-    if (!teamId || !activeUid || !selectedSlot || !selectedGame) return;
-    
-    const startTime = new Date(selectedSlot.day);
-    startTime.setHours(selectedSlot.hour, 0, 0, 0);
-
-    try {
-      await addDoc(collection(db, 'groups', teamId, 'sessions'), {
-        gameId: selectedGame.id,
-        gameName: selectedGame.name,
-        gameImage: selectedGame.image,
-        startTime: Timestamp.fromDate(startTime),
-        proposedBy: activeUid,
-        proposedByName: kidData?.displayName || user?.displayName || 'Anonymous',
-        status: 'proposed',
-        responses: {
-          [activeUid]: { status: 'accepted', note: proposalNote }
-        }
-      });
-      setIsProposeOpen(false);
-      setSelectedSlot(null);
-      setProposalNote('');
-    } catch (err) {
-      console.error('Error proposing session:', err);
-    }
-  };
-
   const respondToSession = async (status: 'accepted' | 'rejected' | 'maybe', note: string, sessionId?: string) => {
     const targetSessionId = sessionId || selectedSession?.id;
     if (!teamId || !activeUid || !targetSessionId) return;
@@ -258,8 +257,56 @@ export const TeamDetailPage = () => {
       });
       setIsResponseOpen(false);
       setSelectedSession(null);
+      setResponseNote('');
     } catch (err) {
       console.error('Error responding:', err);
+    }
+  };
+
+  const deleteSession = async (sessionId: string) => {
+    if (!teamId) return;
+    try {
+      await deleteDoc(doc(db, 'groups', teamId, 'sessions', sessionId));
+      setIsResponseOpen(false);
+      setSelectedSession(null);
+    } catch (err) {
+      console.error('Error deleting session:', err);
+    }
+  };
+
+  const requestAllowanceIncrease = async (session: Session) => {
+    if (!kidData || !kidData.parentId) return;
+    try {
+      await addDoc(collection(db, 'approvals'), {
+        parentId: kidData.parentId,
+        childId: kidData.uid,
+        childName: kidData.displayName,
+        type: 'time',
+        title: `Extra time for ${session.gameName}`,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        data: {
+          sessionId: session.id,
+          gameName: session.gameName,
+          requestedMinutes: session.duration,
+          startTime: session.startTime
+        }
+      });
+
+      // Update session response to indicate pending approval
+      await updateDoc(doc(db, 'groups', teamId, 'sessions', session.id), {
+        [`responses.${activeUid}`]: { 
+          status: 'maybe', 
+          note: 'Waiting for guardian approval for extra time.',
+          guardianApprovalPending: true,
+          requestedAllowance: session.duration 
+        }
+      });
+      
+      setIsResponseOpen(false);
+      setSelectedSession(null);
+    } catch (err) {
+      console.error('Error requesting allowance:', err);
     }
   };
 
@@ -492,7 +539,7 @@ export const TeamDetailPage = () => {
         </div>
 
         {/* Unified Calendar Section */}
-        <div className="lg:col-span-3 space-y-8">
+        <div className="lg:col-span-4 space-y-8 mt-12">
           <div className="flex items-center justify-between">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
               <CalendarIcon size={16} /> Unified Schedule
@@ -510,33 +557,43 @@ export const TeamDetailPage = () => {
             </div>
           </div>
 
-          <Card className="bg-white/5 border-white/10 p-8 overflow-hidden">
-            <div className="overflow-x-auto custom-scrollbar">
-              <div className="min-w-[800px]">
-                <div className="grid grid-cols-[120px_repeat(24,1fr)] gap-2 mb-6">
-                  <div />
-                  {hours.map(h => (
-                    <div key={h} className="text-center text-[10px] font-bold text-white/20">{h}</div>
-                  ))}
-                </div>
+          <Card className="bg-white/5 border-white/10 p-4 lg:p-10 overflow-hidden relative">
+            <div className="w-full">
+              <div className="grid grid-cols-[80px_repeat(24,1fr)] gap-0.5 mb-6 md:gap-3">
+                <div />
+                {hours.map(h => (
+                  <div key={h} className="text-center text-[8px] md:text-[10px] font-bold text-white/20">{h}</div>
+                ))}
+              </div>
 
-                {days.map((day) => {
-                  const dayKey = format(day, 'yyyy-MM-dd');
-                  return (
-                    <div key={dayKey} className="grid grid-cols-[120px_repeat(24,1fr)] gap-2 mb-2 items-center">
-                      <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                        {format(day, 'EEE d')}
-                      </div>
+              {days.map((day) => {
+                const dayKey = format(day, 'yyyy-MM-dd');
+                const dayIdx = day.getDay();
+                return (
+                  <div key={dayKey} className="grid grid-cols-[80px_repeat(24,1fr)] gap-0.5 mb-0.5 items-center md:gap-3 md:mb-3">
+                    <div className="text-[8px] md:text-[10px] font-bold text-white/40 uppercase tracking-tight md:tracking-widest">
+                      {format(day, 'EEE d')}
+                    </div>
                       {hours.map(hour => {
-                        const slotKey = `${dayKey}_${hour}`;
+                        const recurringKey = `${dayIdx}_${hour}`;
+                        const onceKey = `${dayKey}_${hour}`;
+
+                        const availableMembers = members.filter(m => 
+                          m.availability?.recurring?.[recurringKey] || 
+                          m.availability?.once?.[onceKey]
+                        );
+
+                        const isFullyAvailable = members.length > 0 && availableMembers.length === members.length;
+                        const isPartiallyAvailable = availableMembers.length >= 2 && availableMembers.length < members.length;
+
                         const session = sessions.find(s => {
                           const sDate = s.startTime.toDate();
                           return isSameDay(sDate, day) && sDate.getHours() === hour;
                         });
 
-                        // Check team availability (mocked or from teamAvailability field)
-                        const isAvailable = team.teamAvailability?.[slotKey] === 'available';
-                        const isProposedByMe = session?.proposedBy === user?.uid;
+                        const isProposedByMe = session?.proposedBy === activeUid;
+                        const hasResponded = session?.responses?.[activeUid];
+                        const shouldBlink = session?.status === 'proposed' && !hasResponded;
 
                         return (
                           <div
@@ -545,21 +602,60 @@ export const TeamDetailPage = () => {
                               if (session) {
                                 setSelectedSession(session);
                                 setIsResponseOpen(true);
-                              } else {
-                                setSelectedSlot({ day: dayKey, hour });
-                                setIsProposeOpen(true);
+                              } else if (isFullyAvailable || isPartiallyAvailable) {
+                                navigate(`/teams/${teamId}/propose?day=${dayKey}&hour=${hour}`);
                               }
                             }}
                             className={cn(
-                              "h-8 rounded-lg transition-all cursor-pointer border border-transparent relative group",
-                              session?.status === 'scheduled' ? "bg-plaeen-green shadow-[0_0_15px_rgba(118,233,0,0.5)]" :
-                              session?.status === 'proposed' ? (isProposedByMe ? "bg-plaeen-green/20 border-plaeen-green/40" : "bg-plaeen-green/40 border-plaeen-green") :
-                              isAvailable ? "bg-plaeen-green/10 border-plaeen-green/20 hover:bg-plaeen-green/30" : "bg-white/5 hover:bg-white/10"
+                              "aspect-square rounded-lg transition-all border border-transparent relative group hover:scale-95",
+                              (session || isFullyAvailable || isPartiallyAvailable) 
+                                ? "cursor-pointer" 
+                                : "cursor-default pointer-events-none opacity-60",
+                              shouldBlink && "animate-blink-glow",
+                              session?.status === 'scheduled' ? "bg-plaeen-green shadow-[0_0_20px_rgba(118,233,0,0.6)] z-20 border-white/40" :
+                              session?.status === 'proposed' ? (
+                                isProposedByMe 
+                                  ? "bg-amber-400/20 border-amber-400/40 shadow-[0_0_10px_rgba(251,191,36,0.2)]" 
+                                  : hasResponded?.status === 'rejected'
+                                    ? "bg-red-500/10 border-red-500/20 opacity-40"
+                                    : "bg-amber-400/40 border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]"
+                              ) :
+                              isFullyAvailable ? "bg-plaeen-green/40 border-plaeen-green/60 hover:bg-plaeen-green/50 shadow-[0_0_15px_rgba(118,233,0,0.2)]" :
+                              isPartiallyAvailable ? "bg-[#a855f7] border-[#c084fc] hover:bg-[#c084fc]" :
+                              "bg-white/20 border border-white/10"
                             )}
                           >
-                            {session && (
-                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none">
-                                <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">{session.gameName}</p>
+                            {(isFullyAvailable || isPartiallyAvailable || session) && (
+                              <div className={cn(
+                                "absolute left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-50 pointer-events-none shadow-2xl",
+                                session ? "-top-12" : "top-full mt-2"
+                              )}>
+                                {session ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">{session.gameName}</p>
+                                    <p className="text-[8px] text-white/40 font-bold uppercase">Click to view session</p>
+                                  </div>
+                                ) : isFullyAvailable ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-[0.2em] mb-1">All team available!</p>
+                                    <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">Click to propose session</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-plaeen-purple uppercase tracking-[0.2em]">Available:</p>
+                                    {availableMembers.map(m => (
+                                      <p key={m.uid} className="text-[10px] text-white/80 font-bold uppercase">{m.displayName}</p>
+                                    ))}
+                                    <div className="pt-1 mt-1 border-t border-white/10">
+                                      <p className="text-[8px] text-white/40 font-bold uppercase mb-1">
+                                        {availableMembers.length} / {members.length} Players Available
+                                      </p>
+                                      <p className="text-[9px] text-plaeen-green font-bold uppercase tracking-wider">
+                                        Click to propose session
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -569,25 +665,35 @@ export const TeamDetailPage = () => {
                   );
                 })}
               </div>
+
+            <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 pt-8 border-t border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 rounded bg-plaeen-green shadow-[0_0_15px_rgba(118,233,0,0.6)] border border-white/40" />
+                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Scheduled Session</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 rounded bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.4)] border border-white/20" />
+                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Active Proposal</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 rounded bg-plaeen-green/40 border border-plaeen-green/60" />
+                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Team Available</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 rounded bg-[#a855f7] border border-[#c084fc]" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">Partially Available (2+)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-4 rounded bg-white/20 border border-white/10" />
+                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">Unavailable</span>
+              </div>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-8 pt-8 border-t border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Scheduled</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-plaeen-green/40 border border-plaeen-green" />
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Proposed</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-plaeen-green/20 border border-plaeen-green/40" />
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Proposed by you</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-4 w-4 rounded bg-plaeen-green/10 border border-plaeen-green/20" />
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Team Available</span>
-              </div>
+            <div className="mt-6 p-4 rounded-xl bg-plaeen-purple/5 border border-plaeen-purple/20 flex items-center gap-3">
+              <Sparkles size={14} className="text-plaeen-purple" />
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                Click on any slot to propose a new gaming session for your team.
+              </p>
             </div>
           </Card>
         </div>
@@ -617,90 +723,64 @@ export const TeamDetailPage = () => {
         </div>
       )}
 
-      {isProposeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-          <Card className="w-full max-w-2xl bg-plaeen-dark border-plaeen-green/30 p-10">
-            <div className="flex justify-between items-center mb-10">
-              <h2 className="text-4xl font-bold text-white uppercase tracking-tighter">Propose Session</h2>
-              <button onClick={() => setIsProposeOpen(false)} className="text-white/40 hover:text-white"><X size={32} /></button>
-            </div>
-            
-            <div className="space-y-8">
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">Select Game</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {teamGames.map(game => (
-                    <button 
-                      key={game.id}
-                      onClick={() => setSelectedGame(game)}
-                      className={cn(
-                        "p-4 rounded-2xl border transition-all text-left group",
-                        selectedGame?.id === game.id ? "bg-plaeen-green/10 border-plaeen-green" : "bg-white/5 border-white/10 hover:border-white/30"
-                      )}
-                    >
-                      <img src={game.image} className="aspect-video w-full rounded-lg object-cover mb-3" />
-                      <p className={cn(
-                        "text-xs font-bold uppercase tracking-tight",
-                        selectedGame?.id === game.id ? "text-plaeen-green" : "text-white/60"
-                      )}>{game.name}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-                  <p className="text-sm font-bold text-white uppercase tracking-widest mb-2">Time slot</p>
-                  <p className="text-2xl font-bold text-plaeen-green">
-                    {selectedSlot ? format(new Date(selectedSlot.day), 'EEEE, MMM d') : ''} @ {selectedSlot?.hour}:00
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2 block">Add a note</label>
-                  <textarea 
-                    value={proposalNote}
-                    onChange={(e) => setProposalNote(e.target.value)}
-                    placeholder="e.g. Let's finish the raid!"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all h-24"
-                  />
-                </div>
-              </div>
-              <Button onClick={proposeSession} className="w-full py-6 font-bold uppercase tracking-widest">
-                Confirm proposal
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
       {isResponseOpen && selectedSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
           <Card className="w-full max-w-2xl bg-plaeen-dark border-plaeen-green/30 p-10 shadow-[0_0_50px_rgba(118,233,0,0.1)]">
-            <div className="flex justify-between items-center mb-10">
+            <div className="flex justify-between items-start mb-10">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-2">Session Proposed by <span className="text-white">{selectedSession.proposedByName}</span></p>
-                <h2 className="text-5xl font-bold text-white uppercase tracking-tighter">{selectedSession.gameName}</h2>
+                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-2">
+                  Session Proposed by <span className="text-white">{selectedSession.proposedByName}</span>
+                </p>
+                <h2 className="text-5xl font-bold text-white uppercase tracking-tighter mb-2">{selectedSession.gameName}</h2>
+                <div className="flex items-center gap-4 text-white/40 font-bold uppercase tracking-widest text-[10px]">
+                  <div className="flex items-center gap-1">
+                    <CalendarIcon size={14} />
+                    {format(selectedSession.startTime.toDate(), 'EEEE, MMM d')}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock size={14} />
+                    {format(selectedSession.startTime.toDate(), 'HH:mm')} - {format(selectedSession.endTime?.toDate() || new Date(), 'HH:mm')} ({selectedSession.duration}m)
+                  </div>
+                </div>
               </div>
-              <button onClick={() => setIsResponseOpen(false)} className="text-white/40 hover:text-white transition-colors"><X size={32} /></button>
+              <div className="flex gap-2">
+                {selectedSession.proposedBy === activeUid && (
+                  <button 
+                    onClick={() => deleteSession(selectedSession.id)}
+                    className="h-10 w-10 rounded-full border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                    title="Delete Proposal"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+                <button onClick={() => setIsResponseOpen(false)} className="h-10 w-10 rounded-full border border-white/10 text-white/40 hover:text-white transition-colors flex items-center justify-center">
+                  <X size={24} />
+                </button>
+              </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-12 mb-12">
+            <div className="grid md:grid-cols-2 gap-12 mb-10">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-6 block">Invitees</label>
-                <div className="space-y-4">
+                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-6 block">Invitees Status</label>
+                <div className="space-y-3">
                   {members.map(member => {
                     const response = selectedSession.responses?.[member.uid];
                     return (
-                      <div key={member.uid} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="flex items-center gap-4">
-                          <img src={member.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.uid}`} className="h-10 w-10 rounded-full" />
-                          <span className="font-bold text-white uppercase text-sm">{member.displayName}</span>
+                      <div key={member.uid} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <img src={member.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.uid}`} className="h-8 w-8 rounded-full" />
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white uppercase text-[10px] tracking-tight">{member.displayName}</span>
+                            {response?.guardianApprovalPending && (
+                              <span className="text-[8px] text-amber-400 font-bold uppercase">Pending Guardian Approval</span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {response?.status === 'accepted' ? <Check className="text-plaeen-green" size={20} /> :
-                           response?.status === 'rejected' ? <X className="text-red-500" size={20} /> :
-                           response?.status === 'maybe' ? <HelpCircle className="text-yellow-500" size={20} /> :
-                           <div className="h-5 w-5 rounded-full border-2 border-white/10" />}
+                          {response?.status === 'accepted' ? <Check className="text-plaeen-green" size={16} /> :
+                           response?.status === 'rejected' ? <X className="text-red-500" size={16} /> :
+                           response?.status === 'maybe' ? <HelpCircle className="text-yellow-500" size={16} /> :
+                           <div className="h-4 w-4 rounded-full border-2 border-white/10" />}
                         </div>
                       </div>
                     );
@@ -708,44 +788,82 @@ export const TeamDetailPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-6 block">Notes</label>
-                <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                  {Object.entries(selectedSession.responses || {}).map(([uid, res]: [string, any]) => {
-                    const responder = members.find(m => m.uid === uid);
-                    if (!res.note) return null;
+              <div className="space-y-8">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-6 block">Admin Note</label>
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/10 italic text-white/60 text-sm">
+                    "{selectedSession.notes || 'No specific goals set for this session'}"
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">Personal Allowance</label>
+                  {(() => {
+                    const me = members.find(m => m.uid === activeUid);
+                    const allowance = me?.screenTime?.dailyAllowance || 0;
+                    const used = me?.screenTime?.usedToday || 0;
+                    const remaining = allowance - used;
+                    const canAfford = remaining >= selectedSession.duration;
+
                     return (
-                      <div key={uid} className="p-4 rounded-2xl bg-white/5 border-l-4 border-plaeen-green">
-                        <p className="text-[10px] font-bold text-plaeen-green uppercase mb-1">{responder?.displayName}</p>
-                        <p className="text-sm text-white/80">"{res.note}"</p>
+                      <div className={cn(
+                        "p-4 rounded-2xl border flex items-center justify-between",
+                        canAfford ? "bg-plaeen-green/10 border-plaeen-green/20" : "bg-amber-400/10 border-amber-400/20"
+                      )}>
+                        <div>
+                          <p className="text-xs font-bold text-white uppercase tracking-widest leading-none mb-1">Remaining Today</p>
+                          <p className={cn("text-2xl font-bold", canAfford ? "text-plaeen-green" : "text-amber-400")}>{remaining} min</p>
+                        </div>
+                        {!canAfford && role === 'kid' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-amber-400/40 text-amber-400 hover:bg-amber-400/10 text-[10px] py-1 px-3"
+                            onClick={() => requestAllowanceIncrease(selectedSession)}
+                          >
+                            Ask Guardian
+                          </Button>
+                        )}
                       </div>
                     );
-                  })}
+                  })()}
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <Button 
-                onClick={() => respondToSession('accepted', '')}
-                className="bg-plaeen-green text-black font-bold uppercase tracking-widest py-6"
-              >
-                Accept
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => respondToSession('maybe', '')}
-                className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest py-6"
-              >
-                Maybe
-              </Button>
-              <Button 
-                variant="ghost"
-                onClick={() => respondToSession('rejected', '')}
-                className="text-red-400 hover:bg-red-500/10 font-bold uppercase tracking-widest py-6"
-              >
-                Decline
-              </Button>
+            <div className="space-y-4">
+              <div className="relative">
+                <label className="absolute left-4 -top-2 px-2 bg-plaeen-dark text-[10px] font-bold text-white/40 uppercase tracking-widest z-10">Add a note</label>
+                <textarea 
+                  value={responseNote}
+                  onChange={(e) => setResponseNote(e.target.value)}
+                  placeholder="e.g. I'll join but might be late!"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 pt-6 text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all h-20"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <Button 
+                  onClick={() => respondToSession('accepted', responseNote)}
+                  className="bg-plaeen-green text-black font-bold uppercase tracking-widest py-6"
+                >
+                  {selectedSession.responses?.[activeUid]?.status === 'accepted' ? 'Update Response' : 'Accept'}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => respondToSession('maybe', responseNote)}
+                  className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest py-6"
+                >
+                  Maybe
+                </Button>
+                <Button 
+                  variant="ghost"
+                  onClick={() => respondToSession('rejected', responseNote)}
+                  className="text-red-400 hover:bg-red-500/10 font-bold uppercase tracking-widest py-6"
+                >
+                  {selectedSession.responses?.[activeUid]?.status === 'rejected' ? 'Withdrawn' : 'Decline'}
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

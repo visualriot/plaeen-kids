@@ -8,6 +8,7 @@ import { Check, X, Bell, UserPlus, Gamepad2, Clock, Users, ArrowLeft, AlertTrian
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { cn, formatName, safeToDate } from '@/lib/utils';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 
 interface ApprovalRequest {
   id: string;
@@ -32,7 +33,7 @@ export const ApprovalsPage = () => {
     const q = query(collection(db, 'approvals'), where('parentId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setApprovals(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ApprovalRequest)));
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'approvals'));
 
     return () => unsubscribe();
   }, [user]);
@@ -50,8 +51,11 @@ export const ApprovalsPage = () => {
           const kidDoc = await getDoc(doc(db, 'users', request.childId));
           const currentAllowance = kidDoc.data()?.screenTime?.dailyAllowance || 60;
           await updateDoc(doc(db, 'users', request.childId), {
-            'screenTime.dailyAllowance': currentAllowance + (request.data.minutes || 30)
+            'screenTime.dailyAllowance': currentAllowance + (request.data.requestedMinutes || request.data.minutes || 30)
           });
+          
+          // If it was for a specific session, we might want to update that session too,
+          // but just increasing the allowance is enough for the kid to then "Accept" the session.
         }
       } else if (status === 'denied' && request.type === 'overtime') {
         // Punishment logic
@@ -66,6 +70,7 @@ export const ApprovalsPage = () => {
         // Update notification to kid about punishment
         await addDoc(collection(db, 'notifications'), {
           userId: request.childId,
+          parentId: user.uid,
           type: 'penalty',
           title: 'Overtime Penalty',
           message: `A penalty of ${penalty} minutes has been deducted from your screen time for overtime.`,
@@ -78,6 +83,7 @@ export const ApprovalsPage = () => {
       if (request.type !== 'overtime') {
         await addDoc(collection(db, 'notifications'), {
           userId: request.childId,
+          parentId: user.uid,
           type: 'approval_status',
           title: `Request ${status}`,
           message: `Your request for ${request.type === 'game' ? request.data.gameName : request.type} has been ${status}.`,
@@ -89,6 +95,7 @@ export const ApprovalsPage = () => {
       } else if (status === 'approved') {
         await addDoc(collection(db, 'notifications'), {
           userId: request.childId,
+          parentId: user.uid,
           type: 'approval_status',
           title: 'Overtime Forgiven',
           message: 'Your parent has forgiven your overtime session. No penalty applied!',

@@ -3,11 +3,12 @@ import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useProfile } from '../contexts/ProfileContext';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Lock, LogOut, Pencil, Settings, Shield, User, X, Camera, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn, calculateAge, formatName } from '../lib/utils';
 import { validateUsername } from '@/lib/validation';
 
@@ -33,7 +34,48 @@ export const ProfileSelectionPage = () => {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [showForgotPinView, setShowForgotPinView] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const pinInputRef = React.useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  // Persistent focus for PIN input when modal is open
+  useEffect(() => {
+    if (showPinModal && !showForgotPinView) {
+      const timer = setTimeout(() => pinInputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showPinModal, showForgotPinView]);
+
+  const handleGlobalClickFocus = (e: MouseEvent) => {
+    if (showPinModal && !showForgotPinView && pinInputRef.current) {
+      const target = e.target as HTMLElement;
+      // Never focus away if clicking generic areas
+      if (target.tagName !== 'BUTTON' && target.tagName !== 'INPUT' && !target.closest('.no-focus-steal')) {
+        pinInputRef.current.focus();
+      }
+    }
+  };
+
+  const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    if (showPinModal && !showForgotPinView && pinInputRef.current) {
+      if (document.activeElement !== pinInputRef.current) {
+        pinInputRef.current.focus();
+      }
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('mousedown', handleGlobalClickFocus);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', handleGlobalClickFocus);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [showPinModal, showForgotPinView]);
 
   useEffect(() => {
     if (parentProfile && !parentProfile.onboardingComplete) {
@@ -47,7 +89,7 @@ export const ProfileSelectionPage = () => {
     const q = query(collection(db, 'users'), where('parentId', '==', user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setKids(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as KidProfile)));
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'users'));
 
     return () => unsubscribe();
   }, [user]);
@@ -140,6 +182,32 @@ export const ProfileSelectionPage = () => {
   };
 
   const AVATAR_SEEDS = ['Felix', 'Aneka', 'Caleb', 'Jocelyn', 'Max', 'Luna', 'Leo', 'Milo'];
+
+  const pinVariants = {
+    inactive: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      scale: 1
+    },
+    active: {
+      borderColor: ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.1)'],
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      scale: [1, 1.03, 1],
+      transition: { 
+        borderColor: { repeat: Infinity, duration: 2 },
+        scale: { repeat: Infinity, duration: 2 }
+      }
+    },
+    filled: {
+      borderColor: 'rgba(118, 233, 0, 1)',
+      backgroundColor: 'rgba(118, 233, 0, 0.1)',
+      scale: 1
+    },
+    error: {
+      borderColor: 'rgba(239, 68, 68, 1)',
+      scale: 1
+    }
+  };
 
   return (
     <div className="min-h-screen bg-plaeen-dark flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -364,58 +432,187 @@ export const ProfileSelectionPage = () => {
           >
             <div className="w-full max-w-sm text-center">
               <button 
-                onClick={() => setShowPinModal(false)}
+                onClick={() => {
+                  setShowPinModal(false);
+                  setShowForgotPinView(false);
+                  setResetSent(false);
+                  setResetEmail('');
+                }}
                 className="absolute top-8 right-8 text-white/40 hover:text-white"
               >
                 <X size={32} />
               </button>
 
-              <Shield size={48} className="text-plaeen-green mx-auto mb-8" />
-              <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">Parental Access</h2>
-              <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-12">Enter your 4-digit PIN</p>
+              <AnimatePresence mode="wait">
+                {!showForgotPinView ? (
+                  <motion.div
+                    key="pin-view"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                  >
+                    <Shield size={48} className="text-plaeen-green mx-auto mb-8" />
+                    <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">Parental Access</h2>
+                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-12">Enter your 4-digit PIN</p>
 
-              <form onSubmit={handlePinSubmit} className="space-y-12">
-                <div className="flex justify-center gap-4">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div 
-                      key={i}
-                      className={`h-16 w-16 rounded-2xl border-2 flex items-center justify-center text-3xl font-bold transition-all duration-300 ${
-                        pinError ? 'border-red-500 animate-shake' : 
-                        pin.length > i ? 'border-plaeen-green text-white bg-plaeen-green/10' : 'border-white/10 text-white/20'
-                      }`}
-                    >
-                      {pin.length > i ? '•' : ''}
-                    </div>
-                  ))}
-                </div>
+                      <form onSubmit={handlePinSubmit} className="space-y-12 relative">
+                        <div 
+                          className="flex justify-center gap-4 cursor-text group/pin"
+                          onClick={() => pinInputRef.current?.focus()}
+                        >
+                          {[0, 1, 2, 3].map((i) => {
+                            const isFilled = pin.length > i;
+                            const isNext = pin.length === i;
+                            
+                            return (
+                              <motion.div 
+                                key={i}
+                                variants={pinVariants}
+                                initial="inactive"
+                                animate={
+                                  pinError ? "error" :
+                                  isFilled ? "filled" : 
+                                  isNext ? "active" : "inactive"
+                                }
+                                className={cn(
+                                  "h-16 w-16 rounded-2xl border-2 flex items-center justify-center text-3xl font-bold transition-all duration-300",
+                                  pinError && "animate-shake"
+                                )}
+                              >
+                                {isFilled ? '•' : ''}
+                              </motion.div>
+                            );
+                          })}
+                        </div>
 
-                <input 
-                  type="password"
-                  maxLength={4}
-                  autoFocus
-                  value={pin}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setPin(val);
-                    if (val.length === 4) {
-                      // Auto submit
-                      if (val === (parentProfile?.guardianPin || '0000')) {
-                        setParentAuthenticated(true);
-                        navigate('/parent-dashboard');
-                      } else {
-                        setPinError(true);
-                        setPin('');
-                        setTimeout(() => setPinError(false), 500);
-                      }
-                    }
-                  }}
-                  className="opacity-0 absolute"
-                />
+                        <input 
+                          ref={pinInputRef}
+                          type="password"
+                          maxLength={4}
+                          autoFocus
+                          value={pin}
+                          onFocus={() => setIsInputFocused(true)}
+                          onBlur={() => setIsInputFocused(false)}
+                          className="absolute inset-0 opacity-0 cursor-default pointer-events-none"
+                          autoComplete="off"
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setPin(val);
+                            if (val.length === 4) {
+                              // Auto submit
+                              if (val === (parentProfile?.guardianPin || '0000')) {
+                                setParentAuthenticated(true);
+                                navigate('/parent-dashboard');
+                              } else {
+                                setPinError(true);
+                                setPin('');
+                                setTimeout(() => setPinError(false), 500);
+                              }
+                            }
+                          }}
+                        />
 
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em]">
-                  Forgot PIN? Contact Support
-                </p>
-              </form>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowForgotPinView(true);
+                          }}
+                          className="relative z-20 text-[10px] font-bold text-white/20 hover:text-plaeen-green transition-all uppercase tracking-[0.3em] py-2 px-4 cursor-pointer"
+                        >
+                          Forgot PIN?
+                        </button>
+                      </form>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="forgot-view"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <Lock size={48} className="text-plaeen-green mx-auto mb-8" />
+                    <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">Reset PIN</h2>
+                    
+                    {!resetSent ? (
+                      <>
+                        <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-12">Enter your email to receive a reset link</p>
+                        <form 
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!resetEmail) return;
+                            setIsResetting(true);
+                            try {
+                              // Real logic would go here: searching for user, generating token, saving to db
+                              // For now we simulate the "send"
+                              await new Promise(r => setTimeout(r, 1500));
+                              setResetSent(true);
+                            } catch (err) {
+                              console.error(err);
+                            } finally {
+                              setIsResetting(false);
+                            }
+                          }} 
+                          className="space-y-8 text-left"
+                        >
+                          <div className="space-y-4">
+                            <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">Email Address</label>
+                            <input 
+                              type="email"
+                              value={resetEmail}
+                              onChange={e => setResetEmail(e.target.value)}
+                              placeholder="ENTER YOUR EMAIL"
+                              className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-5 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest text-sm"
+                              required
+                            />
+                          </div>
+                          <Button 
+                            type="submit" 
+                            disabled={isResetting}
+                            className="w-full py-6 font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+                          >
+                            {isResetting ? 'Processing...' : 'Send Reset Link'}
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPinView(false)}
+                            className="w-full text-[10px] font-bold text-white/20 hover:text-white transition-all uppercase tracking-[0.3em]"
+                          >
+                            Back to Login
+                          </button>
+                        </form>
+                      </>
+                    ) : (
+                      <div className="py-8 space-y-8">
+                        <Check size={48} className="text-plaeen-green mx-auto" />
+                        <p className="text-white font-bold uppercase tracking-widest text-sm">Reset link sent to your email!</p>
+                        <p className="text-white/40 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                          Check your inbox and click the link to configure your new futuristic PIN.
+                        </p>
+                        
+                        <div className="p-6 rounded-2xl bg-plaeen-green/5 border border-plaeen-green/20 space-y-4">
+                          <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest text-center">Protocol Override (Dev Mode):</p>
+                          <Link 
+                            to={`/reset-pin?token=${user?.uid}`}
+                            className="block w-full py-4 rounded-xl bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] hover:scale-105 transition-transform"
+                          >
+                            Open Magic Reset Link
+                          </Link>
+                        </div>
+
+                        <Button 
+                          onClick={() => setShowForgotPinView(false)}
+                          variant="outline"
+                          className="w-full py-6 font-bold uppercase tracking-widest border-white/10 text-white/40 hover:text-white"
+                        >
+                          Return to Access
+                        </Button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
         )}

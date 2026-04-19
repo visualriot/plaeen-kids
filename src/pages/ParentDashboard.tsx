@@ -9,6 +9,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { format, isSameWeek, isSameMonth } from 'date-fns';
 import { useProfile } from '@/contexts/ProfileContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 import { validateUsername } from '@/lib/validation';
 import { cn, formatName } from '@/lib/utils';
 
@@ -73,9 +74,7 @@ export const ParentDashboard = () => {
     const q = query(collection(db, 'users'), where('parentId', '==', user.uid));
     const unsubscribeKids = onSnapshot(q, (snapshot) => {
       setKids(snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as KidProfile)));
-    }, (error) => {
-      console.error("Kids listener error:", error);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'users'));
 
     const qApprovals = query(collection(db, 'approvals'), where('parentId', '==', user.uid), where('status', '==', 'pending'));
     const unsubscribeApprovals = onSnapshot(qApprovals, (snapshot) => {
@@ -92,14 +91,28 @@ export const ParentDashboard = () => {
       }
       
       setApprovals(newApprovals);
-    }, (error) => {
-      console.error("Approvals listener error:", error);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'approvals'));
 
     return () => {
       unsubscribeKids();
       unsubscribeApprovals();
     };
+  }, [user]);
+
+  // Sync parent email to users_public once for searchability
+  useEffect(() => {
+    if (!user || user.isAnonymous) return;
+    const syncProfile = async () => {
+      const publicRef = doc(db, 'users_public', user.uid);
+      const publicSnap = await getDoc(publicRef);
+      if (publicSnap.exists()) {
+        const data = publicSnap.data();
+        if (!data.email && user.email) {
+          await updateDoc(publicRef, { email: user.email.toLowerCase() });
+        }
+      }
+    };
+    syncProfile();
   }, [user]);
 
   const createKidAccount = async (e: React.FormEvent) => {
@@ -279,10 +292,16 @@ export const ParentDashboard = () => {
       await deleteDoc(doc(db, 'users_public', kidId));
       
       // 3. Delete approvals
-      const qApprovals = query(collection(db, 'approvals'), where('childId', '==', kidId));
-      const snapApprovals = await getDocs(qApprovals);
-      for (const d of snapApprovals.docs) {
-        await deleteDoc(d.ref);
+      if (user) {
+        const qApprovals = query(
+          collection(db, 'approvals'), 
+          where('childId', '==', kidId),
+          where('parentId', '==', user.uid)
+        );
+        const snapApprovals = await getDocs(qApprovals);
+        for (const d of snapApprovals.docs) {
+          await deleteDoc(d.ref);
+        }
       }
 
     } catch (err) {
@@ -479,6 +498,7 @@ export const ParentDashboard = () => {
                         {req.type === 'activity' ? `Activity: ${req.title}` : 
                          req.type === 'friend' ? `Friend: ${req.data.friendName}` : 
                          req.type === 'game' ? `Game: ${req.data.gameName}` : 
+                         req.type === 'time' ? `Extra Time: ${req.data.requestedMinutes}m` :
                          req.type === 'overtime' ? `Overtime: ${req.data.overtimeMinutes}m` : 'Team Invite'}
                       </p>
                     </div>
@@ -510,6 +530,23 @@ export const ParentDashboard = () => {
                         >
                           Handle Decision
                         </Button>
+                      ) : req.type === 'time' ? (
+                        <div className="flex gap-2 w-full">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleApproval(req.id, 'approved', req.data.requestedMinutes)}
+                            className="flex-1 bg-plaeen-green/10 text-plaeen-green border border-plaeen-green/20 hover:bg-plaeen-green hover:text-black py-2 text-[8px] font-bold uppercase tracking-widest"
+                          >
+                            Approve {req.data.requestedMinutes}m
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleApproval(req.id, 'denied')}
+                            className="flex-1 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white py-2"
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
                       ) : (
                         <>
                           <Button 

@@ -9,6 +9,7 @@ import { useProfile } from '../contexts/ProfileContext';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { cn, formatName, safeToDate } from '../lib/utils';
+import { handleFirestoreError } from '../lib/firestoreUtils';
 import { format, isToday, isYesterday, subDays, isAfter } from 'date-fns';
 
 interface Notification {
@@ -20,11 +21,15 @@ interface Notification {
   read: boolean;
   createdAt: any;
   data?: any;
+  groupId?: string;
+  teamId?: string;
+  fromId?: string;
+  parentId?: string;
 }
 
 export const NotificationsPage = () => {
   const [user] = useAuthState(auth);
-  const { activeKid, role, parentProfile } = useProfile();
+  const { activeKid, role, parentProfile, isParentViewingKid } = useProfile();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [feedback, setFeedback] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,22 +39,33 @@ export const NotificationsPage = () => {
   const activeUid = activeKid?.uid || user?.uid;
 
   useEffect(() => {
-    if (!activeUid) return;
+    if (!activeUid || !user) return;
 
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', activeUid),
-      orderBy('createdAt', 'desc'),
-      limit(100)
-    );
+    let q;
+    if (isParentViewingKid) {
+      q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', activeUid),
+        where('parentId', '==', user.uid),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      );
+    } else {
+      q = query(
+        collection(db, 'notifications'),
+        where('userId', '==', activeUid),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Notification)));
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'notifications'));
 
     return () => unsubscribe();
-  }, [activeUid]);
+  }, [activeUid, user, isParentViewingKid]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -140,15 +156,26 @@ export const NotificationsPage = () => {
         }
 
         // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
-        const qClean = query(
-          collection(db, 'notifications'),
-          where('userId', '==', activeUid),
-          where('type', '==', 'team_invite')
-        );
+        const isParentViewingKid = role === 'parent' && activeKid && activeUid !== user?.uid;
+        let qClean;
+        if (isParentViewingKid) {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', activeUid),
+            where('parentId', '==', user?.uid),
+            where('type', '==', 'team_invite')
+          );
+        } else {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', activeUid),
+            where('type', '==', 'team_invite')
+          );
+        }
         const snap = await getDocs(qClean);
         const batch = writeBatch(db);
         snap.docs.forEach(d => {
-          const dData = d.data();
+          const dData = d.data() as any;
           const dGid = dData.data?.groupId || dData.data?.teamId || dData.groupId || dData.teamId;
           if (dGid === gid) {
             batch.delete(d.ref);
@@ -229,15 +256,26 @@ export const NotificationsPage = () => {
       
       // AGGRESSIVE CLEANUP: Find all notifications for this friend request
       if (fromId) {
-        const qClean = query(
-          collection(db, 'notifications'),
-          where('userId', '==', activeUid),
-          where('type', '==', 'friend_request')
-        );
+        const isParentViewingKid = role === 'parent' && activeKid && activeUid !== user?.uid;
+        let qClean;
+        if (isParentViewingKid) {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', activeUid),
+            where('parentId', '==', user?.uid),
+            where('type', '==', 'friend_request')
+          );
+        } else {
+          qClean = query(
+            collection(db, 'notifications'),
+            where('userId', '==', activeUid),
+            where('type', '==', 'friend_request')
+          );
+        }
         const snap = await getDocs(qClean);
         const batch = writeBatch(db);
         snap.docs.forEach(d => {
-          const dData = d.data();
+          const dData = d.data() as any;
           const dFromId = dData.fromId || dData.data?.fromId;
           if (dFromId === fromId) {
             batch.delete(d.ref);

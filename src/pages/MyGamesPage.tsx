@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useNavigate } from 'react-router-dom';
+import { handleFirestoreError } from '@/lib/firestoreUtils';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { 
@@ -58,11 +59,15 @@ export const MyGamesPage = () => {
 
     // Listen to user data for wishlist and allowedGames
     const unsubscribeUser = onSnapshot(doc(db, 'users', activeKid.uid), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setWishlist(data.wishlist || []);
+      try {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setWishlist(data.wishlist || []);
+        }
+      } catch (err) {
+        console.error("Error processing user wishlist:", err);
       }
-    });
+    }, (error) => handleFirestoreError(error, 'get', `users/${activeKid.uid}`));
 
     // Listen to approvals for pending/denied games
     const isParent = user.uid !== activeKid.uid;
@@ -75,7 +80,7 @@ export const MyGamesPage = () => {
     const unsubscribeApprovals = onSnapshot(qApprovals, (snapshot) => {
       setApprovals(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'approvals'));
 
     // Fetch teams
     const qTeams = query(
@@ -86,20 +91,15 @@ export const MyGamesPage = () => {
       const allTeams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       // Filter client-side to avoid multiple array-contains
       setTeams(allTeams.filter((t: any) => t.members.includes(activeKid.uid)));
-    });
+    }, (error) => handleFirestoreError(error, 'list', 'groups'));
 
     // Fetch friends
+    let unsubscribeFriends: (() => void) | undefined;
     if (activeKid.friends && activeKid.friends.length > 0) {
       const qFriends = query(collection(db, 'users_public'), where('uid', 'in', activeKid.friends));
-      const unsubscribeFriends = onSnapshot(qFriends, (snapshot) => {
+      unsubscribeFriends = onSnapshot(qFriends, (snapshot) => {
         setFriends(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-      });
-      return () => {
-        unsubscribeUser();
-        unsubscribeApprovals();
-        unsubscribeTeams();
-        unsubscribeFriends();
-      };
+      }, (error) => handleFirestoreError(error, 'list', 'users_public'));
     } else {
       setFriends([]);
     }
@@ -108,6 +108,7 @@ export const MyGamesPage = () => {
       unsubscribeUser();
       unsubscribeApprovals();
       unsubscribeTeams();
+      if (unsubscribeFriends) unsubscribeFriends();
     };
   }, [user, activeKid]);
 
