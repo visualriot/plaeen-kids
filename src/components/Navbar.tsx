@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { auth } from '../firebase';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { 
-  Gamepad2, 
-  Users, 
-  Calendar, 
-  Heart, 
-  Search, 
-  Bell, 
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { auth } from "../firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
+import {
+  Gamepad2,
+  Users,
+  Calendar,
+  Heart,
+  Search,
+  Bell,
   User as UserIcon,
   LogOut,
   Shield,
@@ -18,15 +18,15 @@ import {
   LayoutDashboard,
   Users2,
   Compass,
-  RefreshCw
-} from 'lucide-react';
-import { Button } from './Button';
-import { useProfile } from '../contexts/ProfileContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { formatName } from '../lib/utils';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
-import { NotificationPanel } from './NotificationPanel';
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "./Button";
+import { useProfile } from "../contexts/ProfileContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { formatName, getUserAvatar } from "../lib/utils";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
+import { NotificationPanel } from "./NotificationPanel";
 
 export const Navbar = () => {
   const [user] = useAuthState(auth);
@@ -40,7 +40,7 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const activeUid = activeKid?.uid || (role === 'parent' ? user?.uid : null);
+  const activeUid = activeKid?.uid || (role === "parent" ? user?.uid : null);
 
   useEffect(() => {
     setUnreadCount(0);
@@ -49,16 +49,16 @@ export const Navbar = () => {
     let q;
     if (isParentViewingKid) {
       q = query(
-        collection(db, 'notifications'),
-        where('userId', '==', activeUid),
-        where('parentId', '==', user?.uid),
-        where('read', '==', false)
+        collection(db, "notifications"),
+        where("userId", "==", activeUid),
+        where("parentId", "==", user?.uid),
+        where("read", "==", false),
       );
     } else {
       q = query(
-        collection(db, 'notifications'),
-        where('userId', '==', activeUid),
-        where('read', '==', false)
+        collection(db, "notifications"),
+        where("userId", "==", activeUid),
+        where("read", "==", false),
       );
     }
 
@@ -72,43 +72,51 @@ export const Navbar = () => {
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isUserMenuOpen && userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        isUserMenuOpen &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setIsUserMenuOpen(false);
       }
-      if (isNotificationsOpen && notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+      if (
+        isNotificationsOpen &&
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
         setIsNotificationsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isUserMenuOpen, isNotificationsOpen]);
 
   const handleLogout = () => {
     auth.signOut();
     logoutProfile();
-    navigate('/auth');
+    navigate("/auth");
   };
 
   const handleSwitchProfile = () => {
     logoutProfile();
-    navigate('/select-profile');
+    navigate("/select-profile");
   };
 
   const kidNavLinks = [
-    { name: 'Hub', path: '/kid-dashboard', icon: LayoutDashboard },
-    { name: 'Teams', path: '/teams', icon: Users2 },
-    { name: 'Friends', path: '/friends', icon: Users },
-    { name: 'My Games', path: '/my-games', icon: Gamepad2 },
+    { name: "Hub", path: "/kid-dashboard", icon: LayoutDashboard },
+    { name: "Teams", path: "/teams", icon: Users2 },
+    { name: "Friends", path: "/friends", icon: Users },
+    { name: "My Games", path: "/my-games", icon: Gamepad2 },
   ];
 
   const parentNavLinks = [
-    { name: 'Guardian Hub', path: '/parent-dashboard', icon: Shield },
-    { name: 'Approvals', path: '/parent/approvals', icon: Bell },
-    { name: 'Activity', path: '/parent/activity', icon: Calendar },
+    { name: "Guardian Hub", path: "/parent-dashboard", icon: Shield },
+    { name: "Approvals", path: "/parent/approvals", icon: Bell },
+    { name: "Activity", path: "/parent/activity", icon: Calendar },
   ];
 
-  const navLinks = role === 'kid' ? kidNavLinks : parentNavLinks;
+  const navLinks = role === "kid" ? kidNavLinks : parentNavLinks;
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-plaeen-dark/80 backdrop-blur-xl">
@@ -116,7 +124,11 @@ export const Navbar = () => {
         {/* Logo & Main Nav */}
         <div className="flex items-center gap-12">
           <Link to="/" className="flex items-center gap-2 group">
-            <img src="/logo.png" alt="Plaeen" className="h-10 w-auto group-hover:scale-110 transition-transform" />
+            <img
+              src="/logo/logo.png"
+              alt="Plaeen"
+              className="h-10 w-auto group-hover:scale-110 transition-transform"
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -126,9 +138,9 @@ export const Navbar = () => {
                 key={link.path}
                 to={link.path}
                 className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                  location.pathname === link.path 
-                    ? 'text-plaeen-green bg-plaeen-green/10' 
-                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                  location.pathname === link.path
+                    ? "text-plaeen-green bg-plaeen-green/10"
+                    : "text-white/40 hover:text-white hover:bg-white/5"
                 }`}
               >
                 {link.name}
@@ -139,10 +151,13 @@ export const Navbar = () => {
 
         {/* Right Side Actions */}
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-2 relative" ref={notificationsRef}>
-            <button 
+          <div
+            className="hidden md:flex items-center gap-2 relative"
+            ref={notificationsRef}
+          >
+            <button
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className={`p-2 transition-colors relative ${isNotificationsOpen ? 'text-plaeen-green' : 'text-white/40 hover:text-white'}`}
+              className={`p-2 transition-colors relative ${isNotificationsOpen ? "text-plaeen-green" : "text-white/40 hover:text-white"}`}
             >
               <Bell size={20} />
               {unreadCount > 0 && (
@@ -151,7 +166,7 @@ export const Navbar = () => {
             </button>
 
             {activeUid && (
-              <NotificationPanel 
+              <NotificationPanel
                 userId={activeUid}
                 isOpen={isNotificationsOpen}
                 onClose={() => setIsNotificationsOpen(false)}
@@ -161,56 +176,63 @@ export const Navbar = () => {
 
           {/* User Profile Dropdown */}
           <div className="relative" ref={userMenuRef}>
-            <button 
+            <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-3 p-1 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
             >
               <div className="h-10 w-10 rounded-xl overflow-hidden border-2 border-plaeen-green/30">
-                <img 
-                  src={activeKid?.photoURL || user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} 
-                  alt="Profile" 
+                <img
+                  src={getUserAvatar(activeKid?.photoURL || user?.photoURL)}
+                  alt="Profile"
                   className="h-full w-full object-cover"
                 />
               </div>
               <div className="hidden sm:block text-left pr-2">
                 <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-none mb-1">
-                  {formatName(activeKid?.displayName || user?.displayName || 'User')}
+                  {formatName(
+                    activeKid?.displayName || user?.displayName || "User",
+                  )}
                 </p>
                 <p className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest leading-none">
-                  {role === 'kid' ? 'Gamer' : 'Guardian'}
+                  {role === "kid" ? "Gamer" : "Guardian"}
                 </p>
               </div>
-              <ChevronDown size={14} className={`text-white/20 mr-2 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                size={14}
+                className={`text-white/20 mr-2 transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`}
+              />
             </button>
 
             <AnimatePresence>
               {isUserMenuOpen && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   className="absolute right-0 mt-4 w-64 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl p-2 z-[70] backdrop-blur-xl"
                 >
                   <div className="p-4 border-b border-white/5 mb-2">
-                    <p className="text-xs font-bold text-white uppercase tracking-widest">Account Settings</p>
+                    <p className="text-xs font-bold text-white uppercase tracking-widest">
+                      Account Settings
+                    </p>
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={handleSwitchProfile}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
                   >
                     <RefreshCw size={16} /> Switch Profile
                   </button>
 
-                  <Link 
+                  <Link
                     to="/kid-calendar"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
                   >
                     <Calendar size={16} /> Calendar
                   </Link>
-                  
-                  <Link 
-                    to={role === 'kid' ? '/profile' : '/parent/settings'}
+
+                  <Link
+                    to={role === "kid" ? "/profile" : "/parent/settings"}
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
                   >
                     <UserIcon size={16} /> Settings
@@ -218,7 +240,7 @@ export const Navbar = () => {
 
                   <div className="h-px bg-white/5 my-2 mx-4" />
 
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
                   >
@@ -230,7 +252,7 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile Menu Toggle */}
-          <button 
+          <button
             className="lg:hidden p-2 text-white/40 hover:text-white"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
@@ -242,9 +264,9 @@ export const Navbar = () => {
       {/* Mobile Navigation */}
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             className="lg:hidden border-t border-white/5 bg-plaeen-dark/95 backdrop-blur-xl overflow-hidden"
           >
@@ -255,9 +277,9 @@ export const Navbar = () => {
                   to={link.path}
                   onClick={() => setIsMenuOpen(false)}
                   className={`flex items-center gap-4 p-4 rounded-2xl text-sm font-bold uppercase tracking-widest transition-all ${
-                    location.pathname === link.path 
-                      ? 'text-plaeen-green bg-plaeen-green/10' 
-                      : 'text-white/40 hover:text-white hover:bg-white/5'
+                    location.pathname === link.path
+                      ? "text-plaeen-green bg-plaeen-green/10"
+                      : "text-white/40 hover:text-white hover:bg-white/5"
                   }`}
                 >
                   <link.icon size={20} />
