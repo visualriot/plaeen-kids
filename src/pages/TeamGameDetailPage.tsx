@@ -1,13 +1,39 @@
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
-import { auth, db } from '@/firebase';
-import { doc, onSnapshot, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, Timestamp } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { Plus, ChevronLeft, Calendar as CalendarIcon, Target, BookOpen, Trophy, Clock, MessageSquare, Save, RotateCcw, X, Check, HelpCircle, Gamepad2 } from 'lucide-react';
-import { format, isSameDay } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
+import { auth, db } from "@/firebase";
+import {
+  doc,
+  onSnapshot,
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  Timestamp,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useAuthState } from "react-firebase-hooks/auth";
+import {
+  Plus,
+  ChevronLeft,
+  Calendar as CalendarIcon,
+  Target,
+  BookOpen,
+  Trophy,
+  Clock,
+  MessageSquare,
+  Save,
+  RotateCcw,
+  X,
+  Check,
+  HelpCircle,
+  Gamepad2,
+} from "lucide-react";
+import { format, isSameDay } from "date-fns";
+import { cn, getUserAvatar } from "@/lib/utils";
 
 interface GroupGame {
   id: string;
@@ -39,28 +65,33 @@ export const TeamGameDetailPage = () => {
   const [user] = useAuthState(auth);
   const [game, setGame] = useState<GroupGame | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [newGoal, setNewGoal] = useState('');
-  const [notes, setNotes] = useState('');
+  const [newGoal, setNewGoal] = useState("");
+  const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!teamId || !gameId) return;
 
-    const unsubscribe = onSnapshot(doc(db, 'groups', teamId, 'games', gameId), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data() as GroupGame;
-        setGame(data);
-        setNotes(data.teamNotes || '');
-      }
-    });
+    const unsubscribe = onSnapshot(
+      doc(db, "groups", teamId, "games", gameId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as GroupGame;
+          setGame(data);
+          setNotes(data.teamNotes || "");
+        }
+      },
+    );
 
     const sessionsQuery = query(
-      collection(db, 'groups', teamId, 'sessions'),
-      where('gameId', '==', gameId)
+      collection(db, "groups", teamId, "sessions"),
+      where("gameId", "==", gameId),
     );
     const sessionsUnsubscribe = onSnapshot(sessionsQuery, (snapshot) => {
-      setSessions(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Session)));
+      setSessions(
+        snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session),
+      );
     });
 
     return () => {
@@ -72,23 +103,23 @@ export const TeamGameDetailPage = () => {
   const addGoal = async () => {
     if (!teamId || !gameId || !newGoal.trim()) return;
     try {
-      await updateDoc(doc(db, 'groups', teamId, 'games', gameId), {
-        teamGoals: arrayUnion(newGoal.trim())
+      await updateDoc(doc(db, "groups", teamId, "games", gameId), {
+        teamGoals: arrayUnion(newGoal.trim()),
       });
-      setNewGoal('');
+      setNewGoal("");
     } catch (err) {
-      console.error('Error adding goal:', err);
+      console.error("Error adding goal:", err);
     }
   };
 
   const removeGoal = async (goal: string) => {
     if (!teamId || !gameId) return;
     try {
-      await updateDoc(doc(db, 'groups', teamId, 'games', gameId), {
-        teamGoals: arrayRemove(goal)
+      await updateDoc(doc(db, "groups", teamId, "games", gameId), {
+        teamGoals: arrayRemove(goal),
       });
     } catch (err) {
-      console.error('Error removing goal:', err);
+      console.error("Error removing goal:", err);
     }
   };
 
@@ -96,35 +127,47 @@ export const TeamGameDetailPage = () => {
     if (!teamId || !gameId) return;
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, 'groups', teamId, 'games', gameId), {
-        teamNotes: notes
+      await updateDoc(doc(db, "groups", teamId, "games", gameId), {
+        teamNotes: notes,
       });
     } catch (err) {
-      console.error('Error saving notes:', err);
+      console.error("Error saving notes:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (!game) return <div className="flex h-[60vh] items-center justify-center">Loading game intel...</div>;
+  if (!game)
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        Loading game intel...
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="mb-12">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={() => navigate(`/teams/${teamId}`)}
           className="text-white/40 hover:text-plaeen-green gap-2 uppercase tracking-widest font-bold mb-8"
         >
           <ChevronLeft size={20} /> Back to Team
         </Button>
-        
+
         <div className="relative h-96 rounded-[3rem] overflow-hidden group">
-          <img src={game.image} alt={game.name} className="w-full h-full object-cover" />
+          <img
+            src={game.image}
+            alt={game.name}
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-plaeen-dark via-plaeen-dark/40 to-transparent flex flex-col justify-end p-12">
             <div className="flex flex-wrap gap-3 mb-6">
-              {game.genres.map(g => (
-                <span key={g} className="px-4 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[10px] font-bold uppercase tracking-widest">
+              {game.genres.map((g) => (
+                <span
+                  key={g}
+                  className="px-4 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[10px] font-bold uppercase tracking-widest"
+                >
                   {g}
                 </span>
               ))}
@@ -147,17 +190,26 @@ export const TeamGameDetailPage = () => {
               <Card className="bg-white/5 border-white/10 p-8 text-center group hover:border-plaeen-green/30 transition-all">
                 <Clock className="mx-auto mb-4 text-plaeen-green" size={32} />
                 <p className="text-3xl font-bold text-white mb-1">124h</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Total Playtime</p>
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                  Total Playtime
+                </p>
               </Card>
               <Card className="bg-white/5 border-white/10 p-8 text-center group hover:border-plaeen-green/30 transition-all">
                 <Trophy className="mx-auto mb-4 text-plaeen-green" size={32} />
                 <p className="text-3xl font-bold text-white mb-1">42/80</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Achievements</p>
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                  Achievements
+                </p>
               </Card>
               <Card className="bg-white/5 border-white/10 p-8 text-center group hover:border-plaeen-green/30 transition-all">
-                <CalendarIcon className="mx-auto mb-4 text-plaeen-green" size={32} />
+                <CalendarIcon
+                  className="mx-auto mb-4 text-plaeen-green"
+                  size={32}
+                />
                 <p className="text-3xl font-bold text-white mb-1">Yesterday</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Last Session</p>
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                  Last Session
+                </p>
               </Card>
             </div>
           </section>
@@ -170,31 +222,49 @@ export const TeamGameDetailPage = () => {
             <Card className="bg-white/5 border-white/10 p-8">
               <div className="space-y-4 mb-8">
                 {game.teamGoals?.map((goal, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 group">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 group"
+                  >
                     <div className="flex items-center gap-4">
                       <div className="h-6 w-6 rounded-lg border-2 border-plaeen-green/30 flex items-center justify-center group-hover:border-plaeen-green transition-colors">
-                        <Check size={14} className="text-plaeen-green opacity-0 group-hover:opacity-100" />
+                        <Check
+                          size={14}
+                          className="text-plaeen-green opacity-0 group-hover:opacity-100"
+                        />
                       </div>
-                      <span className="font-bold text-white/80 uppercase tracking-wide">{goal}</span>
+                      <span className="font-bold text-white/80 uppercase tracking-wide">
+                        {goal}
+                      </span>
                     </div>
-                    <button onClick={() => removeGoal(goal)} className="text-white/10 hover:text-red-500 transition-colors">
+                    <button
+                      onClick={() => removeGoal(goal)}
+                      className="text-white/10 hover:text-red-500 transition-colors"
+                    >
                       <X size={18} />
                     </button>
                   </div>
                 ))}
                 {(!game.teamGoals || game.teamGoals.length === 0) && (
-                  <p className="text-center py-8 text-white/20 font-bold uppercase tracking-widest">No objectives set yet</p>
+                  <p className="text-center py-8 text-white/20 font-bold uppercase tracking-widest">
+                    No objectives set yet
+                  </p>
                 )}
               </div>
               <div className="flex gap-4">
-                <input 
+                <input
                   type="text"
                   value={newGoal}
                   onChange={(e) => setNewGoal(e.target.value)}
                   placeholder="Add a new goal (e.g. Complete Chapter 4)"
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all"
                 />
-                <Button onClick={addGoal} className="px-8 font-bold uppercase tracking-widest">Add</Button>
+                <Button
+                  onClick={addGoal}
+                  className="px-8 font-bold uppercase tracking-widest"
+                >
+                  Add
+                </Button>
               </div>
             </Card>
           </section>
@@ -205,26 +275,32 @@ export const TeamGameDetailPage = () => {
               <BookOpen size={16} /> Team Intel & Strategy
             </h2>
             <Card className="bg-white/5 border-white/10 p-8">
-              <textarea 
+              <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Share strategies, build ideas, or session recaps..."
                 className="w-full h-64 bg-white/5 border border-white/10 rounded-2xl p-6 text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all mb-6 resize-none"
               />
               <div className="flex justify-end gap-4">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setNotes(game.teamNotes || '')}
+                <Button
+                  variant="ghost"
+                  onClick={() => setNotes(game.teamNotes || "")}
                   className="text-white/40 hover:text-white uppercase tracking-widest font-bold"
                 >
                   <RotateCcw size={18} className="mr-2" /> Revert
                 </Button>
-                <Button 
-                  onClick={saveNotes} 
+                <Button
+                  onClick={saveNotes}
                   disabled={isSaving}
                   className="px-12 font-bold uppercase tracking-widest"
                 >
-                  {isSaving ? 'Saving...' : <><Save size={18} className="mr-2" /> Save Intel</>}
+                  {isSaving ? (
+                    "Saving..."
+                  ) : (
+                    <>
+                      <Save size={18} className="mr-2" /> Save Intel
+                    </>
+                  )}
                 </Button>
               </div>
             </Card>
@@ -239,38 +315,59 @@ export const TeamGameDetailPage = () => {
             </h2>
             <Card className="bg-white/5 border-white/10 p-8">
               <div className="space-y-6">
-                {sessions.sort((a, b) => a.startTime.toDate() - b.startTime.toDate()).map(session => (
-                  <div key={session.id} className="p-6 rounded-2xl bg-white/5 border-l-4 border-plaeen-green">
-                    <p className="text-[10px] font-bold text-plaeen-green uppercase mb-2">
-                      {format(session.startTime.toDate(), 'EEEE, MMM d')}
-                    </p>
-                    <p className="text-2xl font-bold text-white mb-4">
-                      {format(session.startTime.toDate(), 'HH:mm')}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex -space-x-2">
-                        {Object.entries(session.responses || {}).map(([uid, res]: [string, any]) => (
-                          <div key={uid} className={cn(
-                            "h-8 w-8 rounded-full border-2 border-plaeen-dark overflow-hidden",
-                            res.status === 'accepted' ? "border-plaeen-green" : "border-white/20"
-                          )}>
-                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`} className="h-full w-full object-cover" />
-                          </div>
-                        ))}
+                {sessions
+                  .sort((a, b) => a.startTime.toDate() - b.startTime.toDate())
+                  .map((session) => (
+                    <div
+                      key={session.id}
+                      className="p-6 rounded-2xl bg-white/5 border-l-4 border-plaeen-green"
+                    >
+                      <p className="text-[10px] font-bold text-plaeen-green uppercase mb-2">
+                        {format(session.startTime.toDate(), "EEEE, MMM d")}
+                      </p>
+                      <p className="text-2xl font-bold text-white mb-4">
+                        {format(session.startTime.toDate(), "HH:mm")}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex -space-x-2">
+                          {Object.entries(session.responses || {}).map(
+                            ([uid, res]: [string, any]) => (
+                              <div
+                                key={uid}
+                                className={cn(
+                                  "h-8 w-8 rounded-full border-2 border-plaeen-dark overflow-hidden",
+                                  res.status === "accepted"
+                                    ? "border-plaeen-green"
+                                    : "border-white/20",
+                                )}
+                              >
+                                <img
+                                  src={getUserAvatar(res.photoURL)}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            ),
+                          )}
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full",
+                            session.status === "scheduled"
+                              ? "bg-plaeen-green text-black"
+                              : "bg-white/10 text-white/40",
+                          )}
+                        >
+                          {session.status}
+                        </span>
                       </div>
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full",
-                        session.status === 'scheduled' ? "bg-plaeen-green text-black" : "bg-white/10 text-white/40"
-                      )}>
-                        {session.status}
-                      </span>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 {sessions.length === 0 && (
-                  <p className="text-center py-12 text-white/20 font-bold uppercase tracking-widest">No sessions scheduled</p>
+                  <p className="text-center py-12 text-white/20 font-bold uppercase tracking-widest">
+                    No sessions scheduled
+                  </p>
                 )}
-                <Button 
+                <Button
                   onClick={() => navigate(`/search?teamId=${teamId}`)}
                   className="w-full py-6 font-bold uppercase tracking-widest bg-plaeen-purple/40 text-plaeen-green border border-plaeen-green/30"
                 >
@@ -289,8 +386,14 @@ export const TeamGameDetailPage = () => {
               <div className="h-16 w-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/10">
                 <Gamepad2 size={32} className="text-white/20" />
               </div>
-              <p className="text-sm text-white/40 font-medium mb-8">Connect your Steam ID to sync achievements and playtime automatically.</p>
-              <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest">
+              <p className="text-sm text-white/40 font-medium mb-8">
+                Connect your Steam ID to sync achievements and playtime
+                automatically.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest"
+              >
                 Connect Steam
               </Button>
             </Card>
