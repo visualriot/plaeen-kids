@@ -8,6 +8,30 @@ export function cn(...inputs: ClassValue[]) {
 export const DEFAULT_USER_AVATAR = "/avatars/user/avatar_user_01.webp";
 export const DEFAULT_TEAM_AVATAR = "/avatars/teams/avatar_team_01.webp";
 
+export const getRandomUserAvatar = () => {
+  const randomNum = Math.floor(Math.random() * 80) + 1;
+  return `/avatars/user/avatar_user_${String(randomNum).padStart(2, "0")}.webp`;
+};
+
+export const getRandomTeamAvatar = () => {
+  const randomNum = Math.floor(Math.random() * 66) + 1;
+  return `/avatars/teams/avatar_team_${String(randomNum).padStart(2, "0")}.webp`;
+};
+
+export const getRandomTeamAvatars = (count: number = 6) => {
+  const avatars: string[] = [];
+  const totalAvatars = 66;
+  const indices = new Set<number>();
+
+  while (indices.size < Math.min(count, totalAvatars)) {
+    indices.add(Math.floor(Math.random() * totalAvatars) + 1);
+  }
+
+  return Array.from(indices).map(
+    (num) => `/avatars/teams/avatar_team_${String(num).padStart(2, "0")}.webp`,
+  );
+};
+
 /**
  * Gets a consistent default avatar path for a user based on their UID if no photoURL exists.
  */

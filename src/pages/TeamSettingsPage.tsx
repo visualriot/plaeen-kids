@@ -35,7 +35,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getUserAvatar } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Team {
@@ -380,10 +380,7 @@ export const TeamSettingsPage = () => {
                         )}
                       >
                         <img
-                          src={
-                            member.photoURL ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.uid}`
-                          }
+                          src={getUserAvatar(member.photoURL)}
                           className="h-full w-full rounded-lg object-cover"
                         />
                         {isMemberAdmin && (
@@ -469,10 +466,7 @@ export const TeamSettingsPage = () => {
                     >
                       <div className="h-8 w-8 rounded-full bg-white/10 overflow-hidden">
                         <img
-                          src={
-                            friend?.photoURL ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`
-                          }
+                          src={getUserAvatar(friend?.photoURL)}
                           className="h-full w-full object-cover"
                         />
                       </div>
@@ -600,10 +594,7 @@ export const TeamSettingsPage = () => {
                     >
                       <div className="flex items-center gap-4 text-left">
                         <img
-                          src={
-                            friend.photoURL ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.uid}`
-                          }
+                          src={getUserAvatar(friend.photoURL)}
                           className="h-10 w-10 rounded-full"
                         />
                         <div>

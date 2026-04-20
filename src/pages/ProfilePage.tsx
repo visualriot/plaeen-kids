@@ -106,7 +106,7 @@ export const ProfilePage = () => {
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
       <div className="mb-12">
-        <h1 className="font-display text-5xl font-bold text-white uppercase tracking-tight mb-2">
+        <h1 className="text-5xl font-bold text-white uppercase tracking-tight mb-2">
           <span className="text-plaeen-green">Settings</span>
         </h1>
         <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
