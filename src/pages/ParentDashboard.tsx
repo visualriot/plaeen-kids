@@ -69,7 +69,7 @@ interface ApprovalRequest {
   id: string;
   childId: string;
   childName: string;
-  type: "game" | "time" | "team" | "activity" | "overtime";
+  type: "game" | "time" | "team" | "activity" | "overtime" | "friend";
   status: "pending" | "approved" | "denied";
   title?: string;
   rewardMinutes?: number;
@@ -404,19 +404,14 @@ export const ParentDashboard = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16">
         <div>
-          <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+          <h1 className="text-6xl text-white drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             Guardian <span className="text-plaeen-green">Hub</span>
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
-            Parental Oversight & Management
-          </p>
+          <p className="note mt-2">Parental Oversight & Management</p>
         </div>
         <div className="flex gap-4">
           <Link to="/parent/settings">
-            <Button
-              variant="outline"
-              className="border-white/10 text-white/40 hover:text-white py-6"
-            >
+            <Button variant="ghost" className=" py-6">
               <Settings size={20} />
             </Button>
           </Link>
@@ -460,7 +455,7 @@ export const ParentDashboard = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         {/* Kids List */}
         <div className="lg:col-span-2 space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+          <h2 className="flex items-center gap-3">
             <Shield size={16} /> Linked Accounts
           </h2>
 
@@ -470,8 +465,8 @@ export const ParentDashboard = () => {
                 key={kid.uid}
                 className="bg-white/5 border-white/10 p-8 hover:border-plaeen-green/30 transition-all group"
               >
-                <div className="flex flex-col md:flex-row justify-between gap-8">
-                  <div className="flex gap-6">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                  <div className="flex items-center gap-6">
                     <div className="h-20 w-20 rounded-2xl border-2 border-plaeen-green p-1 bg-plaeen-dark shadow-[0_0_15px_rgba(118,233,0,0.2)]">
                       <img
                         src={getUserAvatar(kid.photoURL)}
@@ -481,9 +476,7 @@ export const ParentDashboard = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-2xl font-bold text-white uppercase tracking-tight group-hover:text-plaeen-green transition-colors">
-                          {formatName(kid.displayName)}
-                        </h3>
+                        <h3>{formatName(kid.displayName)}</h3>
                         {kid.screenTime?.isSessionActive && (
                           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-[8px] font-bold text-plaeen-green uppercase tracking-widest animate-pulse">
                             <span className="h-1.5 w-1.5 rounded-full bg-plaeen-green"></span>
@@ -516,7 +509,7 @@ export const ParentDashboard = () => {
                           })()}
                       </div>
                       <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
+                        <div className="flex items-center gap-2 text-[11px] font-medium text-white/60 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
                           <Clock size={12} className="text-plaeen-green" />
                           {(() => {
                             const usedToday = kid.screenTime?.usedToday || 0;
@@ -536,7 +529,7 @@ export const ParentDashboard = () => {
                           })()}
                           m Remaining
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
+                        <div className="flex items-center gap-2 text-[11px] font-medium text-white/60 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
                           <Gamepad2 size={12} className="text-plaeen-green" />
                           {(kid.allowedGames || []).length} Games Allowed
                         </div>
@@ -547,25 +540,25 @@ export const ParentDashboard = () => {
                   <div className="flex flex-col justify-between items-end gap-4">
                     <div className="flex gap-2">
                       <Link to={`/parent/child/${kid.uid}`}>
-                        <Button className="bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] px-6">
-                          Manage <ChevronRight size={14} className="ml-2" />
-                        </Button>
+                        <Button className="w-full flex px-6">Manage</Button>
                       </Link>
                       <Button
-                        variant="outline"
+                        variant="remove"
                         onClick={() => handleDeleteKid(kid.uid)}
-                        className="border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold uppercase tracking-widest text-[10px] px-4"
+                        className="px-4"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </Button>
                     </div>
 
                     <Button
-                      variant="outline"
+                      variant="tertiary"
                       onClick={() => handleSwitchProfile(kid.uid)}
-                      className="w-full border-white/10 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] px-6"
+                      size="sm"
+                      className="w-full py-1"
                     >
-                      Switch to Profile
+                      Switch to Profile{" "}
+                      <ChevronRight size={16} className="ml-2" />
                     </Button>
 
                     {!kid.username && (
@@ -598,7 +591,7 @@ export const ParentDashboard = () => {
           {/* Action Required */}
           <section className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+              <h2 className="flex items-center gap-3">
                 <Bell
                   size={16}
                   className={
@@ -607,15 +600,12 @@ export const ParentDashboard = () => {
                 />{" "}
                 Action Required
                 {approvals.length > 0 && (
-                  <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full animate-pulse">
+                  <span className="bg-red-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">
                     {approvals.length}
                   </span>
                 )}
               </h2>
-              <Link
-                to="/parent/approvals"
-                className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-plaeen-green transition-colors"
-              >
+              <Link to="/parent/approvals" className="link">
                 View All
               </Link>
             </div>
@@ -721,7 +711,7 @@ export const ParentDashboard = () => {
                 </Card>
               ))}
               {approvals.length === 0 && (
-                <p className="text-center py-8 text-white/10 text-[10px] font-bold uppercase tracking-widest border border-dashed border-white/5 rounded-2xl">
+                <p className="text-center py-8 ghost-text font-bold uppercase tracking-widest border border-dashed border-white/20 rounded-2xl">
                   All clear
                 </p>
               )}

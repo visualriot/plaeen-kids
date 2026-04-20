@@ -62,7 +62,11 @@ interface KidProfile {
     accumulatedTime?: number;
     lastReset: any;
     bannedDates?: string[];
-    scheduledDeductions?: { date: string; minutes: number }[];
+    scheduledDeductions?: {
+      id: string;
+      date: string;
+      minutes: number;
+    }[];
     isSessionActive?: boolean;
     sessionStartTime?: number;
     todayAdjustments?: {
@@ -71,6 +75,8 @@ interface KidProfile {
       minutes: number;
       reason: string;
       timestamp: string;
+      isScheduled?: boolean;
+      data?: any;
     }[];
   };
   allowedGames: string[];
@@ -436,12 +442,14 @@ export const ChildManagementPage = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
-      <button
+      <Button
         onClick={() => navigate("/parent-dashboard")}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] mb-8 transition-colors"
+        variant="tertiary"
+        size="sm"
+        className="flex items-center gap-2 font-bold uppercase mb-8 "
       >
         <ArrowLeft size={14} /> Back to Guardian Hub
-      </button>
+      </Button>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div className="flex items-center gap-6">
@@ -452,11 +460,9 @@ export const ChildManagementPage = () => {
               className="h-full w-full rounded-2xl object-cover"
             />
           </div>
-          <div>
-            <h1 className="text-5xl font-bold text-white uppercase tracking-tighter">
-              {formatName(kid.displayName)}
-            </h1>
-            <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-1">
+          <div className="space-y-3">
+            <h1>{formatName(kid.displayName)}</h1>
+            <p className="text-sm tracking-widest text-white/50">
               @{kid.username}
             </p>
           </div>
@@ -465,7 +471,7 @@ export const ChildManagementPage = () => {
 
       {pendingApprovals.filter((a) => a.type === "overtime").length > 0 && (
         <div className="mb-12 space-y-4">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-500 flex items-center gap-3">
+          <h2 className="text-red-500 flex items-center gap-3">
             <Bell size={16} /> Pending Overtime Decisions
           </h2>
           <div className="grid gap-4">
@@ -510,20 +516,18 @@ export const ChildManagementPage = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         {/* Left Column: Screen Time Settings */}
         <div className="space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+          <h2 className="flex items-center gap-3">
             <Clock size={16} /> Screen Time Control
           </h2>
           <Card className="bg-white/5 border-white/10 p-8 space-y-10">
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block">
-                  Allowance
-                </label>
+              <div className="flex justify-between items-center mb-6">
+                <label className="block">Allowance</label>
                 <div className="relative">
                   <select
                     value={allowanceType}
                     onChange={(e) => setAllowanceType(e.target.value as any)}
-                    className="appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-2 pr-10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
+                    className="appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-2 pr-10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2376e900'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                       backgroundRepeat: "no-repeat",
@@ -549,7 +553,7 @@ export const ChildManagementPage = () => {
                   </select>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 ">
                 <input
                   type="range"
                   min="0"
@@ -567,9 +571,7 @@ export const ChildManagementPage = () => {
                   }
                   className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xl font-bold text-white text-center focus:outline-none focus:border-plaeen-green/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                  min/day
-                </span>
+                <label>min/day</label>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mt-6">
@@ -593,9 +595,7 @@ export const ChildManagementPage = () => {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-4 block">
-                Restricted Days (No Play)
-              </label>
+              <label className="mb-4 block">Restricted Days (No Play)</label>
               <div className="flex flex-wrap gap-2">
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
                   (day) => (
@@ -621,87 +621,72 @@ export const ChildManagementPage = () => {
                 )}
               </div>
             </div>
-
-            <Button
-              onClick={handleSaveAllowance}
-              className="w-full bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] py-4"
-            >
-              Apply Allowance Settings
-            </Button>
-
-            <div className="pt-8 border-t border-white/5 space-y-8">
+            <div className="space-y-4">
+              <Button
+                onClick={handleSaveAllowance}
+                size="md"
+                variant="primary"
+                className="w-full"
+              >
+                Apply Allowance Settings
+              </Button>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">
-                  Bonus / Accumulated Time
-                </label>
-                <div className="flex items-center gap-4 mb-6">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setAccumulatedTime(Math.max(0, accumulatedTime - 5))
-                    }
-                    className="border-white/10 text-white/40"
-                  >
-                    -5m
-                  </Button>
-                  <div className="flex-1 text-center">
-                    <span className="text-3xl font-bold text-white">
-                      {accumulatedTime}m
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setAccumulatedTime(accumulatedTime + 5)}
-                    className="border-white/10 text-white/40"
-                  >
-                    +5m
-                  </Button>
-                </div>
-                <Button
-                  onClick={handleSaveBonus}
-                  variant="outline"
-                  className="w-full border-plaeen-green/30 text-plaeen-green font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-plaeen-green/10"
-                >
-                  Apply Bonus Time
-                </Button>
-              </div>
-
-              <div className="pt-8 border-t border-white/5">
                 <Button
                   onClick={handleResetDaily}
-                  variant="outline"
-                  className="w-full border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/30 font-bold uppercase tracking-widest text-[10px] py-6"
+                  variant="tertiary"
+                  size="sm"
+                  className="w-full tracking-widest"
                 >
                   <RefreshCw size={14} className="mr-2" /> Reset Daily Allowance
                 </Button>
-                <p className="text-[8px] text-white/20 font-bold uppercase tracking-widest mt-3 text-center">
-                  Returns today's used time to weekly & monthly pots
-                </p>
               </div>
             </div>
           </Card>
 
-          <Card className="bg-plaeen-purple/10 border-plaeen-purple/20 p-8">
-            <div className="flex items-center gap-4 mb-4">
-              <Zap size={20} className="text-plaeen-purple" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-tight">
-                Auto-Accumulation
-              </h3>
+          {/* Bonus & Penalties */}
+          <Card className="bg-white/5 border-white/10 p-8 space-y-10">
+            <div>
+              <label className="mb-4 block">Bonus / Accumulated Time</label>
+              <div className="flex items-center gap-4 mb-6">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setAccumulatedTime(Math.max(0, accumulatedTime - 5))
+                  }
+                >
+                  -5m
+                </Button>
+                <div className="flex-1 text-center">
+                  <span className="text-3xl font-bold text-white">
+                    {accumulatedTime}m
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setAccumulatedTime(accumulatedTime + 5)}
+                >
+                  +5m
+                </Button>
+              </div>
+              <Button
+                onClick={handleSaveBonus}
+                variant="primary"
+                size="sm"
+                className="w-full "
+              >
+                Apply Bonus Time
+              </Button>
             </div>
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-relaxed">
-              Unused screen time will automatically roll over to the next
-              period.
-            </p>
           </Card>
 
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+          <h2 className="flex items-center gap-3">
             <Shield size={16} /> Profile Identity
           </h2>
           <Card className="bg-white/5 border-white/10 p-8 space-y-6">
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block mb-2">
+              <label className="block mb-2 normal-case font-normal text-[12px] text-white/50">
                 Display Name
               </label>
               <input
@@ -712,7 +697,7 @@ export const ChildManagementPage = () => {
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green block mb-2">
+              <label className="block mb-2 normal-case font-normal text-[12px] text-white/50">
                 Unique Username
               </label>
               <input
@@ -751,7 +736,7 @@ export const ChildManagementPage = () => {
               )}
             </div>
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block mb-2">
+              <label className="block mb-2 normal-case font-normal text-[12px] text-white/50">
                 Date of Birth
               </label>
               <input
@@ -765,10 +750,10 @@ export const ChildManagementPage = () => {
             <div className="pt-4 border-t border-white/5">
               <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                 <div>
-                  <p className="text-[10px] font-bold text-white uppercase tracking-tight">
-                    Restricted Mode (Child Friendly)
+                  <p className="text-[12px] font-bold text-white uppercase">
+                    Parental Control
                   </p>
-                  <p className="text-[8px] text-white/40 mt-1 uppercase tracking-widest font-bold">
+                  <p className="font-light italic mt-1 tracking-widest">
                     Only show child-friendly games
                   </p>
                 </div>
@@ -794,7 +779,9 @@ export const ChildManagementPage = () => {
             )}
             <Button
               onClick={handleSaveIdentity}
-              className="w-full bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-[10px] py-4 hover:border-plaeen-green hover:text-plaeen-green"
+              variant="primary"
+              size="sm"
+              className="flex w-full"
             >
               Save Profile Changes
             </Button>
@@ -894,7 +881,7 @@ export const ChildManagementPage = () => {
 
           {/* Active Penalties */}
           <section className="space-y-6">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-500 flex items-center gap-3">
+            <h2 className="text-red-500 flex items-center gap-3">
               <Shield size={16} /> Active Penalties
             </h2>
 
@@ -962,9 +949,7 @@ export const ChildManagementPage = () => {
               {!kid.screenTime?.scheduledDeductions?.length &&
                 !kid.screenTime?.bannedDates?.length && (
                   <Card className="md:col-span-2 bg-white/5 border-dashed border-white/10 p-12 text-center">
-                    <p className="text-white/20 font-bold uppercase tracking-widest">
-                      No active penalties
-                    </p>
+                    <p className="ghost-text">No active penalties</p>
                   </Card>
                 )}
             </div>
@@ -1016,7 +1001,7 @@ export const ChildManagementPage = () => {
 
           {/* Session History */}
           <section className="space-y-6">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 flex items-center gap-3">
+            <h2 className=" text-white/40 flex items-center gap-3">
               <History size={16} /> Recent Sessions
             </h2>
             <Card className="bg-white/5 border-white/10 overflow-hidden">
@@ -1083,9 +1068,7 @@ export const ChildManagementPage = () => {
                     {sessions.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-6 py-12 text-center">
-                          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
-                            No session history yet
-                          </p>
+                          <p className="ghost-text">No session history yet</p>
                         </td>
                       </tr>
                     )}
@@ -1098,12 +1081,12 @@ export const ChildManagementPage = () => {
           {/* Allowed Games */}
           <div className="space-y-8">
             <div className="flex justify-between items-center">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+              <h2 className="flex items-center gap-3">
                 <Gamepad2 size={16} /> Approved Games
               </h2>
               <div className="relative">
                 <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 font-bold"
                   size={14}
                 />
                 <input
@@ -1111,7 +1094,7 @@ export const ChildManagementPage = () => {
                   placeholder="SEARCH GAMES..."
                   value={gameSearch}
                   onChange={(e) => setGameSearch(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white focus:border-plaeen-green focus:outline-none transition-all w-64"
+                  className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-4 text-[11px] font-bold uppercase tracking-widest text-white focus:border-plaeen-green focus:outline-none transition-all w-64"
                 />
               </div>
             </div>
@@ -1147,9 +1130,9 @@ export const ChildManagementPage = () => {
                   </button>
                 </Card>
               ))}
-              <button className="border-2 border-dashed border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-white/10 hover:text-plaeen-green hover:border-plaeen-green/30 transition-all group">
+              <button className="border-2 border-dashed border-white/20 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/30 transition-all group">
                 <Plus size={32} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">
+                <span className="text-[12px] font-bold uppercase tracking-widest">
                   Add New Game
                 </span>
               </button>

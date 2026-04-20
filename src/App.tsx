@@ -34,6 +34,7 @@ import { KidCalendarPage } from "./pages/KidCalendarPage";
 import { ProposeSessionPage } from "./pages/ProposeSessionPage";
 import { UserAvatarSelectionPage } from "./pages/UserAvatarSelectionPage";
 import { TeamAvatarSelectionPage } from "./pages/TeamAvatarSelectionPage";
+import { CreateTeamPage } from "./pages/CreateTeamPage";
 import { ProfileProvider, useProfile } from "./contexts/ProfileContext";
 
 import { ParentSettingsPage } from "./pages/ParentSettingsPage";
@@ -206,6 +207,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRole="kid">
                 <TeamsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams/create"
+            element={
+              <ProtectedRoute allowedRole="kid">
+                <CreateTeamPage />
               </ProtectedRoute>
             }
           />

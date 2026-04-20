@@ -30,13 +30,11 @@ import {
   Shield,
   LogOut,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   cn,
   getTeamAvatar,
   getUserAvatar,
-  getRandomTeamAvatar,
-  getRandomTeamAvatars,
   DEFAULT_TEAM_AVATAR,
 } from "@/lib/utils";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
@@ -60,6 +58,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 
 export const TeamsPage = () => {
   const [user] = useAuthState(auth);
+  const navigate = useNavigate();
   const {
     role,
     activeKid: kidData,
@@ -68,33 +67,13 @@ export const TeamsPage = () => {
   } = useProfile();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     type: "leave" | "delete";
     teamId: string;
   } | null>(null);
 
-  // Create Team State
-  const [teamName, setTeamName] = useState("");
-  const [nameError, setNameError] = useState("");
-  const [suggestedAvatars, setSuggestedAvatars] = useState<string[]>([]);
-  const [selectedAvatar, setSelectedAvatar] = useState("");
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [members, setMembers] = useState<Friend[]>([]); // New state for member management
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-
   const activeUid = kidData ? kidData.uid : user?.uid;
-
-  const openCreateModal = () => {
-    const randomAvatars = getRandomTeamAvatars(6);
-    setSuggestedAvatars(randomAvatars);
-    setSelectedAvatar(randomAvatars[0]);
-    setTeamName("");
-    setNameError("");
-    setSelectedFriends([]);
-    setIsModalOpen(true);
-  };
 
   useEffect(() => {
     if (!activeUid || profileLoading) return;
@@ -143,20 +122,6 @@ export const TeamsPage = () => {
               }
             });
           }
-
-          // Extract all member UIDs from all teams to fetch their basic profiles
-          const allMemberIds = Array.from(
-            new Set(allTeams.flatMap((t) => t.members || [])),
-          );
-          if (allMemberIds.length > 0) {
-            // Fetch public profiles for member management in modal
-            const membersQuery = query(
-              collection(db, "users_public"),
-              where("uid", "in", allMemberIds),
-            );
-            const membersSnap = await getDocs(membersQuery);
-            setMembers(membersSnap.docs.map((d) => d.data() as any));
-          }
         } catch (err) {
           console.error("Error in snapshot callback:", err);
           setLoading(false);
@@ -165,91 +130,8 @@ export const TeamsPage = () => {
       (error) => handleFirestoreError(error, "list", "groups"),
     );
 
-    // Fetch friends for the modal
-    const fetchFriends = async () => {
-      if (!activeUid) return;
-      const userDoc = await getDoc(doc(db, "users", activeUid));
-      if (userDoc.exists()) {
-        const friendIds = userDoc.data().friends || [];
-        if (friendIds.length > 0) {
-          const friendsQuery = query(
-            collection(db, "users_public"),
-            where("uid", "in", friendIds),
-          );
-          const friendsSnap = await getDocs(friendsQuery);
-          setFriends(friendsSnap.docs.map((d) => d.data() as Friend));
-        } else {
-          setFriends([]);
-        }
-      }
-    };
-    fetchFriends();
-
     return () => unsubscribe();
   }, [activeUid]);
-
-  const handleCreateTeam = async () => {
-    setNameError("");
-    if (!activeUid || !teamName.trim()) return;
-
-    // Check for duplicate names for this user
-    const nameExists = teams.some(
-      (t) => t.name.toLowerCase() === teamName.trim().toLowerCase(),
-    );
-    if (nameExists) {
-      setNameError("choose a unique name for your team");
-      return;
-    }
-
-    try {
-      const parentId = kidData?.parentId || user?.uid;
-      let groupId = "";
-
-      // Send invitations
-      const finalInvites = [...selectedFriends];
-      const docRef = await addDoc(collection(db, "groups"), {
-        name: teamName,
-        ownerId: activeUid,
-        members: [activeUid],
-        adminIds: [activeUid],
-        pendingMembers: finalInvites,
-        parentIds: [parentId],
-        isPublic: false,
-        games: [],
-        imageURL: selectedAvatar,
-        createdAt: new Date().toISOString(),
-      });
-      groupId = docRef.id;
-
-      // Send notifications ONLY to the newly invited friends
-      const notificationPromises = finalInvites.map((friendId) =>
-        addDoc(collection(db, "notifications"), {
-          userId: friendId,
-          type: "team_invite",
-          title: "Team Invitation",
-          message: `${kidData?.displayName || "A friend"} (@${kidData?.username || "unknown"}) invited you to join the team "${teamName}"`,
-          data: {
-            groupId: groupId,
-            teamName: teamName,
-            invitedBy: activeUid,
-            invitedByName: kidData?.displayName || "A friend",
-          },
-          read: false,
-          createdAt: new Date().toISOString(),
-        }),
-      );
-      await Promise.all(notificationPromises);
-
-      setIsModalOpen(false);
-      setTeamName("");
-      setNameError("");
-      setSelectedFriends([]);
-      // Reset selected avatar with a new random one for next time
-      setSelectedAvatar(getRandomTeamAvatar());
-    } catch (err) {
-      console.error("Error saving team:", err);
-    }
-  };
 
   const handleDeleteTeam = async (teamId: string) => {
     try {
@@ -322,7 +204,9 @@ export const TeamsPage = () => {
 
   const toggleFriend = (uid: string) => {
     setSelectedFriends((prev) =>
-      prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid],
+      prev.includes(uid)
+        ? prev.filter((id: string) => id !== uid)
+        : [...prev, uid],
     );
   };
 
@@ -336,45 +220,40 @@ export const TeamsPage = () => {
   return (
     <div className="mx-auto max-w-7xl px-6 py-20 text-center">
       <div className="flex flex-col items-center justify-center gap-6 mb-20">
-        <div className="flex items-center gap-4">
-          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter">
+        <div className="flex items-end justify-baseline gap-4">
+          <h1>
             Who are you <span className="text-plaeen-green">playing</span> with?
           </h1>
-          <button
+          <Button
             onClick={() => setIsEditMode(!isEditMode)}
+            variant="tertiary"
             className={cn(
-              "transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest mt-4",
-              isEditMode
-                ? "text-plaeen-green"
-                : "text-white/20 hover:text-white",
+              "flex gap-x-2 py-0 px-1 pb-0 justify-baseline self-end",
+              isEditMode ? "text-plaeen-green" : "",
             )}
           >
             <Edit2 size={14} /> {isEditMode ? "Done" : "Edit teams"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {teams.length === 0 ? (
-        <div className="flex flex-col items-center gap-12">
+        <div className="flex flex-col items-center gap-12 cursor-pointer">
           <div className="relative group">
-            <div className="absolute inset-0 bg-plaeen-green/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-plaeen-green/40 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             <button
-              onClick={openCreateModal}
-              className="relative flex h-64 w-64 items-center justify-center rounded-[2.5rem] bg-plaeen-purple/20 border-2 border-dashed border-white/10 transition-all hover:scale-105 hover:border-plaeen-green group"
+              onClick={() => navigate("/teams/create")}
+              className="relative flex flex-col space-y-6 h-64 w-64 items-center justify-center rounded-[2.5rem] bg-plaeen-purple/20 border-2 border-dashed border-white/10 transition-all hover:scale-105 hover:border-plaeen-green group"
             >
               <Plus
                 size={64}
-                className="text-white/10 group-hover:text-plaeen-green transition-colors"
+                className="text-white/30 group-hover:text-plaeen-green transition-colors"
               />
+              <p className="text-lg font-bold uppercase tracking-wider font-white/40 group-hover:text-plaeen-green">
+                Add new team
+              </p>
             </button>
           </div>
-          <Button
-            onClick={openCreateModal}
-            size="lg"
-            className="px-12 py-8 text-xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]"
-          >
-            Add new team
-          </Button>
         </div>
       ) : (
         <div className="flex flex-wrap justify-center gap-x-12 gap-y-16 max-w-6xl mx-auto px-6">
@@ -474,8 +353,8 @@ export const TeamsPage = () => {
           {/* Add New Team card inline */}
           {!isEditMode && (
             <button
-              onClick={openCreateModal}
-              className="group flex flex-col items-center gap-6 relative"
+              onClick={() => navigate("/teams/create")}
+              className="group flex flex-col items-center gap-6 relative cursor-pointer"
             >
               <div className="relative h-44 w-44 rounded-[2.2rem] flex items-center justify-center bg-plaeen-purple/20 border-4 border-dashed border-white/10 group-hover:border-plaeen-green group-hover:bg-plaeen-purple/30 transition-all duration-300 shadow-2xl overflow-hidden">
                 <div className="absolute inset-0 bg-plaeen-green/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -555,170 +434,9 @@ export const TeamsPage = () => {
           })()}
         </div>
       )}
-
-      {/* Create Team Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-          <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-plaeen-dark border-plaeen-green/30 p-12 shadow-[0_0_50px_rgba(118,233,0,0.1)]">
-            <div className="flex justify-between items-center mb-12">
-              <div>
-                <h2 className="text-4xl font-bold text-white uppercase tracking-tighter">
-                  Create New Team
-                </h2>
-                {role === "kid" && (
-                  <div className="flex items-center gap-2 mt-2 text-plaeen-green font-bold uppercase tracking-widest text-[10px]">
-                    <Shield size={12} /> Kid-Safe Private Team
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                }}
-                className="text-white/40 hover:text-white transition-colors"
-              >
-                <X size={32} />
-              </button>
-            </div>
-
-            <div className="space-y-10 text-left">
-              {/* Avatar Selection */}
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-6">
-                  Select Team Avatar
-                </label>
-                <div className="flex flex-wrap items-center gap-4">
-                  {suggestedAvatars.slice(0, 5).map((avatar) => (
-                    <div key={avatar} className="relative group/avatar">
-                      <button
-                        onClick={() => setSelectedAvatar(avatar)}
-                        className={`relative h-24 w-24 rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
-                          selectedAvatar === avatar
-                            ? "border-plaeen-green scale-110 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
-                            : "border-white/10 opacity-40 hover:opacity-100 hover:border-white/30"
-                        }`}
-                      >
-                        <img
-                          src={avatar}
-                          alt="Avatar"
-                          className="h-full w-full object-cover"
-                        />
-                        {selectedAvatar === avatar && (
-                          <div className="absolute inset-0 bg-plaeen-green/10 flex items-center justify-center">
-                            <Check size={24} className="text-plaeen-green" />
-                          </div>
-                        )}
-                      </button>
-                      {/* Hover Preview Tooltip */}
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 pointer-events-none opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 z-[70] scale-90 group-hover/avatar:scale-100">
-                        <div className="relative h-[252px] w-[252px] rounded-[2.5rem] overflow-hidden border-4 border-plaeen-green shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-plaeen-dark">
-                          <img
-                            src={avatar}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <Link
-                    to="/team-avatar-selection?returnTo=/teams"
-                    className="h-24 w-24 rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-1 text-white/20 hover:text-white/40 hover:border-white/20 transition-all group shrink-0"
-                  >
-                    <Plus size={24} />
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-center px-2 leading-tight">
-                      See More
-                    </span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Team Name */}
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-4">
-                  Team Name
-                </label>
-                <input
-                  type="text"
-                  value={teamName}
-                  onChange={(e) => {
-                    setTeamName(e.target.value);
-                    setNameError("");
-                  }}
-                  placeholder="e.g. DUMBLEDORE'S ARMY"
-                  className={cn(
-                    "w-full rounded-2xl border-2 bg-white/5 px-8 py-6 text-xl font-bold text-white uppercase focus:outline-none transition-all",
-                    nameError
-                      ? "border-red-500 focus:border-red-500"
-                      : "border-white/10 focus:border-plaeen-green",
-                  )}
-                />
-                {nameError && (
-                  <p className="mt-2 text-xs font-bold uppercase tracking-widest text-red-500">
-                    {nameError}
-                  </p>
-                )}
-              </div>
-
-              {/* Add Friends */}
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-6">
-                  Add Friends
-                </label>
-                {friends.length === 0 ? (
-                  <div className="p-8 rounded-2xl bg-white/5 border border-dashed border-white/10 text-center">
-                    <p className="text-sm font-bold text-white/20 uppercase tracking-widest">
-                      No friends found in this sector
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-6 max-h-64 overflow-y-auto pr-4 custom-scrollbar">
-                    {friends.map((friend) => (
-                      <button
-                        key={friend.uid}
-                        onClick={() => toggleFriend(friend.uid)}
-                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-300 ${
-                          selectedFriends.includes(friend.uid)
-                            ? "bg-plaeen-green/10 border-plaeen-green text-plaeen-green shadow-[0_0_15px_rgba(118,233,0,0.2)]"
-                            : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:border-white/30"
-                        }`}
-                      >
-                        <img
-                          src={getUserAvatar(friend.photoURL)}
-                          className="h-10 w-10 rounded-full"
-                        />
-                        <div className="flex flex-col text-left truncate">
-                          <span className="text-sm font-bold uppercase truncate">
-                            {friend.displayName}
-                          </span>
-                          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest truncate">
-                            @{friend.username}
-                          </span>
-                        </div>
-                        {selectedFriends.includes(friend.uid) ? (
-                          <Check size={20} className="ml-auto" />
-                        ) : (
-                          <Plus size={20} className="ml-auto" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-8">
-                <Button
-                  onClick={handleCreateTeam}
-                  className="w-full py-8 text-xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]"
-                  disabled={!teamName.trim()}
-                >
-                  Create Team
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };
+function setSelectedFriends(arg0: (prev: any) => any) {
+  throw new Error("Function not implemented.");
+}

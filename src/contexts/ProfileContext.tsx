@@ -5,6 +5,15 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
 
 interface KidProfile {
+  streak: {
+    rewardClaimedToday: boolean;
+    rewardMinutes: number | boolean;
+    targetDays: number;
+    count: number;
+    history: {};
+    lastUpdate: string;
+  };
+  birthDate: import("react/jsx-runtime").JSX.Element;
   uid: string;
   displayName: string;
   username: string;
@@ -12,6 +21,7 @@ interface KidProfile {
   parentId: string;
   photoURL?: string;
   screenTime: {
+    lastReset: any;
     dailyAllowance: number;
     usedToday: number;
     weeklyAllowance?: number;
@@ -22,7 +32,11 @@ interface KidProfile {
     monthlyAdjustments?: number;
     accumulatedTime?: number;
     bannedDates?: string[];
-    scheduledDeductions?: { date: string; minutes: number }[];
+    scheduledDeductions?: {
+      id: string;
+      date: string;
+      minutes: number;
+    }[];
     isSessionActive?: boolean;
     sessionStartTime?: number;
     todayAdjustments?: {

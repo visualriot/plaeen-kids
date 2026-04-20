@@ -422,9 +422,7 @@ export const FriendsPage = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
-      <h1 className="font-display text-5xl font-bold text-plaeen-green uppercase tracking-tight mb-12">
-        Friends
-      </h1>
+      <h1 className="mb-12">Friends</h1>
 
       {message && (
         <div

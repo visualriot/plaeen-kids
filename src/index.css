@@ -1,14 +1,31 @@
-@import url('https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css');
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url("https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Abolition";
+  src: url("/fonts/abolition/AbolitionTest-Round.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Abolition";
+  src: url("/fonts/abolition/AbolitionTest-RoundOblique.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 @theme {
-  --font-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", sans-serif;
-  
-  --color-plaeen-green: #76E900;
-  --color-plaeen-purple: #2D1B4D;
-  --color-plaeen-dark: #0A0514;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", sans-serif;
+
+  --color-plaeen-green: #76e900;
+  --color-plaeen-purple: #2d1b4d;
+  --color-plaeen-purple-medium: #462d71;
+  --color-plaeen-dark: #0a0514;
   --color-plaeen-glass: rgba(255, 255, 255, 0.05);
   --color-plaeen-glass-border: rgba(255, 255, 255, 0.1);
 }
@@ -16,15 +33,66 @@
 @layer base {
   body {
     @apply bg-plaeen-dark text-white font-sans antialiased selection:bg-plaeen-green selection:text-black;
-    background-image: 
-      radial-gradient(circle at 50% -20%, #2D1B4D 0%, #0A0514 100%),
-      radial-gradient(circle at 0% 0%, rgba(118, 233, 0, 0.05) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(118, 233, 0, 0.05) 0%, transparent 50%);
+    background-image:
+      radial-gradient(circle at 50% -20%, #2d1b4d 0%, #0a0514 100%),
+      radial-gradient(
+        circle at 0% 0%,
+        rgba(118, 233, 0, 0.05) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 100% 100%,
+        rgba(118, 233, 0, 0.05) 0%,
+        transparent 50%
+      );
     background-attachment: fixed;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-display;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-black tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-6xl leading-none tracking-wider;
+    font-family: "Abolition", sans-serif;
+  }
+  h2 {
+    @apply text-[12px] leading-tight font-bold uppercase tracking-[0.4em] text-plaeen-green;
+  }
+  h3 {
+    @apply text-2xl font-bold text-white uppercase tracking-tight;
+  }
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  p {
+    @apply leading-relaxed text-white/80;
+  }
+
+  label {
+    @apply block text-[11px] font-semibold text-white/50 uppercase tracking-[0.3em];
+  }
+
+  p {
+    @apply text-[11px] text-white/60;
+  }
+
+  .ghost-text {
+    @apply text-sm text-white/30 tracking-wider uppercase font-semibold;
+  }
+
+  .note {
+    @apply text-base text-white/50 mt-2 tracking-wider font-normal font-sans;
+  }
+
+  .link {
+    @apply font-medium tracking-wide text-sm text-white/20 hover:text-plaeen-green/80 transition-colors;
   }
 }
 
@@ -32,8 +100,20 @@
   @apply bg-plaeen-glass backdrop-blur-xl border border-plaeen-glass-border;
 }
 
+button {
+  cursor: pointer;
+}
+
 .neon-glow {
   box-shadow: 0 0 20px rgba(118, 233, 0, 0.3);
+}
+
+.purple-glow {
+  box-shadow: 0 0 10px rgba(27, 77, 45, 0.1);
+}
+
+.red-glow {
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.1);
 }
 
 .neon-glow-strong {
@@ -42,12 +122,36 @@
 
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(118, 233, 0, 0.4);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: rgba(118, 233, 0, 0.4);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -69,12 +173,13 @@
 }
 
 @keyframes blink-glow {
-  0%, 100% { 
-    opacity: 1; 
+  0%,
+  100% {
+    opacity: 1;
     box-shadow: 0 0 10px rgba(118, 233, 0, 0.2);
   }
-  50% { 
-    opacity: 0.6; 
+  50% {
+    opacity: 0.6;
     box-shadow: 0 0 30px rgba(118, 233, 0, 0.6);
   }
 }

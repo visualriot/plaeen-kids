@@ -49,6 +49,7 @@ import { format } from "date-fns";
 import { useProfile } from "@/contexts/ProfileContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
+import { KidStreakWidget } from "@/components/KidStreakWidget";
 
 import { cn, calculateAge, formatName } from "@/lib/utils";
 
@@ -82,6 +83,7 @@ export const KidDashboard = () => {
   const [notificationLimit, setNotificationLimit] = useState(5);
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
   const [activeNotifMenu, setActiveNotifMenu] = useState<string | null>(null);
+  const [showRewardClaimed, setShowRewardClaimed] = useState(false);
   const [screenTimeView, setScreenTimeView] = useState<
     "daily" | "weekly" | "monthly"
   >((activeKid?.screenTime as any)?.allowanceType || "daily");
@@ -104,6 +106,49 @@ export const KidDashboard = () => {
       setScreenTimeView((activeKid.screenTime as any).allowanceType || "daily");
     }
   }, [activeKid?.uid]);
+
+  // Check for streak reward payout
+  useEffect(() => {
+    if (!activeKid || isParentViewingKid || profileLoading) return;
+
+    const checkReward = async () => {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const streak = activeKid.streak;
+
+      // If we have a streak, a target, and we haven't claimed today
+      if (
+        streak &&
+        streak.count > 0 &&
+        streak.targetDays &&
+        streak.rewardMinutes
+      ) {
+        // Condition: count is multiple of target, and not claimed today
+        const isGoalMet = streak.count % streak.targetDays === 0;
+        const alreadyClaimed = streak.rewardClaimedToday === true;
+
+        if (isGoalMet && !alreadyClaimed) {
+          try {
+            const userRef = doc(db, "users", activeKid.uid);
+            await updateDoc(userRef, {
+              "screenTime.dailyAllowance": increment(streak.rewardMinutes),
+              "streak.rewardClaimedToday": true,
+            });
+            setShowRewardClaimed(true);
+            setTimeout(() => setShowRewardClaimed(false), 5000);
+          } catch (err) {
+            console.error("Error claiming streak reward:", err);
+          }
+        }
+      }
+    };
+
+    checkReward();
+  }, [
+    activeKid?.streak?.count,
+    activeKid?.uid,
+    isParentViewingKid,
+    profileLoading,
+  ]);
 
   // Request notification permission
   useEffect(() => {
@@ -570,6 +615,41 @@ export const KidDashboard = () => {
 
     try {
       const userRef = doc(db, "users", activeKid.uid);
+
+      // Calculate Streak Info
+      const todayStr = new Date().toISOString().split("T")[0];
+      const currentStreak = activeKid?.streak || {
+        count: 0,
+        history: {} as Record<string, boolean>,
+        lastUpdate: "",
+        rewardClaimedToday: false,
+        rewardMinutes: 0,
+      };
+      let newStreak = { ...currentStreak };
+
+      // 1 strike per day, must be at least 5 mins session, must be on time or within 5 min overtime
+      const isEligibleForStreak = durationMin >= 5 && overtimeMin <= 5;
+      const alreadyHasStreakToday = !!currentStreak.history?.[todayStr];
+      const target = activeKid.streak?.targetDays || 7;
+
+      if (!alreadyHasStreakToday) {
+        if (isEligibleForStreak) {
+          // Increment streak
+          const newCount = (currentStreak.count || 0) + 1;
+          newStreak.count = newCount;
+          newStreak.history = { ...currentStreak.history, [todayStr]: true };
+          newStreak.lastUpdate = new Date().toISOString();
+
+          // Check for REWARD goal reached
+          if (newCount > 0 && newCount % target === 0) {
+            newStreak.rewardClaimedToday = false; // Reset flag so it can be claimed tomorrow
+          }
+        } else if (overtimeMin > 5) {
+          // Reset streak if failed overtime rules
+          newStreak.count = 0;
+        }
+      }
+
       let finalUsedToday = currentUsed + durationMin;
       let finalUsedWeekly =
         (activeKid.screenTime?.usedWeekly || 0) + durationMin;
@@ -593,6 +673,7 @@ export const KidDashboard = () => {
         "screenTime.lastReset": serverTimestamp(),
         "screenTime.isSessionActive": false,
         "screenTime.sessionStartTime": null,
+        streak: newStreak,
       };
 
       await updateDoc(userRef, updates);
@@ -948,34 +1029,32 @@ export const KidDashboard = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+            <h1 className="drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
               Welcome,{" "}
               <span className="text-plaeen-green">
-                {formatName(activeKid.displayName)}
+                {/* {activeKid.displayName.split(" ")[0]}! */}
+                {activeKid.displayName.split(" ")[0]}!
               </span>
-              {activeKid.birthDate && (
-                <span className="ml-4 text-2xl text-white/20 font-bold">
-                  {calculateAge(activeKid.birthDate)}Y
-                </span>
-              )}
             </h1>
             <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
-              Your Gaming Hub is Online
+              {activeKid.uid && (
+                <p className="mt-6">@{activeKid.username.split(" ")[0]}</p>
+              )}
             </p>
           </motion.div>
 
           <div className="flex gap-4">
             <Button
               onClick={() => navigate("/kid-calendar")}
-              variant="outline"
-              className="border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green/10 font-bold uppercase tracking-widest px-8 py-6"
+              variant="ghost"
+              className="px-8 py-6"
             >
               <Calendar size={20} className="mr-2" /> Calendar
             </Button>
             <Button
               onClick={() => setIsChoreModalOpen(true)}
-              variant="outline"
-              className="border-plaeen-purple/30 text-plaeen-purple hover:bg-plaeen-purple/10 font-bold uppercase tracking-widest px-8 py-6"
+              variant="ghost"
+              className="px-8 py-6"
             >
               <Zap size={20} className="mr-2" /> Log Activity
             </Button>
@@ -1013,21 +1092,21 @@ export const KidDashboard = () => {
                   restrictedDays.includes(format(new Date(), "EEE")) ||
                   (activeKid.screenTime?.usedToday || 0) >= dailyAllowanceTotal
                 }
-                className={cn(
-                  "font-bold uppercase tracking-widest px-12 py-6 transition-transform",
+                variant={
                   restrictedDays.includes(format(new Date(), "EEE")) ||
-                    (activeKid.screenTime?.usedToday || 0) >=
-                      dailyAllowanceTotal
-                    ? "bg-white/5 text-white/20 cursor-not-allowed"
-                    : "bg-plaeen-green text-black shadow-[0_0_20px_rgba(118,233,0,0.4)] hover:scale-105",
-                )}
+                  (activeKid.screenTime?.usedToday || 0) >= dailyAllowanceTotal
+                    ? "primarydisabled"
+                    : "primary"
+                }
+                className={cn("your-other-classes")}
               >
                 <Gamepad2 size={20} className="mr-2" /> Start Playing
               </Button>
             ) : (
               <Button
                 onClick={handleEndSession}
-                className="bg-red-500 text-white font-bold uppercase tracking-widest px-12 py-6 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:scale-105 transition-transform"
+                className="bg-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)] red-glow"
+                variant="primary"
               >
                 <X size={20} className="mr-2" /> End Session
               </Button>
@@ -1071,23 +1150,24 @@ export const KidDashboard = () => {
             <Card className="bg-white/5 border-white/10 p-8 relative overflow-hidden group">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                  <Clock size={18} className="text-plaeen-green" /> Screen Time
+                  <Clock size={18} className="text-plaeen-green text-nowrap" />{" "}
+                  Screen Time
                 </h2>
-                <div className="flex bg-white/5 rounded-lg p-1">
-                  {(["daily", "weekly", "monthly"] as const).map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setScreenTimeView(v)}
-                      className={`px-3 py-1 rounded-md text-[8px] font-bold uppercase tracking-widest transition-all ${
-                        screenTimeView === v
-                          ? "bg-plaeen-green text-black"
-                          : "text-white/40 hover:text-white"
-                      }`}
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
+              </div>
+              <div className="flex bg-white/5 rounded-lg px-1 py-3 items-center justify-center mb-8 w-66 gap-4 mx-auto">
+                {(["daily", "weekly", "monthly"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setScreenTimeView(v)}
+                    className={`px-3 py-1 rounded-sm text-[12px] font-semibold uppercase tracking-wide transition-all ${
+                      screenTimeView === v
+                        ? "bg-plaeen-green text-black"
+                        : "text-white/50 hover:text-white"
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
               </div>
 
               <div className="text-center mb-8">
@@ -1283,30 +1363,57 @@ export const KidDashboard = () => {
 
             <Card className="bg-plaeen-purple/10 border-plaeen-purple/20 p-8">
               <h2 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Trophy size={18} className="text-plaeen-purple" /> Achievements
+                <Trophy size={18} className="text-plaeen-purple" /> Streaks
               </h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-3 rounded-xl bg-white/5">
-                  <div className="h-10 w-10 rounded-lg bg-plaeen-green/20 flex items-center justify-center">
-                    <Zap size={20} className="text-plaeen-green" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-white uppercase tracking-tight">
-                      Early Finisher
-                    </p>
-                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
-                      5 Sessions on time
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <KidStreakWidget
+                streak={
+                  activeKid?.streak || { count: 0, history: {}, lastUpdate: "" }
+                }
+              />
             </Card>
           </div>
 
           {/* Middle Column: Activity & Sessions */}
           <div className="lg:col-span-2 space-y-12">
+            <AnimatePresence>
+              {showRewardClaimed && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-plaeen-green text-black p-6 rounded-2xl flex items-center justify-between shadow-[0_20px_50px_rgba(118,233,0,0.3)] border border-white/20 relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none group-hover:scale-150 transition-transform duration-1000">
+                    <Trophy size={80} />
+                  </div>
+                  <div className="flex items-center gap-6 relative z-10">
+                    <div className="h-16 w-16 bg-black/10 rounded-xl flex items-center justify-center">
+                      <Zap size={32} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black uppercase tracking-tighter leading-none mb-1">
+                        REWARD ACTIVATED!
+                      </h3>
+                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+                        You gained +{activeKid?.streak?.rewardMinutes} mins
+                        daily allowance for your hard work!
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowRewardClaimed(false)}
+                    className="text-black hover:bg-black/10"
+                  >
+                    <X size={20} />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <section className="space-y-6">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+              <h2 className="flex items-center gap-3">
                 <Calendar size={16} /> Upcoming Sessions
               </h2>
               <div className="grid md:grid-cols-2 gap-6">
@@ -1315,7 +1422,7 @@ export const KidDashboard = () => {
                     <div
                       key={session.id}
                       className={cn(
-                        "glass rounded-2xl p-6 transition-all duration-300 bg-white/5 border-white/10 hover:border-plaeen-green/30 transition-all group cursor-pointer relative overflow-hidden",
+                        "glass rounded-2xl p-6 duration-300 bg-white/5 border-white/10 hover:border-plaeen-green/30 transition-all group cursor-pointer relative overflow-hidden",
                         session.status === "proposed" && "border-amber-400/30",
                       )}
                       onClick={() => navigate(`/teams/${session.groupId}`)}
@@ -1370,200 +1477,14 @@ export const KidDashboard = () => {
                   ))
                 ) : (
                   <Card className="md:col-span-2 bg-white/5 border-dashed border-white/10 p-12 text-center">
-                    <p className="text-white/20 font-bold uppercase tracking-widest">
-                      No sessions planned yet
-                    </p>
+                    <p className="ghost-text">No sessions planned yet</p>
                     <Button
-                      variant="ghost"
-                      className="mt-4 text-plaeen-green text-[10px] font-bold uppercase tracking-widest"
+                      variant="outline"
+                      size="sm"
+                      className="mt-6 px-6 py-3"
                     >
                       Invite Friends to Play
                     </Button>
-                  </Card>
-                )}
-              </div>
-            </section>
-
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
-                  <Bell size={16} /> Notifications
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate("/notifications")}
-                  className="text-[8px] font-bold uppercase tracking-widest text-white/40 hover:text-white"
-                >
-                  See All
-                </Button>
-              </div>
-              <div className="space-y-4">
-                {notifications.map((notif) => (
-                  <Card
-                    key={notif.id}
-                    className={cn(
-                      "bg-white/5 border-white/10 p-4 transition-all relative group",
-                      !notif.read &&
-                        "border-l-2 border-l-plaeen-green bg-plaeen-green/5",
-                      activeNotifMenu === notif.id ? "z-50" : "z-0",
-                    )}
-                  >
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={cn(
-                            "h-10 w-10 rounded-xl flex items-center justify-center",
-                            notif.type === "decision"
-                              ? "bg-plaeen-purple/10 text-plaeen-purple"
-                              : notif.type === "team_invite"
-                                ? "bg-plaeen-green/10 text-plaeen-green"
-                                : notif.type === "friend_request"
-                                  ? "bg-amber-500/10 text-amber-500"
-                                  : notif.type === "friend_accepted"
-                                    ? "bg-plaeen-green/10 text-plaeen-green"
-                                    : "bg-plaeen-green/10 text-plaeen-green",
-                          )}
-                        >
-                          {notif.type === "decision" ? (
-                            <Shield size={20} />
-                          ) : notif.type === "team_invite" ? (
-                            <Users size={20} />
-                          ) : notif.type === "friend_request" ? (
-                            <UserPlus size={20} />
-                          ) : notif.type === "friend_accepted" ? (
-                            <Star size={20} />
-                          ) : (
-                            <Bell size={20} />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-xs font-bold text-white uppercase tracking-tight">
-                              {notif.title || "Notification"}
-                            </p>
-                            {!notif.read && (
-                              <span className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest bg-plaeen-green/10 px-2 py-0.5 rounded">
-                                New
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
-                            {notif.message}
-                          </p>
-                        </div>
-
-                        {/* 3-dots menu */}
-                        {!requiresAction(notif.type) && (
-                          <div className="relative">
-                            <button
-                              onClick={() =>
-                                setActiveNotifMenu(
-                                  activeNotifMenu === notif.id
-                                    ? null
-                                    : notif.id,
-                                )
-                              }
-                              className="p-2 text-white/20 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-
-                            <AnimatePresence>
-                              {activeNotifMenu === notif.id && (
-                                <>
-                                  <div
-                                    className="fixed inset-0 z-10"
-                                    onClick={() => setActiveNotifMenu(null)}
-                                  />
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                    className="absolute right-0 mt-2 w-40 rounded-xl bg-plaeen-dark border border-white/10 shadow-2xl p-1 z-20"
-                                  >
-                                    {!notif.read && (
-                                      <button
-                                        onClick={() =>
-                                          handleMarkAsRead(notif.id)
-                                        }
-                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[8px] font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
-                                      >
-                                        <Check size={12} /> Mark as Read
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteNotification(notif.id)
-                                      }
-                                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[8px] font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
-                                    >
-                                      <Trash2 size={12} /> Delete
-                                    </button>
-                                  </motion.div>
-                                </>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        )}
-                      </div>
-
-                      {notif.type === "friend_request" && (
-                        <div className="flex gap-2 pl-14">
-                          <Button
-                            size="sm"
-                            onClick={() => handleFriendRequest(notif, true)}
-                            className="bg-plaeen-green text-black text-[8px] font-bold uppercase tracking-widest px-4 py-2"
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleFriendRequest(notif, false)}
-                            className="border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest px-4 py-2"
-                          >
-                            Decline
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => navigate("/friends")}
-                            className="text-white/20 text-[6px] font-bold uppercase tracking-widest px-2 py-1 ml-auto"
-                          >
-                            View
-                          </Button>
-                        </div>
-                      )}
-
-                      {notif.type === "team_invite" && (
-                        <div className="flex gap-2 pl-14">
-                          <Button
-                            size="sm"
-                            onClick={() => handleTeamInvite(notif, true)}
-                            className="bg-plaeen-green text-black text-[8px] font-bold uppercase tracking-widest px-4 py-2"
-                          >
-                            Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleTeamInvite(notif, false)}
-                            className="border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest px-4 py-2"
-                          >
-                            Decline
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-
-                {notifications.length === 0 && (
-                  <Card className="bg-white/5 border-dashed border-white/10 p-8 text-center">
-                    <p className="text-white/20 font-bold uppercase tracking-widest">
-                      No new notifications
-                    </p>
                   </Card>
                 )}
               </div>
@@ -1623,7 +1544,7 @@ export const KidDashboard = () => {
             )}
 
             <section className="space-y-6">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+              <h2 className="flex items-center gap-3">
                 <Activity size={16} /> Recent Activity
               </h2>
               <Card className="bg-white/5 border-white/10 p-8">
@@ -1662,7 +1583,7 @@ export const KidDashboard = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md"
           >
-            <div className="w-full max-w-md bg-plaeen-dark border border-plaeen-purple/30 p-10 rounded-2xl shadow-2xl">
+            <div className="w-full max-w-md border border-plaeen-purple-medium p-10 rounded-2xl shadow-2xl">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
                   Log Activity
@@ -1765,3 +1686,6 @@ export const KidDashboard = () => {
     </>
   );
 };
+function increment(rewardMinutes: number | boolean): unknown {
+  throw new Error("Function not implemented.");
+}
