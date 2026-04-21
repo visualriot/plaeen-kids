@@ -75,6 +75,9 @@ async function startServer() {
       genres,
       platforms,
       userAge,
+      sortBy = "relevance",
+      multiplatformOnly,
+      multiplayerOnly,
     } = req.query;
     const apiKey = process.env.RAWG_API_KEY;
 
@@ -87,9 +90,18 @@ async function startServer() {
       const pageNum = parseInt(String(page));
       const pageSizeNum = parseInt(String(page_size));
 
+      // Map sortBy to RAWG ordering parameter
+      const orderingMap: Record<string, string> = {
+        relevance: "relevance",
+        "year-desc": "-released", // minus sign for descending (newest first)
+        "year-asc": "released", // without minus for ascending (oldest first)
+        recommendation: "-rating", // highest rated first
+      };
+      const ordering = orderingMap[String(sortBy)] || "relevance";
+
       // Function to fetch and transform games from RAWG
       const fetchAndTransformGames = async (pageNo: number) => {
-        let url = `https://api.rawg.io/api/games?key=${apiKey}&page=${pageNo}&page_size=40`;
+        let url = `https://api.rawg.io/api/games?key=${apiKey}&page=${pageNo}&page_size=40&ordering=${ordering}`;
 
         if (search) url += `&search=${search}`;
         if (genres) url += `&genres=${genres}`;
@@ -106,48 +118,79 @@ async function startServer() {
             name: game.name,
             description: game.description_raw || "No description available.",
             platforms: game.platforms?.map((p: any) => p.platform.name) || [],
+            platformsCount: game.platforms?.length || 0,
             genres: game.genres?.map((g: any) => g.name) || [],
+            tags: game.tags?.map((t: any) => t.name) || [],
             image:
               game.background_image ||
               `https://picsum.photos/seed/${game.id}/600/400`,
             rating: Math.round(game.metacritic || game.rating * 20),
             releaseDate: game.released || "TBA",
             minAge: minAge,
-            isChildFriendly: minAge !== null && minAge <= 13, // T-rated is max for kids
+            isChildFriendly: minAge !== null && minAge <= 13,
             esrb_rating: game.esrb_rating,
           };
         });
       };
 
       let allGames: any[] = [];
+      const targetCount = pageNum * pageSizeNum;
+      let currentRawgPage = 1;
+      const maxPages = search ? 100 : 50; // Fetch more pages when searching to handle filtering
 
-      // If filtering by age, we need to fetch multiple pages to account for filtered-out games
-      if (userAgeNum) {
-        // For pagination with filtering, we need to fetch enough games to fill the requested page
-        // Calculate how many games we need to have fetched total
-        const targetCount = pageNum * pageSizeNum;
-        let currentRawgPage = 1;
+      // Fetch games with pagination and filtering
+      while (allGames.length < targetCount && currentRawgPage <= maxPages) {
+        const fetchedGames = await fetchAndTransformGames(currentRawgPage);
+        if (fetchedGames.length === 0) break;
 
-        while (allGames.length < targetCount && currentRawgPage <= 50) {
-          const fetchedGames = await fetchAndTransformGames(currentRawgPage);
-          if (fetchedGames.length === 0) break; // No more games available
+        // Apply filters
+        let filtered = fetchedGames;
 
-          // Filter by age
-          const filtered = fetchedGames.filter(
+        // Age filtering
+        if (userAgeNum) {
+          filtered = filtered.filter(
             (g: any) => g.minAge !== null && g.minAge <= userAgeNum,
           );
-          allGames.push(...filtered);
-          currentRawgPage++;
         }
 
-        // Extract the requested page from filtered results
-        const startIdx = (pageNum - 1) * pageSizeNum;
-        const endIdx = startIdx + pageSizeNum;
-        allGames = allGames.slice(startIdx, endIdx);
-      } else {
-        // No age filtering, just fetch one page normally
-        allGames = await fetchAndTransformGames(pageNum);
+        // Multiplatform filtering
+        if (multiplatformOnly === "true") {
+          filtered = filtered.filter((g: any) => g.platformsCount > 1);
+        }
+
+        // Multiplayer filtering
+        if (multiplayerOnly === "true") {
+          filtered = filtered.filter((g: any) => {
+            const multiplayerKeywords = [
+              "multiplayer",
+              "co-op",
+              "co op",
+              "online",
+            ];
+            const tags = g.tags.map((t: string) => t.toLowerCase());
+            const genres = g.genres.map((gen: string) => gen.toLowerCase());
+            const name = g.name.toLowerCase();
+
+            return (
+              multiplayerKeywords.some(
+                (kw) =>
+                  tags.includes(kw) || genres.includes(kw) || name.includes(kw),
+              ) ||
+              tags.some((t: string) =>
+                multiplayerKeywords.some((kw) => t.includes(kw)),
+              )
+            );
+          });
+        }
+
+        allGames.push(...filtered);
+        currentRawgPage++;
       }
+
+      // Extract the requested page from filtered results
+      const startIdx = (pageNum - 1) * pageSizeNum;
+      const endIdx = startIdx + pageSizeNum;
+      allGames = allGames.slice(startIdx, endIdx);
 
       res.json(allGames);
     } catch (error) {
