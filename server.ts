@@ -9,6 +9,57 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Rating to minimum age mapping
+// ESRB: EC (3+), E (6+), E10+ (10+), T (13+), M (17+), AO (18+)
+// PEGI: 3+, 7+, 12+, 16+, 18+
+const RATING_AGE_MAP: Record<string, number> = {
+  // ESRB ratings
+  "EC - Early Childhood": 3,
+  "E - Everyone": 6,
+  "E10+ - Everyone 10+": 10,
+  "T - Teen": 13,
+  "M - Mature": 17,
+  "AO - Adults Only": 18,
+  // Simplified ESRB
+  EC: 3,
+  E: 6,
+  "E10+": 10,
+  T: 13,
+  M: 17,
+  AO: 18,
+  // PEGI ratings
+  "PEGI 3": 3,
+  "PEGI 7": 7,
+  "PEGI 12": 12,
+  "PEGI 16": 16,
+  "PEGI 18": 18,
+  // Alternative formats
+  Everyone: 6,
+  "Everyone 10+": 10,
+  Teen: 13,
+  Mature: 17,
+  "Adults Only": 18,
+};
+
+// Get minimum age from rating
+function getMinAgeFromRating(ratingObj: any): number | null {
+  if (!ratingObj) return null; // No rating available
+
+  const ratingName = ratingObj.name || String(ratingObj);
+  const minAge = RATING_AGE_MAP[ratingName];
+
+  if (minAge !== undefined) return minAge;
+
+  // Fallback: try to extract age from string (e.g., "PEGI 12" -> 12)
+  const ageMatch = ratingName.match(/\d{1,2}/);
+  if (ageMatch) {
+    const extracted = parseInt(ageMatch[0]);
+    if (extracted >= 3 && extracted <= 18) return extracted;
+  }
+
+  return null; // Unknown rating format
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -17,7 +68,14 @@ async function startServer() {
 
   // RAWG API Proxy
   app.get("/api/games", async (req, res) => {
-    const { search, page = 1, page_size = 6, genres, platforms } = req.query;
+    const {
+      search,
+      page = 1,
+      page_size = 6,
+      genres,
+      platforms,
+      userAge,
+    } = req.query;
     const apiKey = process.env.RAWG_API_KEY;
 
     if (!apiKey) {
@@ -25,35 +83,73 @@ async function startServer() {
     }
 
     try {
-      let url = `https://api.rawg.io/api/games?key=${apiKey}&page=${page}&page_size=${page_size}`;
-      
-      if (search) url += `&search=${search}`;
-      if (genres) url += `&genres=${genres}`;
-      if (platforms) url += `&platforms=${platforms}`;
+      const userAgeNum = userAge ? parseInt(String(userAge)) : undefined;
+      const pageNum = parseInt(String(page));
+      const pageSizeNum = parseInt(String(page_size));
 
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      // Transform RAWG data to our app's format
-      let games = data.results.map((game: any) => ({
-        id: game.id.toString(),
-        slug: game.slug,
-        name: game.name,
-        description: game.description_raw || "No description available.",
-        platforms: game.platforms?.map((p: any) => p.platform.name) || [],
-        genres: game.genres?.map((g: any) => g.name) || [],
-        image: game.background_image || `https://picsum.photos/seed/${game.id}/600/400`,
-        rating: Math.round(game.metacritic || game.rating * 20),
-        releaseDate: game.released || "TBA",
-        isChildFriendly: !game.esrb_rating || ["Everyone", "Everyone 10+", "Teen"].includes(game.esrb_rating.name),
-        esrb_rating: game.esrb_rating
-      }));
+      // Function to fetch and transform games from RAWG
+      const fetchAndTransformGames = async (pageNo: number) => {
+        let url = `https://api.rawg.io/api/games?key=${apiKey}&page=${pageNo}&page_size=40`;
 
-      if (req.query.isChildFriendly === 'true') {
-        games = games.filter((g: any) => g.isChildFriendly);
+        if (search) url += `&search=${search}`;
+        if (genres) url += `&genres=${genres}`;
+        if (platforms) url += `&platforms=${platforms}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        return data.results.map((game: any) => {
+          const minAge = getMinAgeFromRating(game.esrb_rating);
+          return {
+            id: game.id.toString(),
+            slug: game.slug,
+            name: game.name,
+            description: game.description_raw || "No description available.",
+            platforms: game.platforms?.map((p: any) => p.platform.name) || [],
+            genres: game.genres?.map((g: any) => g.name) || [],
+            image:
+              game.background_image ||
+              `https://picsum.photos/seed/${game.id}/600/400`,
+            rating: Math.round(game.metacritic || game.rating * 20),
+            releaseDate: game.released || "TBA",
+            minAge: minAge,
+            isChildFriendly: minAge !== null && minAge <= 13, // T-rated is max for kids
+            esrb_rating: game.esrb_rating,
+          };
+        });
+      };
+
+      let allGames: any[] = [];
+
+      // If filtering by age, we need to fetch multiple pages to account for filtered-out games
+      if (userAgeNum) {
+        // For pagination with filtering, we need to fetch enough games to fill the requested page
+        // Calculate how many games we need to have fetched total
+        const targetCount = pageNum * pageSizeNum;
+        let currentRawgPage = 1;
+
+        while (allGames.length < targetCount && currentRawgPage <= 50) {
+          const fetchedGames = await fetchAndTransformGames(currentRawgPage);
+          if (fetchedGames.length === 0) break; // No more games available
+
+          // Filter by age
+          const filtered = fetchedGames.filter(
+            (g: any) => g.minAge !== null && g.minAge <= userAgeNum,
+          );
+          allGames.push(...filtered);
+          currentRawgPage++;
+        }
+
+        // Extract the requested page from filtered results
+        const startIdx = (pageNum - 1) * pageSizeNum;
+        const endIdx = startIdx + pageSizeNum;
+        allGames = allGames.slice(startIdx, endIdx);
+      } else {
+        // No age filtering, just fetch one page normally
+        allGames = await fetchAndTransformGames(pageNum);
       }
 
-      res.json(games);
+      res.json(allGames);
     } catch (error) {
       console.error("RAWG API Error:", error);
       res.status(500).json({ error: "Failed to fetch games from RAWG" });
@@ -63,6 +159,7 @@ async function startServer() {
   // RAWG Game Details Proxy
   app.get("/api/games/:id", async (req, res) => {
     const { id } = req.params;
+    const { userAge } = req.query;
     const apiKey = process.env.RAWG_API_KEY;
 
     if (!apiKey) {
@@ -70,21 +167,30 @@ async function startServer() {
     }
 
     try {
-      const response = await fetch(`https://api.rawg.io/api/games/${id}?key=${apiKey}`);
+      const response = await fetch(
+        `https://api.rawg.io/api/games/${id}?key=${apiKey}`,
+      );
       const game = await response.json();
-      
+
+      const minAge = getMinAgeFromRating(game.esrb_rating);
       res.json({
         id: game.id.toString(),
         slug: game.slug,
         name: game.name,
-        description: game.description_raw || game.description || "No description available.",
+        description:
+          game.description_raw ||
+          game.description ||
+          "No description available.",
         platforms: game.platforms?.map((p: any) => p.platform.name) || [],
         genres: game.genres?.map((g: any) => g.name) || [],
-        image: game.background_image || `https://picsum.photos/seed/${game.id}/600/400`,
+        image:
+          game.background_image ||
+          `https://picsum.photos/seed/${game.id}/600/400`,
         rating: Math.round(game.metacritic || game.rating * 20),
         releaseDate: game.released || "TBA",
-        isChildFriendly: !game.esrb_rating || ["Everyone", "Everyone 10+", "Teen"].includes(game.esrb_rating.name),
-        esrb_rating: game.esrb_rating
+        minAge: minAge,
+        isChildFriendly: minAge !== null && minAge <= 13,
+        esrb_rating: game.esrb_rating,
       });
     } catch (error) {
       console.error("RAWG API Error:", error);

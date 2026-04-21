@@ -49,9 +49,29 @@ interface Game {
   rating: number;
   releaseDate: string;
   isChildFriendly: boolean;
+  minAge?: number;
+  esrb_rating?: any;
 }
 
 import { useProfile } from "@/contexts/ProfileContext";
+
+// Helper to calculate age from birthDate
+function getAgeFromBirthDate(birthDate: any): number | null {
+  if (!birthDate) return null;
+
+  // Handle different date formats
+  const date = typeof birthDate === "string" ? new Date(birthDate) : birthDate;
+  if (isNaN(date.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    age--;
+  }
+
+  return age >= 0 ? age : null;
+}
 
 export const GameSearchPage = () => {
   const [user] = useAuthState(auth);
@@ -135,7 +155,8 @@ export const GameSearchPage = () => {
     try {
       let url = `/api/games?page=${pageNum}`;
       if (role === "kid" && kidData?.restrictedMode) {
-        url += "&isChildFriendly=true";
+        const age = getAgeFromBirthDate(kidData.birthDate);
+        if (age) url += `&userAge=${age}`;
       }
       const response = await fetch(url);
       if (!response.ok) throw new Error("API error");
@@ -230,7 +251,8 @@ export const GameSearchPage = () => {
       try {
         let url = `/api/games?search=${encodeURIComponent(query)}&page=${pageNum}`;
         if (role === "kid" && kidData?.restrictedMode) {
-          url += "&isChildFriendly=true";
+          const age = getAgeFromBirthDate(kidData.birthDate);
+          if (age) url += `&userAge=${age}`;
         }
         const response = await fetch(url);
         if (!response.ok) throw new Error("API error");
@@ -405,24 +427,25 @@ export const GameSearchPage = () => {
             </h2>
             <div className="flex flex-wrap gap-4">
               <Button
+                variant="primary"
+                size="lg"
                 onClick={() =>
                   teamId
                     ? createSession(recommendation)
                     : fetchGameDetails(recommendation)
                 }
-                className="px-12 py-8 text-xl font-bold uppercase tracking-widest bg-plaeen-green text-black hover:scale-105 transition-transform shadow-[0_0_30px_rgba(118,233,0,0.4)]"
               >
                 {teamId ? "Create Session" : "Let's play!"}
               </Button>
               <Button
-                variant="outline"
+                variant="glass"
                 onClick={() =>
                   window.open(
                     `https://rawg.io/games/${recommendation.slug || recommendation.id}`,
                     "_blank",
                   )
                 }
-                className="px-12 py-8 text-xl font-bold uppercase tracking-widest border-white/20 text-white hover:bg-white/10"
+                className="text-xl"
               >
                 <ExternalLink className="mr-3" size={24} /> Check on RAWG
               </Button>
