@@ -9,7 +9,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     | "outline"
     | "ghost"
     | "remove"
-    | "tertiary";
+    | "tertiary"
+    | "glass";
   size?: "sm" | "md" | "lg";
 }
 
@@ -30,12 +31,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         "text-[10px] border-2 border-white/20 text-white/60 hover:bg-white/10 hover:text-white/90 hover:scale-95 font-medium tracking-wide",
       remove:
         "border-1 border-red-500/80 text-red-500/80 fill-red-500 hover:bg-red-500/10 hover:scale-95",
+      glass:
+        "hover:bg-white/10 text-white border border-white/20 backdrop-blur-sm hover:bg-white/20 hover:scale-95 transition-all ease-in-out tracking-widest",
     };
 
     const sizes = {
       sm: "px-3 py-4 text-sm",
       md: "px-8 py-4 text-base",
-      lg: "px-12 py-6 text-xl font-bold uppercase tracking-widest",
+      lg: "px-12 py-8 text-xl font-bold uppercase tracking-widest",
     };
 
     return (

@@ -49,9 +49,62 @@ interface Game {
   rating: number;
   releaseDate: string;
   isChildFriendly: boolean;
+  minAge?: number;
+  esrb_rating?: any;
+  platformsCount?: number;
+  tags?: string[];
 }
 
+// Common platforms and genres
+const PLATFORMS = [
+  { id: "1", name: "PC" },
+  { id: "2", name: "PlayStation" },
+  { id: "3", name: "Xbox" },
+  { id: "7", name: "Nintendo" },
+  { id: "8", name: "iOS" },
+  { id: "9", name: "Android" },
+];
+
+const GENRES = [
+  { id: "4", name: "Action" },
+  { id: "51", name: "Indie" },
+  { id: "3", name: "Adventure" },
+  { id: "5", name: "RPG" },
+  { id: "10", name: "Strategy" },
+  { id: "2", name: "Shooter" },
+  { id: "59", name: "Massively Multiplayer" },
+  { id: "1", name: "Racing" },
+  { id: "6", name: "Sport" },
+  { id: "14", name: "Simulation" },
+  { id: "7", name: "Puzzle" },
+];
+
+const SORT_OPTIONS = [
+  { value: "relevance", label: "By Relevance" },
+  { value: "year-desc", label: "By Release Year (Newest)" },
+  { value: "year-asc", label: "By Release Year (Oldest)" },
+  { value: "recommendation", label: "By Recommendation" },
+];
+
 import { useProfile } from "@/contexts/ProfileContext";
+
+// Helper to calculate age from birthDate
+function getAgeFromBirthDate(birthDate: any): number | null {
+  if (!birthDate) return null;
+
+  // Handle different date formats
+  const date = typeof birthDate === "string" ? new Date(birthDate) : birthDate;
+  if (isNaN(date.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    age--;
+  }
+
+  return age >= 0 ? age : null;
+}
 
 export const GameSearchPage = () => {
   const [user] = useAuthState(auth);
@@ -72,6 +125,30 @@ export const GameSearchPage = () => {
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
   const [page, setPage] = useState(1);
   const [isRequesting, setIsRequesting] = useState(false);
+
+  // Filter state
+  const [sortBy, setSortBy] = useState<
+    "relevance" | "year-desc" | "year-asc" | "recommendation"
+  >("relevance");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [multiplatformOnly, setMultiplatformOnly] = useState(false);
+  const [multiplayerOnly, setMultiplayerOnly] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const getSortLabel = () => {
+    const option = SORT_OPTIONS.find((opt) => opt.value === sortBy);
+    return option?.label.split("By ")[1] || "Relevance";
+  };
+
+  const clearAllFilters = () => {
+    setSortBy("relevance");
+    setSelectedGenres([]);
+    setSelectedPlatforms([]);
+    setMultiplatformOnly(false);
+    setMultiplayerOnly(false);
+    setPage(1);
+  };
 
   const isGameApproved = (gameId: string) => {
     if (role !== "kid" || !kidData) return true;
@@ -130,93 +207,113 @@ export const GameSearchPage = () => {
     checkApiKey();
   }, []);
 
-  const exploreGames = useCallback(async (pageNum = 1) => {
-    setLoading(true);
-    try {
-      let url = `/api/games?page=${pageNum}`;
-      if (role === "kid" && kidData?.restrictedMode) {
-        url += "&isChildFriendly=true";
-      }
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("API error");
-      const data = await response.json();
-      if (pageNum === 1) {
-        setGames(data);
-        if (data.length > 0) setRecommendation(data[0]);
-      } else {
-        setGames((prev) => [...prev, ...data]);
-      }
-    } catch (err) {
-      console.error("Explore error:", err);
-      // Fallback to Gemini
+  const exploreGames = useCallback(
+    async (pageNum = 1) => {
+      setLoading(true);
       try {
-        const prompt = `Act as a game database API. Provide 6 popular trending games. 
+        let url = `/api/games?page=${pageNum}`;
+        if (role === "kid" && kidData?.restrictedMode) {
+          const age = getAgeFromBirthDate(kidData.birthDate);
+          if (age) url += `&userAge=${age}`;
+        }
+        if (sortBy) url += `&sortBy=${sortBy}`;
+        if (selectedGenres.length > 0)
+          url += `&genres=${selectedGenres.join(",")}`;
+        if (selectedPlatforms.length > 0)
+          url += `&platforms=${selectedPlatforms.join(",")}`;
+        if (multiplatformOnly) url += `&multiplatformOnly=true`;
+        if (multiplayerOnly) url += `&multiplayerOnly=true`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("API error");
+        const data = await response.json();
+        if (pageNum === 1) {
+          setGames(data);
+          if (data.length > 0) setRecommendation(data[0]);
+        } else {
+          setGames((prev) => [...prev, ...data]);
+        }
+      } catch (err) {
+        console.error("Explore error:", err);
+        // Fallback to Gemini
+        try {
+          const prompt = `Act as a game database API. Provide 6 popular trending games. 
         Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).`;
 
-        const geminiResponse = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: prompt,
-        });
+          const geminiResponse = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+          });
 
-        const text = geminiResponse.text || "";
-        const cleanedText = text.replace(/```json|```/g, "").trim();
-        const fallbackGames = JSON.parse(cleanedText);
-        if (pageNum === 1) {
-          setGames(fallbackGames);
-          setRecommendation(fallbackGames[0]);
-        } else {
-          setGames((prev) => [...prev, ...fallbackGames]);
+          const text = geminiResponse.text || "";
+          const cleanedText = text.replace(/```json|```/g, "").trim();
+          const fallbackGames = JSON.parse(cleanedText);
+          if (pageNum === 1) {
+            setGames(fallbackGames);
+            setRecommendation(fallbackGames[0]);
+          } else {
+            setGames((prev) => [...prev, ...fallbackGames]);
+          }
+        } catch (geminiErr) {
+          console.error("Gemini fallback error:", geminiErr);
+          const defaultGames = [
+            {
+              id: "1",
+              name: "Elden Ring",
+              description:
+                "Rise, Tarnished, and be led by grace to brandish the power of the Elden Ring.",
+              platforms: ["PC", "PS5", "Xbox"],
+              genres: ["RPG"],
+              image: "https://picsum.photos/seed/elden/600/400",
+              rating: 96,
+              releaseDate: "2022-02-25",
+              isChildFriendly: false,
+            },
+            {
+              id: "2",
+              name: "Valorant",
+              description: "A 5v5 character-based tactical shooter.",
+              platforms: ["PC"],
+              genres: ["Shooter"],
+              image: "https://picsum.photos/seed/valorant/600/400",
+              rating: 80,
+              releaseDate: "2020-06-02",
+              isChildFriendly: false,
+            },
+            {
+              id: "3",
+              name: "Minecraft",
+              description:
+                "Explore infinite worlds and build everything from the simplest of homes to the grandest of castles.",
+              platforms: ["PC", "Mobile", "Console"],
+              genres: ["Sandbox"],
+              image: "https://picsum.photos/seed/minecraft/600/400",
+              rating: 90,
+              releaseDate: "2011-11-18",
+              isChildFriendly: true,
+            },
+          ];
+          if (pageNum === 1) {
+            setGames(defaultGames);
+            setRecommendation(defaultGames[0]);
+          } else {
+            setGames((prev) => [...prev, ...defaultGames]);
+          }
         }
-      } catch (geminiErr) {
-        console.error("Gemini fallback error:", geminiErr);
-        const defaultGames = [
-          {
-            id: "1",
-            name: "Elden Ring",
-            description:
-              "Rise, Tarnished, and be led by grace to brandish the power of the Elden Ring.",
-            platforms: ["PC", "PS5", "Xbox"],
-            genres: ["RPG"],
-            image: "https://picsum.photos/seed/elden/600/400",
-            rating: 96,
-            releaseDate: "2022-02-25",
-            isChildFriendly: false,
-          },
-          {
-            id: "2",
-            name: "Valorant",
-            description: "A 5v5 character-based tactical shooter.",
-            platforms: ["PC"],
-            genres: ["Shooter"],
-            image: "https://picsum.photos/seed/valorant/600/400",
-            rating: 80,
-            releaseDate: "2020-06-02",
-            isChildFriendly: false,
-          },
-          {
-            id: "3",
-            name: "Minecraft",
-            description:
-              "Explore infinite worlds and build everything from the simplest of homes to the grandest of castles.",
-            platforms: ["PC", "Mobile", "Console"],
-            genres: ["Sandbox"],
-            image: "https://picsum.photos/seed/minecraft/600/400",
-            rating: 90,
-            releaseDate: "2011-11-18",
-            isChildFriendly: true,
-          },
-        ];
-        if (pageNum === 1) {
-          setGames(defaultGames);
-          setRecommendation(defaultGames[0]);
-        } else {
-          setGames((prev) => [...prev, ...defaultGames]);
-        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [
+      role,
+      kidData,
+      sortBy,
+      selectedGenres,
+      selectedPlatforms,
+      multiplatformOnly,
+      multiplayerOnly,
+    ],
+  );
 
   const searchGames = useCallback(
     async (queryOverride?: string, pageNum = 1) => {
@@ -230,8 +327,17 @@ export const GameSearchPage = () => {
       try {
         let url = `/api/games?search=${encodeURIComponent(query)}&page=${pageNum}`;
         if (role === "kid" && kidData?.restrictedMode) {
-          url += "&isChildFriendly=true";
+          const age = getAgeFromBirthDate(kidData.birthDate);
+          if (age) url += `&userAge=${age}`;
         }
+        if (sortBy) url += `&sortBy=${sortBy}`;
+        if (selectedGenres.length > 0)
+          url += `&genres=${selectedGenres.join(",")}`;
+        if (selectedPlatforms.length > 0)
+          url += `&platforms=${selectedPlatforms.join(",")}`;
+        if (multiplatformOnly) url += `&multiplatformOnly=true`;
+        if (multiplayerOnly) url += `&multiplayerOnly=true`;
+
         const response = await fetch(url);
         if (!response.ok) throw new Error("API error");
         const data = await response.json();
@@ -269,7 +375,17 @@ export const GameSearchPage = () => {
         setLoading(false);
       }
     },
-    [searchQuery, role, exploreGames],
+    [
+      searchQuery,
+      role,
+      kidData,
+      exploreGames,
+      sortBy,
+      selectedGenres,
+      selectedPlatforms,
+      multiplatformOnly,
+      multiplayerOnly,
+    ],
   );
 
   const fetchGameDetails = async (game: Game) => {
@@ -329,6 +445,24 @@ export const GameSearchPage = () => {
       exploreGames();
     }
   }, [kidData, initialQuery, searchGames, exploreGames]);
+
+  // Re-search when filters change
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      searchGames(searchQuery, 1);
+    } else {
+      exploreGames(1);
+    }
+  }, [
+    sortBy,
+    selectedGenres,
+    selectedPlatforms,
+    multiplatformOnly,
+    multiplayerOnly,
+    searchQuery,
+    searchGames,
+    exploreGames,
+  ]);
 
   const toggleWishlist = async (game: Game) => {
     if (!user) return;
@@ -405,24 +539,25 @@ export const GameSearchPage = () => {
             </h2>
             <div className="flex flex-wrap gap-4">
               <Button
+                variant="primary"
+                size="lg"
                 onClick={() =>
                   teamId
                     ? createSession(recommendation)
                     : fetchGameDetails(recommendation)
                 }
-                className="px-12 py-8 text-xl font-bold uppercase tracking-widest bg-plaeen-green text-black hover:scale-105 transition-transform shadow-[0_0_30px_rgba(118,233,0,0.4)]"
               >
                 {teamId ? "Create Session" : "Let's play!"}
               </Button>
               <Button
-                variant="outline"
+                variant="glass"
                 onClick={() =>
                   window.open(
                     `https://rawg.io/games/${recommendation.slug || recommendation.id}`,
                     "_blank",
                   )
                 }
-                className="px-12 py-8 text-xl font-bold uppercase tracking-widest border-white/20 text-white hover:bg-white/10"
+                className="text-xl"
               >
                 <ExternalLink className="mr-3" size={24} /> Check on RAWG
               </Button>
@@ -431,40 +566,268 @@ export const GameSearchPage = () => {
         </div>
       )}
 
-      <div className="mx-auto max-w-4xl mb-12">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setPage(1);
-            searchGames();
-          }}
-          className="relative group mb-8"
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setPage(1);
+          searchGames();
+        }}
+        className="relative group mb-8 mx-auto max-w-7xl"
+      >
+        <div className="absolute inset-0 bg-plaeen-green/20 blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search for games..."
+          className="w-full rounded-2xl border-2 border-white/10 bg-plaeen-purple/20 px-8 py-6 text-xl font-bold text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all relative z-10 backdrop-blur-xl"
+        />
+        <button
+          type="submit"
+          className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-xl bg-plaeen-green text-black flex items-center justify-center hover:scale-110 transition-transform z-20 shadow-[0_0_15px_rgba(118,233,0,0.5)]"
         >
-          <div className="absolute inset-0 bg-plaeen-green/20 blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for games..."
-            className="w-full rounded-2xl border-2 border-white/10 bg-plaeen-purple/20 px-8 py-6 text-xl font-bold text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all relative z-10 backdrop-blur-xl"
-          />
-          <button
-            type="submit"
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-xl bg-plaeen-green text-black flex items-center justify-center hover:scale-110 transition-transform z-20 shadow-[0_0_15px_rgba(118,233,0,0.5)]"
-          >
-            <Search size={24} />
-          </button>
-        </form>
+          <Search size={24} />
+        </button>
+      </form>
 
-        <div className="flex flex-wrap justify-center gap-4">
-          {["Relevance", "Genre", "Theme", "Platform"].map((filter) => (
-            <button
-              key={filter}
-              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 text-xs font-bold uppercase tracking-widest text-white/40 hover:text-plaeen-green hover:border-plaeen-green/50 transition-all flex items-center gap-3"
-            >
-              {filter} <ChevronDown size={14} />
-            </button>
-          ))}
+      <div className="mx-auto max-w-7xl mb-12">
+        <div className="flex flex-wrap justify-between items-center gap-6">
+          {/* Left Side - Filters and Toggle */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Genre - Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "genre" ? null : "genre")
+                }
+                className={cn(
+                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap",
+                  selectedGenres.length > 0
+                    ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
+                    : openDropdown === "genre"
+                      ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
+                      : "bg-white/5 border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/50",
+                )}
+              >
+                Genre
+                {selectedGenres.length > 0 && ` (${selectedGenres.length})`}
+                <ChevronDown size={12} />
+              </button>
+              {openDropdown === "genre" && (
+                <div className="absolute top-full mt-1 left-0 bg-plaeen-dark border border-plaeen-green/30 rounded-lg shadow-lg z-50 max-h-80 flex flex-col overflow-hidden">
+                  <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-thumb-rounded-full scrollbar-track-transparent flex-1">
+                    {GENRES.map((genre) => (
+                      <button
+                        key={genre.id}
+                        onClick={() => {
+                          setSelectedGenres((prev) =>
+                            prev.includes(genre.id)
+                              ? prev.filter((g) => g !== genre.id)
+                              : [...prev, genre.id],
+                          );
+                        }}
+                        className={cn(
+                          "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all whitespace-nowrap flex items-center gap-3",
+                          selectedGenres.includes(genre.id)
+                            ? "bg-plaeen-green/20 text-plaeen-green"
+                            : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                            selectedGenres.includes(genre.id)
+                              ? "bg-plaeen-green border-plaeen-green shadow-[0_0_6px_rgba(118,233,0,0.4)]"
+                              : "border-white/30",
+                          )}
+                        >
+                          {selectedGenres.includes(genre.id) && (
+                            <Check size={10} className="text-black" />
+                          )}
+                        </div>
+                        {genre.name}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setOpenDropdown(null)}
+                    className="px-4 py-3 border-t border-white/10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Platform - Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() =>
+                  setOpenDropdown(
+                    openDropdown === "platform" ? null : "platform",
+                  )
+                }
+                className={cn(
+                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap",
+                  selectedPlatforms.length > 0 || multiplatformOnly
+                    ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
+                    : openDropdown === "platform"
+                      ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
+                      : "bg-white/5 border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/50",
+                )}
+              >
+                Platform
+                {(selectedPlatforms.length > 0 || multiplatformOnly) &&
+                  ` (${selectedPlatforms.length + (multiplatformOnly ? 1 : 0)})`}
+                <ChevronDown size={12} />
+              </button>
+              {openDropdown === "platform" && (
+                <div className="absolute top-full mt-1 left-0 bg-plaeen-dark border border-plaeen-green/30 rounded-lg shadow-lg z-50 max-h-80 flex flex-col overflow-hidden">
+                  <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-thumb-rounded-full scrollbar-track-transparent flex-1">
+                    <button
+                      onClick={() => {
+                        setMultiplatformOnly(!multiplatformOnly);
+                      }}
+                      className={cn(
+                        "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all border-b border-white/10 whitespace-nowrap flex items-center gap-3",
+                        multiplatformOnly
+                          ? "bg-plaeen-green/20 text-plaeen-green"
+                          : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                          multiplatformOnly
+                            ? "bg-plaeen-green border-plaeen-green shadow-[0_0_6px_rgba(118,233,0,0.4)]"
+                            : "border-white/30",
+                        )}
+                      >
+                        {multiplatformOnly && (
+                          <Check size={10} className="text-black" />
+                        )}
+                      </div>
+                      Multiplatform
+                    </button>
+                    {PLATFORMS.map((platform) => (
+                      <button
+                        key={platform.id}
+                        onClick={() => {
+                          setSelectedPlatforms((prev) =>
+                            prev.includes(platform.id)
+                              ? prev.filter((p) => p !== platform.id)
+                              : [...prev, platform.id],
+                          );
+                        }}
+                        className={cn(
+                          "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all whitespace-nowrap flex items-center gap-3",
+                          selectedPlatforms.includes(platform.id)
+                            ? "bg-plaeen-green/20 text-plaeen-green"
+                            : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                            selectedPlatforms.includes(platform.id)
+                              ? "bg-plaeen-green border-plaeen-green shadow-[0_0_6px_rgba(118,233,0,0.4)]"
+                              : "border-white/30",
+                          )}
+                        >
+                          {selectedPlatforms.includes(platform.id) && (
+                            <Check size={10} className="text-black" />
+                          )}
+                        </div>
+                        {platform.name}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setOpenDropdown(null)}
+                    className="px-4 py-3 border-t border-white/10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Multiplayer - Toggle Switch */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setMultiplayerOnly(!multiplayerOnly);
+                }}
+                className={cn(
+                  "relative inline-flex h-8 w-14 items-center rounded-full transition-all",
+                  multiplayerOnly
+                    ? "bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.3)]"
+                    : "bg-white/10 border border-white/20",
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-md",
+                    multiplayerOnly ? "translate-x-7" : "translate-x-1",
+                  )}
+                />
+              </button>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                Multiplayer Only
+              </span>
+            </div>
+          </div>
+
+          {/* Right Side - Sort and Clear */}
+          <div className="flex items-center gap-6">
+            {/* Clear Filters Button */}
+            {(selectedGenres.length > 0 ||
+              selectedPlatforms.length > 0 ||
+              multiplatformOnly ||
+              multiplayerOnly ||
+              sortBy !== "relevance") && (
+              <button
+                onClick={clearAllFilters}
+                className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors underline"
+              >
+                Clear Filters
+              </button>
+            )}
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() =>
+                  setOpenDropdown(openDropdown === "sort" ? null : "sort")
+                }
+                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white/70 transition-colors"
+              >
+                Sort By:{" "}
+                <span className="text-plaeen-green">{getSortLabel()}</span>
+                <ChevronDown size={12} />
+              </button>
+              {openDropdown === "sort" && (
+                <div className="absolute top-full mt-2 right-0 bg-plaeen-dark border border-white/20 rounded-lg overflow-hidden shadow-lg z-50">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setSortBy(opt.value as any);
+                        setOpenDropdown(null);
+                      }}
+                      className={cn(
+                        "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all whitespace-nowrap",
+                        sortBy === opt.value
+                          ? "bg-plaeen-green/20 text-plaeen-green"
+                          : "text-white/60 hover:text-white hover:bg-white/5",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
