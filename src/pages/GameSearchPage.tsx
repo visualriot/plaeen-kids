@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { auth, db } from "@/firebase";
@@ -11,6 +11,8 @@ import {
   collection,
   addDoc,
   Timestamp,
+  query,
+  where,
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
@@ -34,7 +36,7 @@ import {
 import { GoogleGenAI } from "@google/genai";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { format, set } from "date-fns";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -86,6 +88,71 @@ const SORT_OPTIONS = [
   { value: "recommendation", label: "By Recommendation" },
 ];
 
+// Platform logo mapping - returns SVG file paths
+const getPlatformLogo = (platform: string): string => {
+  const platformLower = platform.toLowerCase();
+
+  // Determine SVG based on platform name
+  if (
+    platformLower.includes("playstation") ||
+    platformLower.includes("ps5") ||
+    platformLower.includes("ps4")
+  ) {
+    return "/icons/platforms/playstation.svg";
+  } else if (platformLower.includes("xbox")) {
+    return "/icons/platforms/xbox.svg";
+  } else if (
+    platformLower.includes("nintendo") ||
+    platformLower.includes("switch")
+  ) {
+    return "/icons/platforms/nintendo.svg";
+  } else if (platformLower.includes("pc") || platformLower === "pc") {
+    return "/icons/platforms/pc.svg";
+  } else if (
+    platformLower.includes("linux") ||
+    platformLower.includes("ubuntu")
+  ) {
+    return "/icons/platforms/ubuntu.svg";
+  } else if (
+    platformLower.includes("ios") ||
+    platformLower.includes("apple") ||
+    platformLower.includes("macos") ||
+    platformLower.includes("mac")
+  ) {
+    return "/icons/platforms/apple.svg";
+  } else if (platformLower.includes("android")) {
+    return "/icons/platforms/android.svg";
+  } else if (
+    platformLower.includes("web") ||
+    platformLower.includes("browser")
+  ) {
+    return "/icons/platforms/web.svg";
+  } else {
+    return "/icons/platforms/other.svg";
+  }
+};
+
+// Platform Icon Component that renders SVG img with Tailwind support
+const PlatformIcon: React.FC<{
+  platform: string;
+  className?: string;
+  title?: string;
+}> = ({ platform, className = "", title }) => {
+  const svgPath = getPlatformLogo(platform);
+
+  return (
+    <img
+      src={svgPath}
+      alt={platform}
+      title={title || platform}
+      className={cn("inline-block", className)}
+      style={{
+        filter: "invert(1) brightness(1.1)",
+      }}
+    />
+  );
+};
+
 import { useProfile } from "@/contexts/ProfileContext";
 
 // Helper to calculate age from birthDate
@@ -115,6 +182,9 @@ export const GameSearchPage = () => {
   const teamId = searchParams.get("teamId");
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [submittedSearchQuery, setSubmittedSearchQuery] = useState(
+    initialQuery.trim(),
+  );
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(false);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
@@ -135,10 +205,53 @@ export const GameSearchPage = () => {
   const [multiplatformOnly, setMultiplatformOnly] = useState(false);
   const [multiplayerOnly, setMultiplayerOnly] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const filterContainerRef = useRef<HTMLDivElement>(null);
+
+  // Team selection modal state
+  const [showTeamSelector, setShowTeamSelector] = useState(false);
+  const [userTeams, setUserTeams] = useState<any[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [gameToCreate, setGameToCreate] = useState<Game | null>(null);
+  const latestRequestRef = useRef(0);
+  const lastInitialQueryRef = useRef(initialQuery);
+  const [showRecommendationSection, setShowRecommendationSection] = useState(
+    !initialQuery.trim(),
+  );
+  const hasSubmittedSearch = submittedSearchQuery.length > 0;
+
+  // Handle click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        filterContainerRef.current &&
+        !filterContainerRef.current.contains(event.target as Node)
+      ) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [openDropdown]);
 
   const getSortLabel = () => {
     const option = SORT_OPTIONS.find((opt) => opt.value === sortBy);
     return option?.label.split("By ")[1] || "Relevance";
+  };
+
+  const resetGenreFilters = () => {
+    setSelectedGenres([]);
+    setPage(1);
+  };
+
+  const resetPlatformFilters = () => {
+    setSelectedPlatforms([]);
+    setMultiplatformOnly(false);
+    setPage(1);
   };
 
   const clearAllFilters = () => {
@@ -147,12 +260,44 @@ export const GameSearchPage = () => {
     setSelectedPlatforms([]);
     setMultiplatformOnly(false);
     setMultiplayerOnly(false);
+    setSearchQuery("");
+    setSubmittedSearchQuery("");
+    setShowRecommendationSection(false);
     setPage(1);
   };
 
-  const isGameApproved = (gameId: string) => {
+  // Check if game is age-appropriate for the kid
+  const isAgeAppropriate = (game: Game): boolean => {
     if (role !== "kid" || !kidData) return true;
-    return kidData.allowedGames?.includes(gameId);
+
+    // If child-friendly, always appropriate
+    if (game.isChildFriendly) return true;
+
+    // Check against kid's age
+    const kidAge = getAgeFromBirthDate(kidData.birthDate);
+    if (!kidAge) return false;
+
+    const minAge = game.minAge || 0;
+    return kidAge >= minAge;
+  };
+
+  // Determine if kid needs to request access
+  const needsAccessRequest = (game: Game): boolean => {
+    if (role !== "kid" || !kidData) return false;
+
+    // If already approved by parent, no need to request
+    if (kidData.allowedGames?.includes(game.id)) return false;
+
+    // If game is age-appropriate for the kid, no request needed
+    if (isAgeAppropriate(game)) return false;
+
+    // Otherwise (game is age-inappropriate), request is needed
+    return true;
+  };
+
+  const isGameApproved = (gameId: string): boolean => {
+    if (role !== "kid" || !kidData) return true;
+    return kidData.allowedGames?.includes(gameId) ?? false;
   };
 
   const requestGameAccess = async (game: Game) => {
@@ -190,6 +335,69 @@ export const GameSearchPage = () => {
     }
   };
 
+  // Fetch user teams for team selector
+  const fetchUserTeams = async () => {
+    if (!user) return;
+    setLoadingTeams(true);
+    try {
+      const groupsSnap = await getDoc(doc(db, "users", user.uid));
+      if (groupsSnap.exists()) {
+        const teamIds = groupsSnap.data().groups || [];
+        const teamsData = await Promise.all(
+          teamIds.map(async (groupId: string) => {
+            const groupSnap = await getDoc(doc(db, "groups", groupId));
+            return groupSnap.exists()
+              ? { id: groupId, ...groupSnap.data() }
+              : null;
+          }),
+        );
+        setUserTeams(teamsData.filter(Boolean));
+      }
+    } catch (err) {
+      console.error("Error fetching teams:", err);
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  // Handle creating session with team selection
+  const handleCreateSessionClick = (game: Game) => {
+    if (teamId) {
+      // Already have teamId, directly create session
+      createSession(game);
+    } else {
+      // Need to select team first
+      setGameToCreate(game);
+      setShowTeamSelector(true);
+      fetchUserTeams();
+    }
+  };
+
+  // Create session in selected team
+  const createSessionInTeam = async (selectedTeamId: string, game: Game) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, "groups", selectedTeamId, "sessions"), {
+        gameId: game.id,
+        gameName: game.name,
+        gameImage: game.image,
+        startTime: Timestamp.fromDate(new Date()),
+        proposedBy: user.uid,
+        proposedByName: user.displayName,
+        status: "proposed",
+        responses: {
+          [user.uid]: { status: "accepted", note: "Created from search" },
+        },
+      });
+      setShowTeamSelector(false);
+      setGameToCreate(null);
+      alert("Gaming session created successfully!");
+    } catch (err) {
+      console.error("Error creating session:", err);
+      alert("Failed to create session");
+    }
+  };
+
   useEffect(() => {
     const checkApiKey = async () => {
       try {
@@ -209,6 +417,7 @@ export const GameSearchPage = () => {
 
   const exploreGames = useCallback(
     async (pageNum = 1) => {
+      const requestId = ++latestRequestRef.current;
       setLoading(true);
       try {
         let url = `/api/games?page=${pageNum}`;
@@ -227,6 +436,8 @@ export const GameSearchPage = () => {
         const response = await fetch(url);
         if (!response.ok) throw new Error("API error");
         const data = await response.json();
+        if (requestId !== latestRequestRef.current) return;
+
         if (pageNum === 1) {
           setGames(data);
           if (data.length > 0) setRecommendation(data[0]);
@@ -248,6 +459,8 @@ export const GameSearchPage = () => {
           const text = geminiResponse.text || "";
           const cleanedText = text.replace(/```json|```/g, "").trim();
           const fallbackGames = JSON.parse(cleanedText);
+          if (requestId !== latestRequestRef.current) return;
+
           if (pageNum === 1) {
             setGames(fallbackGames);
             setRecommendation(fallbackGames[0]);
@@ -293,6 +506,8 @@ export const GameSearchPage = () => {
               isChildFriendly: true,
             },
           ];
+          if (requestId !== latestRequestRef.current) return;
+
           if (pageNum === 1) {
             setGames(defaultGames);
             setRecommendation(defaultGames[0]);
@@ -301,7 +516,9 @@ export const GameSearchPage = () => {
           }
         }
       } finally {
-        setLoading(false);
+        if (requestId === latestRequestRef.current) {
+          setLoading(false);
+        }
       }
     },
     [
@@ -316,16 +533,17 @@ export const GameSearchPage = () => {
   );
 
   const searchGames = useCallback(
-    async (queryOverride?: string, pageNum = 1) => {
-      const query = queryOverride || searchQuery;
-      if (!query.trim()) {
-        exploreGames(pageNum);
+    async (query: string, pageNum = 1) => {
+      const normalizedQuery = query.trim();
+      if (!normalizedQuery) {
+        await exploreGames(pageNum);
         return;
       }
 
+      const requestId = ++latestRequestRef.current;
       setLoading(true);
       try {
-        let url = `/api/games?search=${encodeURIComponent(query)}&page=${pageNum}`;
+        let url = `/api/games?search=${encodeURIComponent(normalizedQuery)}&page=${pageNum}`;
         if (role === "kid" && kidData?.restrictedMode) {
           const age = getAgeFromBirthDate(kidData.birthDate);
           if (age) url += `&userAge=${age}`;
@@ -341,6 +559,8 @@ export const GameSearchPage = () => {
         const response = await fetch(url);
         if (!response.ok) throw new Error("API error");
         const data = await response.json();
+        if (requestId !== latestRequestRef.current) return;
+
         if (pageNum === 1) {
           setGames(data);
         } else {
@@ -350,7 +570,7 @@ export const GameSearchPage = () => {
         console.error("Search error:", err);
         // Fallback to Gemini if backend API fails
         try {
-          const prompt = `Act as a game database API. Search for games matching "${query}". 
+          const prompt = `Act as a game database API. Search for games matching "${normalizedQuery}". 
         Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).
         Filter results based on: ${role === "kid" && kidData?.restrictedMode ? "ONLY child-friendly games" : "all games"}.`;
 
@@ -362,6 +582,8 @@ export const GameSearchPage = () => {
           const text = geminiResponse.text || "";
           const cleanedText = text.replace(/```json|```/g, "").trim();
           const fallbackGames = JSON.parse(cleanedText);
+          if (requestId !== latestRequestRef.current) return;
+
           if (pageNum === 1) {
             setGames(fallbackGames);
           } else {
@@ -369,14 +591,20 @@ export const GameSearchPage = () => {
           }
         } catch (geminiErr) {
           console.error("Gemini fallback error:", geminiErr);
-          exploreGames(pageNum);
+          if (requestId !== latestRequestRef.current) return;
+
+          // Don't fall back to explore for search - just show empty results
+          if (pageNum === 1) {
+            setGames([]);
+          }
         }
       } finally {
-        setLoading(false);
+        if (requestId === latestRequestRef.current) {
+          setLoading(false);
+        }
       }
     },
     [
-      searchQuery,
       role,
       kidData,
       exploreGames,
@@ -427,10 +655,10 @@ export const GameSearchPage = () => {
   const loadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
-    if (searchQuery) {
-      searchGames(searchQuery, nextPage);
+    if (hasSubmittedSearch) {
+      void searchGames(submittedSearchQuery, nextPage);
     } else {
-      exploreGames(nextPage);
+      void exploreGames(nextPage);
     }
   };
 
@@ -438,31 +666,47 @@ export const GameSearchPage = () => {
     if (kidData) {
       setWishlistIds(kidData.wishlist?.map((g: any) => g.id) || []);
     }
+  }, [kidData]);
 
-    if (initialQuery) {
-      searchGames(initialQuery);
-    } else {
-      exploreGames();
-    }
-  }, [kidData, initialQuery, searchGames, exploreGames]);
-
-  // Re-search when filters change
   useEffect(() => {
-    if (searchQuery.trim()) {
-      searchGames(searchQuery, 1);
+    if (initialQuery === lastInitialQueryRef.current) return;
+
+    lastInitialQueryRef.current = initialQuery;
+    setSearchQuery(initialQuery);
+    setSubmittedSearchQuery(initialQuery.trim());
+    setShowRecommendationSection(!initialQuery.trim());
+    setPage(1);
+  }, [initialQuery]);
+
+  // Re-run the active search whenever the applied query, filters, or user context changes.
+  useEffect(() => {
+    setPage(1);
+
+    if (hasSubmittedSearch) {
+      void searchGames(submittedSearchQuery, 1);
     } else {
-      exploreGames(1);
+      void exploreGames(1);
     }
-  }, [
-    sortBy,
-    selectedGenres,
-    selectedPlatforms,
-    multiplatformOnly,
-    multiplayerOnly,
-    searchQuery,
-    searchGames,
-    exploreGames,
-  ]);
+  }, [hasSubmittedSearch, submittedSearchQuery, searchGames, exploreGames]);
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextQuery = searchQuery.trim();
+    setShowRecommendationSection(false);
+    setPage(1);
+
+    if (nextQuery === submittedSearchQuery) {
+      if (nextQuery) {
+        void searchGames(nextQuery, 1);
+      } else {
+        void exploreGames(1);
+      }
+      return;
+    }
+
+    setSubmittedSearchQuery(nextQuery);
+  };
 
   const toggleWishlist = async (game: Game) => {
     if (!user) return;
@@ -522,7 +766,7 @@ export const GameSearchPage = () => {
       </div>
 
       {/* Recommendation Section */}
-      {recommendation && !searchQuery && (
+      {recommendation && !hasSubmittedSearch && showRecommendationSection && (
         <div className="mb-20 relative h-[500px] rounded-[2.5rem] overflow-hidden group">
           <img
             src={recommendation.image}
@@ -567,11 +811,7 @@ export const GameSearchPage = () => {
       )}
 
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPage(1);
-          searchGames();
-        }}
+        onSubmit={handleSearchSubmit}
         className="relative group mb-8 mx-auto max-w-7xl"
       >
         <div className="absolute inset-0 bg-plaeen-green/20 blur-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
@@ -582,16 +822,33 @@ export const GameSearchPage = () => {
           placeholder="Search for games..."
           className="w-full rounded-2xl border-2 border-white/10 bg-plaeen-purple/20 px-8 py-6 text-xl font-bold text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all relative z-10 backdrop-blur-xl"
         />
-        <button
-          type="submit"
-          className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-xl bg-plaeen-green text-black flex items-center justify-center hover:scale-110 transition-transform z-20 shadow-[0_0_15px_rgba(118,233,0,0.5)]"
-        >
-          <Search size={24} />
-        </button>
+        <div className="space-x-2">
+          {searchQuery.trim() && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+              }}
+              className="absolute right-16 top-1/2 -translate-y-1/2 h-12 w-12 rounded-lg bg-white/10 text-white/60 hover:text-white hover:bg-white/20 hover:scale-95 flex items-center justify-center transition-all z-20"
+              title="Clear search"
+            >
+              <X size={24} />
+            </button>
+          )}
+          <button
+            type="submit"
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 rounded-xl bg-plaeen-green text-black flex items-center justify-center hover:scale-95 transition-transform z-20 shadow-[0_0_15px_rgba(118,233,0,0.5)]"
+          >
+            <Search size={24} />
+          </button>
+        </div>
       </form>
 
       <div className="mx-auto max-w-7xl mb-12">
-        <div className="flex flex-wrap justify-between items-center gap-6">
+        <div
+          ref={filterContainerRef}
+          className="flex flex-wrap justify-between items-center gap-6"
+        >
           {/* Left Side - Filters and Toggle */}
           <div className="flex flex-wrap items-center gap-4">
             {/* Genre - Filter Dropdown */}
@@ -649,12 +906,20 @@ export const GameSearchPage = () => {
                       </button>
                     ))}
                   </div>
-                  <button
-                    onClick={() => setOpenDropdown(null)}
-                    className="px-4 py-3 border-t border-white/10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
-                  >
-                    Apply Filters
-                  </button>
+                  <div className="flex gap-0 border-t border-white/10">
+                    <button
+                      onClick={resetGenreFilters}
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      onClick={() => setOpenDropdown(null)}
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -742,12 +1007,20 @@ export const GameSearchPage = () => {
                       </button>
                     ))}
                   </div>
-                  <button
-                    onClick={() => setOpenDropdown(null)}
-                    className="px-4 py-3 border-t border-white/10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
-                  >
-                    Apply Filters
-                  </button>
+                  <div className="flex gap-0 border-t border-white/10">
+                    <button
+                      onClick={resetPlatformFilters}
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      onClick={() => setOpenDropdown(null)}
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -778,21 +1051,8 @@ export const GameSearchPage = () => {
             </div>
           </div>
 
-          {/* Right Side - Sort and Clear */}
+          {/* Right Side - Sort Only */}
           <div className="flex items-center gap-6">
-            {/* Clear Filters Button */}
-            {(selectedGenres.length > 0 ||
-              selectedPlatforms.length > 0 ||
-              multiplatformOnly ||
-              multiplayerOnly ||
-              sortBy !== "relevance") && (
-              <button
-                onClick={clearAllFilters}
-                className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors underline"
-              >
-                Clear Filters
-              </button>
-            )}
             {/* Sort Dropdown */}
             <div className="relative">
               <button
@@ -829,6 +1089,27 @@ export const GameSearchPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Clear All Filters Button - Below filters */}
+        {(selectedGenres.length > 0 ||
+          selectedPlatforms.length > 0 ||
+          multiplatformOnly ||
+          multiplayerOnly ||
+          hasSubmittedSearch ||
+          searchQuery.trim() ||
+          sortBy !== "relevance") && (
+          <div className="mt-4 flex justify-start">
+            <Button
+              onClick={clearAllFilters}
+              type="button"
+              variant="tertiary"
+              size="sm"
+              className="p-0 hover:text-red-500"
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        )}
       </div>
 
       {loading && page === 1 ? (
@@ -856,7 +1137,7 @@ export const GameSearchPage = () => {
               </div>
 
               <div className="p-6">
-                <h3 className="text-xl font-bold text-plaeen-green uppercase tracking-tight mb-4 group-hover:text-white transition-colors">
+                <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-4 group-hover:text-plaeen-green transition-colors">
                   {game.name}
                 </h3>
 
@@ -877,25 +1158,21 @@ export const GameSearchPage = () => {
                   </div>
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
                     <span className="text-white/20">Platforms</span>
-                    <div className="flex gap-2 text-white/60">
+                    <div className="flex gap-2">
                       {game.platforms.slice(0, 3).map((p) => (
-                        <Monitor key={p} size={12} />
+                        <PlatformIcon
+                          key={p}
+                          platform={p}
+                          className="h-5 w-5 opacity-70 hover:opacity-100 transition-opacity text-white/20 fill-white/20"
+                          title={p}
+                        />
                       ))}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex gap-2">
-                  {isGameApproved(game.id) ? (
-                    <Button
-                      onClick={() =>
-                        teamId ? createSession(game) : fetchGameDetails(game)
-                      }
-                      className="flex-1 font-bold uppercase tracking-widest text-xs py-3 bg-plaeen-purple text-white hover:bg-plaeen-green hover:text-black transition-all"
-                    >
-                      {teamId ? "Create Session" : "View Details"}
-                    </Button>
-                  ) : (
+                  {needsAccessRequest(game) ? (
                     <Button
                       onClick={() => requestGameAccess(game)}
                       disabled={isRequesting}
@@ -903,14 +1180,23 @@ export const GameSearchPage = () => {
                     >
                       Request Access
                     </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleCreateSessionClick(game)}
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 tracking-wider"
+                    >
+                      Create Session
+                    </Button>
                   )}
                   <button
                     onClick={() => toggleWishlist(game)}
                     className={cn(
-                      "h-10 w-10 rounded-xl flex items-center justify-center transition-all border",
+                      "h-14 w-14 rounded-xl flex items-center justify-center transition-all border",
                       wishlistIds.includes(game.id)
                         ? "bg-plaeen-green border-plaeen-green text-black shadow-[0_0_15px_rgba(118,233,0,0.4)]"
-                        : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30",
+                        : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:border-white/30 hover:scale-95",
                     )}
                   >
                     <Heart
@@ -927,7 +1213,7 @@ export const GameSearchPage = () => {
                         "_blank",
                       )
                     }
-                    className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:text-white hover:border-white/30 transition-all"
+                    className="h-14 w-14 rounded-xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:text-white hover:border-white/30 hover:scale-95 transition-all"
                   >
                     <ExternalLink size={18} />
                   </button>
@@ -1033,7 +1319,10 @@ export const GameSearchPage = () => {
                         key={p}
                         className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5"
                       >
-                        <Monitor size={16} className="text-white/20" />
+                        <PlatformIcon
+                          platform={p}
+                          className="h-8 w-8 opacity-70 hover:opacity-100 transition-opacity fill-white/20"
+                        />
                         <span className="text-xs font-bold text-white/60 uppercase">
                           {p}
                         </span>
@@ -1042,43 +1331,22 @@ export const GameSearchPage = () => {
                   </div>
 
                   <div className="mt-12 space-y-4">
-                    {isGameApproved(selectedGame.id) ? (
-                      <Button
-                        onClick={() =>
-                          teamId
-                            ? createSession(selectedGame)
-                            : toggleWishlist(selectedGame)
-                        }
-                        className={cn(
-                          "w-full py-6 font-bold uppercase tracking-widest gap-3",
-                          teamId
-                            ? "bg-plaeen-green text-black"
-                            : wishlistIds.includes(selectedGame.id)
-                              ? "bg-white/5 border-white/10 text-white/40"
-                              : "bg-plaeen-green text-black",
-                        )}
-                      >
-                        {teamId ? (
-                          <>
-                            <Plus size={20} /> Create Session
-                          </>
-                        ) : wishlistIds.includes(selectedGame.id) ? (
-                          <>
-                            <Check size={20} /> In Wishlist
-                          </>
-                        ) : (
-                          <>
-                            <Heart size={20} /> Add to Wishlist
-                          </>
-                        )}
-                      </Button>
-                    ) : (
+                    {needsAccessRequest(selectedGame) ? (
                       <Button
                         onClick={() => requestGameAccess(selectedGame)}
                         disabled={isRequesting}
                         className="w-full py-6 font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-white/40 hover:border-plaeen-green hover:text-plaeen-green gap-3"
                       >
                         <Shield size={20} /> Request Parent Approval
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleCreateSessionClick(selectedGame)}
+                        className="w-full gap-3"
+                        variant="primary"
+                        size="sm"
+                      >
+                        <Plus size={20} /> Create Session
                       </Button>
                     )}
                     <Button
@@ -1101,12 +1369,98 @@ export const GameSearchPage = () => {
         </div>
       )}
 
-      {!loading && games.length === 0 && searchQuery && (
+      {!loading && games.length === 0 && hasSubmittedSearch && (
         <div className="text-center py-20">
           <Gamepad2 size={64} className="mx-auto text-white/10 mb-6" />
           <p className="text-xl font-bold text-white/20 uppercase tracking-widest">
             No games found in this sector
           </p>
+        </div>
+      )}
+
+      {/* Team Selector Modal */}
+      {showTeamSelector && gameToCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+          <Card className="w-full max-w-2xl bg-plaeen-dark border-plaeen-green/30 p-8 shadow-[0_0_50px_rgba(118,233,0,0.1)]">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-4xl font-bold text-white uppercase tracking-tighter">
+                Select Team
+              </h2>
+              <button
+                onClick={() => {
+                  setShowTeamSelector(false);
+                  setGameToCreate(null);
+                }}
+                className="h-10 w-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:scale-110 transition-transform border border-white/10"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-white/60 mb-6">
+              Choose which team you want to add{" "}
+              <span className="text-plaeen-green font-bold">
+                {gameToCreate.name}
+              </span>{" "}
+              to:
+            </p>
+
+            {loadingTeams ? (
+              <div className="flex items-center justify-center py-12 gap-4">
+                <div className="h-8 w-8 border-4 border-plaeen-green border-t-transparent rounded-full animate-spin" />
+                <span className="text-plaeen-green font-bold uppercase">
+                  Loading teams...
+                </span>
+              </div>
+            ) : userTeams.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-white/40 mb-4">No teams found</p>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/teams")}
+                  className="border-plaeen-green text-plaeen-green"
+                >
+                  Go to Teams
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-3 mb-8">
+                {userTeams.map((team) => (
+                  <button
+                    key={team.id}
+                    onClick={() => createSessionInTeam(team.id, gameToCreate)}
+                    className="p-4 rounded-lg border-2 border-white/10 bg-white/5 text-left hover:border-plaeen-green hover:bg-plaeen-green/10 transition-all group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-bold text-white group-hover:text-plaeen-green transition-colors uppercase">
+                          {team.name || "Unnamed Team"}
+                        </h3>
+                        <p className="text-white/40 text-sm mt-1">
+                          {team.members?.length || 0} members
+                        </p>
+                      </div>
+                      <Plus
+                        size={20}
+                        className="text-white/40 group-hover:text-plaeen-green transition-colors"
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTeamSelector(false);
+                setGameToCreate(null);
+              }}
+              className="w-full border-white/20 text-white"
+            >
+              Cancel
+            </Button>
+          </Card>
         </div>
       )}
     </div>
