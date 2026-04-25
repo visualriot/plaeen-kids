@@ -59,6 +59,7 @@ import {
   subDays,
 } from "date-fns";
 import { cn, safeToDate, getUserAvatar } from "@/lib/utils";
+import { mergeTeamGames } from "@/lib/teamGames";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Team {
@@ -102,12 +103,18 @@ interface Session {
   gameId: string;
   gameName: string;
   gameImage?: string;
+  description?: string;
+  platforms?: string[];
+  genres?: string[];
   startTime: any;
   endTime: any;
   duration: number; // in minutes
   proposedBy: string;
   proposedByName: string;
   status: "proposed" | "scheduled" | "ongoing" | "completed" | "cancelled";
+  catalogEntry?: boolean;
+  teamGoals?: string[];
+  teamNotes?: string;
   responses?: Record<
     string,
     {
@@ -412,9 +419,11 @@ export const TeamDetailPage = () => {
       </div>
     );
 
+  const visibleSessions = sessions.filter((session) => !session.catalogEntry);
+  const combinedTeamGames = mergeTeamGames(teamGames, sessions);
   const headerImage =
-    teamGames.length > 0
-      ? teamGames[0].image
+    combinedTeamGames.length > 0
+      ? combinedTeamGames[0].image
       : "https://picsum.photos/seed/gaming/1920/1080";
 
   const activeEvents = events.filter((e) => {
@@ -502,7 +511,7 @@ export const TeamDetailPage = () => {
                 </p>
                 <p className="text-[10px] text-white/40 uppercase tracking-widest">
                   {
-                    sessions.filter(
+                    visibleSessions.filter(
                       (s) =>
                         s.status === "proposed" &&
                         !s.responses?.[user?.uid || ""],
@@ -593,7 +602,7 @@ export const TeamDetailPage = () => {
             <Gamepad2 size={16} /> Games Played
           </h2>
           <div className="space-y-4">
-            {teamGames.map((game) => (
+            {combinedTeamGames.map((game) => (
               <Link key={game.id} to={`/teams/${teamId}/games/${game.id}`}>
                 <Card className="group relative overflow-hidden p-0 border-white/5 bg-white/5 hover:border-plaeen-green/30 transition-all mb-4">
                   <div className="aspect-video relative">
@@ -629,7 +638,7 @@ export const TeamDetailPage = () => {
             </h2>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {sessions
+            {visibleSessions
               .filter((s) => s.status === "proposed" && !s.startTime)
               .map((proposal) => {
                 const votes = Object.values(proposal.responses || {}).filter(
@@ -692,7 +701,7 @@ export const TeamDetailPage = () => {
                   </Card>
                 );
               })}
-            {sessions.filter((s) => s.status === "proposed" && !s.startTime)
+            {visibleSessions.filter((s) => s.status === "proposed" && !s.startTime)
               .length === 0 && (
               <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2rem]">
                 <p className="text-white/20 font-bold uppercase tracking-widest text-xs">
@@ -770,7 +779,8 @@ export const TeamDetailPage = () => {
                         availableMembers.length >= 2 &&
                         availableMembers.length < members.length;
 
-                      const session = sessions.find((s) => {
+                      const session = visibleSessions.find((s) => {
+                        if (!s.startTime?.toDate) return false;
                         const sDate = s.startTime.toDate();
                         return (
                           isSameDay(sDate, day) && sDate.getHours() === hour

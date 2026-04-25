@@ -28,11 +28,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn, getUserAvatar } from "@/lib/utils";
+import { mergeTeamGames } from "@/lib/teamGames";
 
 interface GroupGame {
   id: string;
   name: string;
   image: string;
+  description?: string;
+  platforms?: string[];
+  genres?: string[];
 }
 
 interface UserProfile {
@@ -84,14 +88,17 @@ export const ProposeSessionPage = () => {
         setTeam(teamData);
 
         // Fetch Games
-        const gamesSnap = await getDocs(
-          collection(db, "groups", teamId, "games"),
-        );
+        const [gamesSnap, sessionsSnap] = await Promise.all([
+          getDocs(collection(db, "groups", teamId, "games")),
+          getDocs(collection(db, "groups", teamId, "sessions")),
+        ]);
         const games = gamesSnap.docs.map(
           (d) => ({ id: d.id, ...d.data() }) as GroupGame,
         );
-        setTeamGames(games);
-        if (games.length > 0) setSelectedGame(games[0]);
+        const sessionGames = sessionsSnap.docs.map((d) => d.data());
+        const mergedGames = mergeTeamGames(games as any, sessionGames as any);
+        setTeamGames(mergedGames);
+        if (mergedGames.length > 0) setSelectedGame(mergedGames[0]);
 
         // Fetch Members (for allowance checks)
         const memberProfiles: UserProfile[] = [];
