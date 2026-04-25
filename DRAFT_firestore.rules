@@ -71,11 +71,47 @@ service cloud.firestore {
     }
 
     function isValidSession(data) {
-      return data.keys().hasAll(['groupId', 'gameId', 'startTime', 'proposedBy', 'status']) &&
-             isValidId(data.groupId) &&
-             isValidId(data.gameId) &&
+      let hasScheduleDetails = data.keys().hasAll(['startTime', 'duration']) &&
+                               data.startTime is timestamp &&
+                               data.duration is number &&
+                               data.duration > 0;
+      let isProposal = data.status == 'proposed';
+
+      return data.keys().hasAll(['gameName', 'status', 'proposedBy']) &&
+             data.gameName is string && data.gameName.size() <= 200 &&
              data.proposedBy is string &&
-             data.status in ['proposed', 'scheduled', 'ongoing', 'completed', 'cancelled'];
+             data.status in ['proposed', 'scheduled', 'ongoing', 'completed', 'cancelled'] &&
+             (!data.keys().hasAny(['groupId']) || isValidId(data.groupId)) &&
+             (!data.keys().hasAny(['gameId']) || isValidId(data.gameId)) &&
+             (!data.keys().hasAny(['gameImage']) || data.gameImage is string) &&
+             (!data.keys().hasAny(['responses']) || data.responses is map) &&
+             (!data.keys().hasAny(['createdAt']) || data.createdAt is timestamp) &&
+             (!data.keys().hasAny(['endTime']) || data.endTime is timestamp) &&
+             (isProposal || hasScheduleDetails);
+    }
+
+    function isValidGroupGame(data) {
+      return data.keys().hasAll(['name', 'image', 'description', 'platforms', 'genres', 'addedBy']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.image is string &&
+             data.description is string &&
+             data.platforms is list &&
+             data.genres is list &&
+             (data.addedBy == request.auth.uid || isParentOf(data.addedBy)) &&
+             (!data.keys().hasAny(['addedByName']) || data.addedByName is string) &&
+             (!data.keys().hasAny(['slug']) || data.slug is string) &&
+             (!data.keys().hasAny(['rating']) || data.rating is number) &&
+             (!data.keys().hasAny(['releaseDate']) || data.releaseDate is string) &&
+             (!data.keys().hasAny(['isChildFriendly']) || data.isChildFriendly is bool) &&
+             (!data.keys().hasAny(['minAge']) || data.minAge == null || data.minAge is number) &&
+             (!data.keys().hasAny(['teamGoals']) || data.teamGoals is list) &&
+             (!data.keys().hasAny(['teamNotes']) || data.teamNotes is string) &&
+             (!data.keys().hasAny(['addedAt']) || data.addedAt is timestamp);
+    }
+
+    function isValidGroupGameCollaborationUpdate(data) {
+      return (!data.keys().hasAny(['teamGoals']) || data.teamGoals is list) &&
+             (!data.keys().hasAny(['teamNotes']) || data.teamNotes is string);
     }
 
     // --- Collection Rules ---
@@ -124,7 +160,16 @@ service cloud.firestore {
 
       match /games/{gameId} {
         allow read: if isSignedIn() && isGroupMember(groupId);
-        allow create, update, delete: if isSignedIn() && isGroupAdmin(groupId);
+        allow create: if isSignedIn() && isGroupMember(groupId) && isValidGroupGame(incoming());
+        allow update: if isSignedIn() && (
+          isGroupAdmin(groupId) ||
+          (
+            isGroupMember(groupId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['teamGoals', 'teamNotes']) &&
+            isValidGroupGameCollaborationUpdate(incoming())
+          )
+        );
+        allow delete: if isSignedIn() && isGroupAdmin(groupId);
       }
 
       match /events/{eventId} {

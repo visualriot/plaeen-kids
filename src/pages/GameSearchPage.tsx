@@ -5,11 +5,13 @@ import { auth, db } from "@/firebase";
 import {
   doc,
   getDoc,
+  getDocs,
   updateDoc,
   arrayUnion,
   arrayRemove,
   collection,
   addDoc,
+  setDoc,
   Timestamp,
   query,
   where,
@@ -36,7 +38,7 @@ import {
 import { GoogleGenAI } from "@google/genai";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { format, set } from "date-fns";
+import { format } from "date-fns";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -218,6 +220,10 @@ export const GameSearchPage = () => {
     !initialQuery.trim(),
   );
   const hasSubmittedSearch = submittedSearchQuery.length > 0;
+  const pageTitle = teamId ? "Create New Session" : "Explore Games";
+  const activePlayerId = kidData?.uid || user?.uid || null;
+  const activePlayerName =
+    kidData?.displayName || user?.displayName || "Anonymous";
 
   // Handle click outside to close dropdowns
   useEffect(() => {
@@ -337,26 +343,100 @@ export const GameSearchPage = () => {
 
   // Fetch user teams for team selector
   const fetchUserTeams = async () => {
-    if (!user) return;
+    const memberId = kidData?.uid || user?.uid;
+    if (!memberId) {
+      setUserTeams([]);
+      return;
+    }
+
     setLoadingTeams(true);
     try {
-      const groupsSnap = await getDoc(doc(db, "users", user.uid));
-      if (groupsSnap.exists()) {
-        const teamIds = groupsSnap.data().groups || [];
-        const teamsData = await Promise.all(
-          teamIds.map(async (groupId: string) => {
-            const groupSnap = await getDoc(doc(db, "groups", groupId));
-            return groupSnap.exists()
-              ? { id: groupId, ...groupSnap.data() }
-              : null;
-          }),
+      const teamsQuery = query(
+        collection(db, "groups"),
+        where("members", "array-contains", memberId),
+      );
+      const teamsSnap = await getDocs(teamsQuery);
+      const teamsData = teamsSnap.docs
+        .map((teamDoc) => ({ id: teamDoc.id, ...teamDoc.data() }))
+        .sort((a: any, b: any) =>
+          (a.name || "").localeCompare(b.name || ""),
         );
-        setUserTeams(teamsData.filter(Boolean));
-      }
+
+      setUserTeams(teamsData);
     } catch (err) {
       console.error("Error fetching teams:", err);
+      setUserTeams([]);
     } finally {
       setLoadingTeams(false);
+    }
+  };
+
+  const createTeamSession = async (
+    selectedTeamId: string,
+    game: Game,
+  ): Promise<"created" | "duplicate" | "error"> => {
+    if (!activePlayerId) return "error";
+
+    const now = Timestamp.now();
+    const teamGameRef = doc(db, "groups", selectedTeamId, "games", game.id);
+    const catalogSessionRef = doc(
+      db,
+      "groups",
+      selectedTeamId,
+      "sessions",
+      `game_${game.id}`,
+    );
+    const existingSessionsQuery = query(
+      collection(db, "groups", selectedTeamId, "sessions"),
+      where("gameId", "==", game.id),
+    );
+
+    try {
+      const [existingGame, existingCatalogSession, existingSessions] =
+        await Promise.all([
+          getDoc(teamGameRef),
+          getDoc(catalogSessionRef),
+          getDocs(existingSessionsQuery),
+        ]);
+
+      if (
+        existingGame.exists() ||
+        existingCatalogSession.exists() ||
+        !existingSessions.empty
+      ) {
+        return "duplicate";
+      }
+
+      await setDoc(catalogSessionRef, {
+        groupId: selectedTeamId,
+        gameId: game.id,
+        gameName: game.name,
+        gameImage: game.image,
+        description: game.description,
+        platforms: game.platforms,
+        genres: game.genres,
+        proposedBy: activePlayerId,
+        proposedByName: activePlayerName,
+        status: "completed",
+        catalogEntry: true,
+        startTime: Timestamp.fromMillis(0),
+        endTime: Timestamp.fromMillis(60_000),
+        duration: 1,
+        teamGoals: [],
+        teamNotes: "",
+        createdAt: now,
+        responses: {
+          [activePlayerId]: {
+            status: "accepted",
+            note: "Added from game search",
+          },
+        },
+      });
+
+      return "created";
+    } catch (err) {
+      console.error("Error creating team session:", err);
+      return "error";
     }
   };
 
@@ -364,38 +444,33 @@ export const GameSearchPage = () => {
   const handleCreateSessionClick = (game: Game) => {
     if (teamId) {
       // Already have teamId, directly create session
-      createSession(game);
+      void createSession(game);
     } else {
       // Need to select team first
       setGameToCreate(game);
       setShowTeamSelector(true);
-      fetchUserTeams();
+      void fetchUserTeams();
     }
   };
 
   // Create session in selected team
   const createSessionInTeam = async (selectedTeamId: string, game: Game) => {
-    if (!user) return;
-    try {
-      await addDoc(collection(db, "groups", selectedTeamId, "sessions"), {
-        gameId: game.id,
-        gameName: game.name,
-        gameImage: game.image,
-        startTime: Timestamp.fromDate(new Date()),
-        proposedBy: user.uid,
-        proposedByName: user.displayName,
-        status: "proposed",
-        responses: {
-          [user.uid]: { status: "accepted", note: "Created from search" },
-        },
-      });
+    const result = await createTeamSession(selectedTeamId, game);
+
+    if (result === "created") {
       setShowTeamSelector(false);
       setGameToCreate(null);
-      alert("Gaming session created successfully!");
-    } catch (err) {
-      console.error("Error creating session:", err);
-      alert("Failed to create session");
+      alert("Game added to the team successfully!");
+      navigate(`/teams/${selectedTeamId}`);
+      return;
     }
+
+    if (result === "duplicate") {
+      alert(`${game.name} is already in this team.`);
+      return;
+    }
+
+    alert("Failed to add game to the team.");
   };
 
   useEffect(() => {
@@ -632,24 +707,22 @@ export const GameSearchPage = () => {
   };
 
   const createSession = async (game: Game) => {
-    if (!user || !teamId) return;
-    try {
-      await addDoc(collection(db, "groups", teamId, "sessions"), {
-        gameId: game.id,
-        gameName: game.name,
-        gameImage: game.image,
-        startTime: Timestamp.fromDate(new Date()), // Default to now, user can edit in calendar
-        proposedBy: user.uid,
-        proposedByName: user.displayName,
-        status: "proposed",
-        responses: {
-          [user.uid]: { status: "accepted", note: "Created from search" },
-        },
-      });
+    if (!teamId) return;
+
+    const result = await createTeamSession(teamId, game);
+
+    if (result === "created") {
       navigate(`/teams/${teamId}`);
-    } catch (err) {
-      console.error("Error creating session:", err);
+      return;
     }
+
+    if (result === "duplicate") {
+      alert(`${game.name} is already in this team.`);
+      navigate(`/teams/${teamId}`);
+      return;
+    }
+
+    alert("Failed to add game to the team.");
   };
 
   const loadMore = () => {
@@ -755,7 +828,7 @@ export const GameSearchPage = () => {
       )}
 
       <div className="mb-16 flex flex-col md:flex-row items-center justify-between gap-6">
-        <h1>Create New Session</h1>
+        <h1>{pageTitle}</h1>
         <Button
           variant="outline"
           onClick={() => navigate(-1)}

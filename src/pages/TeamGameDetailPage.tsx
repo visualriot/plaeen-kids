@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { cn, getUserAvatar } from "@/lib/utils";
+import { getTeamGameFromSession } from "@/lib/teamGames";
 
 interface GroupGame {
   id: string;
@@ -55,8 +56,15 @@ interface Session {
   id: string;
   gameId: string;
   gameName: string;
+  gameImage?: string;
+  description?: string;
+  platforms?: string[];
+  genres?: string[];
   startTime: any;
   status: string;
+  catalogEntry?: boolean;
+  teamGoals?: string[];
+  teamNotes?: string;
   responses?: Record<string, any>;
 }
 
@@ -65,6 +73,8 @@ export const TeamGameDetailPage = () => {
   const [user] = useAuthState(auth);
   const [game, setGame] = useState<GroupGame | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [catalogSessionId, setCatalogSessionId] = useState<string | null>(null);
+  const [usesFallbackGame, setUsesFallbackGame] = useState(false);
   const [newGoal, setNewGoal] = useState("");
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -78,8 +88,11 @@ export const TeamGameDetailPage = () => {
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data() as GroupGame;
+          setUsesFallbackGame(false);
           setGame(data);
           setNotes(data.teamNotes || "");
+        } else {
+          setUsesFallbackGame(true);
         }
       },
     );
@@ -89,21 +102,50 @@ export const TeamGameDetailPage = () => {
       where("gameId", "==", gameId),
     );
     const sessionsUnsubscribe = onSnapshot(sessionsQuery, (snapshot) => {
-      setSessions(
-        snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session),
+      const allSessions = snapshot.docs.map(
+        (d) => ({ id: d.id, ...d.data() }) as Session,
       );
+      const catalogSession =
+        allSessions.find((session) => session.catalogEntry) || allSessions[0];
+
+      setCatalogSessionId(catalogSession?.id || null);
+      setSessions(allSessions.filter((session) => !session.catalogEntry));
+
+      if (catalogSession && usesFallbackGame) {
+        const fallbackGame = getTeamGameFromSession({
+          gameId: catalogSession.gameId,
+          gameName: catalogSession.gameName,
+          gameImage: catalogSession.gameImage,
+          description: catalogSession.description,
+          platforms: catalogSession.platforms,
+          genres: catalogSession.genres,
+          teamGoals: catalogSession.teamGoals,
+          teamNotes: catalogSession.teamNotes,
+        });
+
+        if (fallbackGame) {
+          setGame(fallbackGame);
+          setNotes(fallbackGame.teamNotes || "");
+        }
+      }
     });
 
     return () => {
       unsubscribe();
       sessionsUnsubscribe();
     };
-  }, [teamId, gameId]);
+  }, [teamId, gameId, usesFallbackGame]);
 
   const addGoal = async () => {
     if (!teamId || !gameId || !newGoal.trim()) return;
+    if (usesFallbackGame && !catalogSessionId) return;
     try {
-      await updateDoc(doc(db, "groups", teamId, "games", gameId), {
+      const targetRef =
+        usesFallbackGame && catalogSessionId
+          ? doc(db, "groups", teamId, "sessions", catalogSessionId)
+          : doc(db, "groups", teamId, "games", gameId);
+
+      await updateDoc(targetRef, {
         teamGoals: arrayUnion(newGoal.trim()),
       });
       setNewGoal("");
@@ -114,8 +156,14 @@ export const TeamGameDetailPage = () => {
 
   const removeGoal = async (goal: string) => {
     if (!teamId || !gameId) return;
+    if (usesFallbackGame && !catalogSessionId) return;
     try {
-      await updateDoc(doc(db, "groups", teamId, "games", gameId), {
+      const targetRef =
+        usesFallbackGame && catalogSessionId
+          ? doc(db, "groups", teamId, "sessions", catalogSessionId)
+          : doc(db, "groups", teamId, "games", gameId);
+
+      await updateDoc(targetRef, {
         teamGoals: arrayRemove(goal),
       });
     } catch (err) {
@@ -125,9 +173,15 @@ export const TeamGameDetailPage = () => {
 
   const saveNotes = async () => {
     if (!teamId || !gameId) return;
+    if (usesFallbackGame && !catalogSessionId) return;
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, "groups", teamId, "games", gameId), {
+      const targetRef =
+        usesFallbackGame && catalogSessionId
+          ? doc(db, "groups", teamId, "sessions", catalogSessionId)
+          : doc(db, "groups", teamId, "games", gameId);
+
+      await updateDoc(targetRef, {
         teamNotes: notes,
       });
     } catch (err) {
@@ -316,6 +370,7 @@ export const TeamGameDetailPage = () => {
             <Card className="bg-white/5 border-white/10 p-8">
               <div className="space-y-6">
                 {sessions
+                  .filter((session) => session.startTime?.toDate)
                   .sort((a, b) => a.startTime.toDate() - b.startTime.toDate())
                   .map((session) => (
                     <div
