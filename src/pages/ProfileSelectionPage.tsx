@@ -29,14 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { cn, calculateAge, formatName, getUserAvatar } from "../lib/utils";
 import { validateUsername } from "@/lib/validation";
-
-interface KidProfile {
-  uid: string;
-  displayName: string;
-  username: string;
-  birthDate?: string;
-  photoURL?: string;
-}
+import type { KidProfile } from "@/lib/types";
 
 export const ProfileSelectionPage = () => {
   const [user] = useAuthState(auth);

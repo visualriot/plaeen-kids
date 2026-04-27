@@ -43,46 +43,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { validateUsername } from "@/lib/validation";
 import { useProfile } from "@/contexts/ProfileContext";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-
-interface KidProfile {
-  uid: string;
-  displayName: string;
-  username?: string;
-  birthDate?: string;
-  photoURL?: string;
-  screenTime: {
-    dailyAllowance: number;
-    usedToday: number;
-    weeklyAllowance?: number;
-    usedWeekly?: number;
-    monthlyAllowance?: number;
-    usedMonthly?: number;
-    weeklyAdjustments?: number;
-    monthlyAdjustments?: number;
-    accumulatedTime?: number;
-    lastReset: any;
-    bannedDates?: string[];
-    scheduledDeductions?: {
-      id: string;
-      date: string;
-      minutes: number;
-    }[];
-    isSessionActive?: boolean;
-    sessionStartTime?: number;
-    todayAdjustments?: {
-      id: string;
-      type: "penalty" | "reward";
-      minutes: number;
-      reason: string;
-      timestamp: string;
-      isScheduled?: boolean;
-      data?: any;
-    }[];
-  };
-  allowedGames: string[];
-  friends: string[];
-  restrictedMode?: boolean;
-}
+import type { KidProfile } from "@/lib/types";
 
 export const ChildManagementPage = () => {
   const { childId } = useParams();

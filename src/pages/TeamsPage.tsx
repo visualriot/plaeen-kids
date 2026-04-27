@@ -38,21 +38,7 @@ import {
   DEFAULT_TEAM_AVATAR,
 } from "@/lib/utils";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-
-interface Team {
-  id: string;
-  name: string;
-  imageURL?: string;
-  adminIds: string[];
-  members: string[];
-}
-
-interface Friend {
-  uid: string;
-  displayName: string;
-  username: string;
-  photoURL?: string;
-}
+import type { Team, Friend } from "@/lib/types";
 
 import { useProfile } from "@/contexts/ProfileContext";
 

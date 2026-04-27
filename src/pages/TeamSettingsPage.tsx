@@ -37,23 +37,7 @@ import {
 } from "lucide-react";
 import { cn, getUserAvatar } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface Team {
-  id: string;
-  name: string;
-  imageURL?: string;
-  members: string[];
-  adminIds: string[];
-  ownerId: string;
-  pendingMembers?: string[];
-}
-
-interface UserProfile {
-  uid: string;
-  displayName: string;
-  username: string;
-  photoURL?: string;
-}
+import type { Team, UserProfile } from "@/lib/types";
 
 export const TeamSettingsPage = () => {
   const { teamId } = useParams();

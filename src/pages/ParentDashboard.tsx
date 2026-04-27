@@ -48,34 +48,7 @@ import {
   getUserAvatar,
   DEFAULT_USER_AVATAR,
 } from "@/lib/utils";
-
-interface KidProfile {
-  uid: string;
-  displayName: string;
-  username?: string;
-  photoURL?: string;
-  screenTime: {
-    dailyAllowance: number;
-    usedToday: number;
-    lastReset: any;
-    isSessionActive?: boolean;
-    sessionStartTime?: number;
-  };
-  allowedGames: string[];
-  role: "kid";
-}
-
-interface ApprovalRequest {
-  id: string;
-  childId: string;
-  childName: string;
-  type: "game" | "time" | "team" | "activity" | "overtime" | "friend";
-  status: "pending" | "approved" | "denied";
-  title?: string;
-  rewardMinutes?: number;
-  data: any;
-  createdAt: any;
-}
+import type { KidProfile, ApprovalRequest } from "@/lib/types";
 
 export const ParentDashboard = () => {
   const [user] = useAuthState(auth);

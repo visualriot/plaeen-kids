@@ -61,83 +61,15 @@ import {
 import { cn, safeToDate, getUserAvatar } from "@/lib/utils";
 import { mergeTeamGames } from "@/lib/teamGames";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface Team {
-  id: string;
-  name: string;
-  members: string[];
-  adminIds: string[];
-  pendingMembers?: string[];
-  ownerId: string;
-  imageURL?: string;
-  teamAvailability?: Record<string, string>;
-}
-
-interface GroupGame {
-  id: string;
-  name: string;
-  image: string;
-  description: string;
-  platforms: string[];
-  genres: string[];
-}
-
-interface UserProfile {
-  uid: string;
-  displayName: string;
-  photoURL?: string;
-  availability?: {
-    recurring?: Record<string, boolean>;
-    once?: Record<string, boolean>;
-  };
-  screenTime?: {
-    dailyAllowance: number;
-    usedToday: number;
-    lastReset: any;
-  };
-  parentId?: string;
-}
-
-interface Session {
-  id: string;
-  gameId: string;
-  gameName: string;
-  gameImage?: string;
-  description?: string;
-  platforms?: string[];
-  genres?: string[];
-  startTime: any;
-  endTime: any;
-  duration: number; // in minutes
-  proposedBy: string;
-  proposedByName: string;
-  status: "proposed" | "scheduled" | "ongoing" | "completed" | "cancelled";
-  catalogEntry?: boolean;
-  teamGoals?: string[];
-  teamNotes?: string;
-  responses?: Record<
-    string,
-    {
-      status: "accepted" | "rejected" | "maybe";
-      note?: string;
-      guardianApprovalPending?: boolean;
-      requestedAllowance?: number;
-    }
-  >;
-  notes?: string;
-}
-
 import { useProfile } from "@/contexts/ProfileContext";
-
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-
-interface TeamEvent {
-  id: string;
-  type: "member_joined";
-  userId: string;
-  userName: string;
-  createdAt: any;
-}
+import type {
+  Team,
+  GroupGame,
+  UserProfile,
+  Session,
+  TeamEvent,
+} from "@/lib/types";
 
 export const TeamDetailPage = () => {
   const { teamId } = useParams();
@@ -701,8 +633,9 @@ export const TeamDetailPage = () => {
                   </Card>
                 );
               })}
-            {visibleSessions.filter((s) => s.status === "proposed" && !s.startTime)
-              .length === 0 && (
+            {visibleSessions.filter(
+              (s) => s.status === "proposed" && !s.startTime,
+            ).length === 0 && (
               <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2rem]">
                 <p className="text-white/20 font-bold uppercase tracking-widest text-xs">
                   No active game proposals

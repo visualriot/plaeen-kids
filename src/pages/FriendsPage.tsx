@@ -22,24 +22,7 @@ import { Search, UserPlus, UserMinus, Check, X, Clock } from "lucide-react";
 import { formatName, getUserAvatar } from "@/lib/utils";
 
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-
-interface UserProfile {
-  uid: string;
-  displayName: string;
-  username: string;
-  photoURL?: string;
-  parentId?: string;
-}
-
-interface FriendRequest {
-  id: string;
-  fromId: string;
-  fromName: string;
-  toId: string;
-  toName?: string;
-  status: "pending" | "accepted" | "rejected";
-}
-
+import type { UserProfile, FriendRequest } from "@/lib/types";
 import { useProfile } from "@/contexts/ProfileContext";
 
 export const FriendsPage = () => {

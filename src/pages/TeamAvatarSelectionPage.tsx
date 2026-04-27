@@ -3,11 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Check, Loader2 } from "lucide-react";
 import { db } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-
-interface AvatarCategory {
-  name: string;
-  avatars: string[];
-}
+import type { AvatarCategory } from "@/lib/types";
 
 export const TeamAvatarSelectionPage = () => {
   const navigate = useNavigate();
