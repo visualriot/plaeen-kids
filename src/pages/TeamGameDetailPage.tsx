@@ -35,6 +35,7 @@ import {
 import { format, isSameDay } from "date-fns";
 import { cn, getUserAvatar } from "@/lib/utils";
 import { getTeamGameFromSession } from "@/lib/teamGames";
+import type { Session } from "@/lib/types";
 
 interface GroupGame {
   id: string;
@@ -50,22 +51,6 @@ interface GroupGame {
   };
   teamGoals?: string[];
   teamNotes?: string;
-}
-
-interface Session {
-  id: string;
-  gameId: string;
-  gameName: string;
-  gameImage?: string;
-  description?: string;
-  platforms?: string[];
-  genres?: string[];
-  startTime: any;
-  status: string;
-  catalogEntry?: boolean;
-  teamGoals?: string[];
-  teamNotes?: string;
-  responses?: Record<string, any>;
 }
 
 export const TeamGameDetailPage = () => {

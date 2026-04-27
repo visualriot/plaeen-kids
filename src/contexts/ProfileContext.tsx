@@ -3,57 +3,7 @@ import { auth, db } from "../firebase";
 import { doc, onSnapshot, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-
-interface KidProfile {
-  streak: {
-    rewardClaimedToday: boolean;
-    rewardMinutes: number | boolean;
-    targetDays: number;
-    count: number;
-    history: {};
-    lastUpdate: string;
-  };
-  birthDate: import("react/jsx-runtime").JSX.Element;
-  uid: string;
-  displayName: string;
-  username: string;
-  role: "kid";
-  parentId: string;
-  photoURL?: string;
-  screenTime: {
-    lastReset: any;
-    dailyAllowance: number;
-    usedToday: number;
-    weeklyAllowance?: number;
-    usedWeekly?: number;
-    monthlyAllowance?: number;
-    usedMonthly?: number;
-    weeklyAdjustments?: number;
-    monthlyAdjustments?: number;
-    accumulatedTime?: number;
-    bannedDates?: string[];
-    scheduledDeductions?: {
-      id: string;
-      date: string;
-      minutes: number;
-    }[];
-    isSessionActive?: boolean;
-    sessionStartTime?: number;
-    todayAdjustments?: {
-      id: string;
-      type: "penalty" | "reward";
-      minutes: number;
-      reason: string;
-      timestamp: string;
-    }[];
-  };
-  allowedGames: string[];
-  teamAliases?: Record<string, string>;
-  availability?: {
-    recurring?: Record<string, boolean>;
-    once?: Record<string, boolean>;
-  };
-}
+import type { KidProfile } from "@/lib/types";
 
 interface ProfileContextType {
   activeKid: KidProfile | null;

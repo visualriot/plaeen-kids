@@ -22,19 +22,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { cn, getUserAvatar, getRandomTeamAvatar } from "@/lib/utils";
 import { useProfile } from "@/contexts/ProfileContext";
-
-interface Friend {
-  uid: string;
-  displayName: string;
-  username: string;
-  photoURL?: string;
-}
-
-interface AvatarCategory {
-  id: string;
-  name: string;
-  avatars: string[];
-}
+import type { Friend, AvatarCategory } from "@/lib/types";
 
 const AVATAR_CATEGORIES: AvatarCategory[] = [
   {

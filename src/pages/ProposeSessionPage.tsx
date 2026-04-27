@@ -29,25 +29,7 @@ import {
 import { format } from "date-fns";
 import { cn, getUserAvatar } from "@/lib/utils";
 import { mergeTeamGames } from "@/lib/teamGames";
-
-interface GroupGame {
-  id: string;
-  name: string;
-  image: string;
-  description?: string;
-  platforms?: string[];
-  genres?: string[];
-}
-
-interface UserProfile {
-  uid: string;
-  displayName: string;
-  photoURL?: string;
-  screenTime?: {
-    dailyAllowance: number;
-    usedToday: number;
-  };
-}
+import type { GroupGame, UserProfile } from "@/lib/types";
 
 export const ProposeSessionPage = () => {
   const { teamId } = useParams();

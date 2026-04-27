@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { GameDetailsModal } from "@/components/GameDetailsModal";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -34,6 +35,7 @@ import {
   ExternalLink,
   ChevronDown,
   Shield,
+  Search as SearchIcon,
 } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 import { cn } from "@/lib/utils";
@@ -195,6 +197,10 @@ export const GameSearchPage = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const [selectedGameDetails, setSelectedGameDetails] = useState<Game | null>(
+    null,
+  );
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [isRequesting, setIsRequesting] = useState(false);
 
@@ -243,6 +249,38 @@ export const GameSearchPage = () => {
       };
     }
   }, [openDropdown]);
+
+  // Handle tag, genre, and platform filters from modal
+  useEffect(() => {
+    const tag = searchParams.get("tag");
+    const genre = searchParams.get("genre");
+    const platform = searchParams.get("platform");
+
+    if (tag) {
+      // Search for games with this tag
+      setSearchQuery(tag);
+      setSubmittedSearchQuery(tag);
+      setShowRecommendationSection(false);
+    } else if (genre) {
+      // Find the genre ID and add it to selected genres
+      const foundGenre = GENRES.find(
+        (g) => g.name.toLowerCase() === genre.toLowerCase(),
+      );
+      if (foundGenre) {
+        setSelectedGenres([foundGenre.id]);
+        setPage(1);
+      }
+    } else if (platform) {
+      // Find the platform ID and add it to selected platforms
+      const foundPlatform = PLATFORMS.find(
+        (p) => p.name.toLowerCase() === platform.toLowerCase(),
+      );
+      if (foundPlatform) {
+        setSelectedPlatforms([foundPlatform.id]);
+        setPage(1);
+      }
+    }
+  }, [searchParams]);
 
   const getSortLabel = () => {
     const option = SORT_OPTIONS.find((opt) => opt.value === sortBy);
@@ -358,9 +396,7 @@ export const GameSearchPage = () => {
       const teamsSnap = await getDocs(teamsQuery);
       const teamsData = teamsSnap.docs
         .map((teamDoc) => ({ id: teamDoc.id, ...teamDoc.data() }))
-        .sort((a: any, b: any) =>
-          (a.name || "").localeCompare(b.name || ""),
-        );
+        .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
 
       setUserTeams(teamsData);
     } catch (err) {
@@ -782,20 +818,20 @@ export const GameSearchPage = () => {
   };
 
   const toggleWishlist = async (game: Game) => {
-    if (!user) return;
+    if (!activePlayerId) return;
     const isAdded = wishlistIds.includes(game.id);
 
     try {
       if (isAdded) {
-        // Find the exact item in the user's wishlist to remove it
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          const currentWishlist = userDoc.data().wishlist || [];
+        // Find the exact item in the player's wishlist to remove it
+        const playerDoc = await getDoc(doc(db, "users", activePlayerId));
+        if (playerDoc.exists()) {
+          const currentWishlist = playerDoc.data().wishlist || [];
           const itemToRemove = currentWishlist.find(
             (item: any) => item.id === game.id,
           );
           if (itemToRemove) {
-            await updateDoc(doc(db, "users", user.uid), {
+            await updateDoc(doc(db, "users", activePlayerId), {
               wishlist: arrayRemove(itemToRemove),
             });
           }
@@ -806,7 +842,7 @@ export const GameSearchPage = () => {
           ...game,
           addedAt: new Date().toISOString(),
         };
-        await updateDoc(doc(db, "users", user.uid), {
+        await updateDoc(doc(db, "users", activePlayerId), {
           wishlist: arrayUnion(wishlistItem),
         });
         setWishlistIds((prev) => [...prev, game.id]);
@@ -1280,15 +1316,14 @@ export const GameSearchPage = () => {
                     />
                   </button>
                   <button
-                    onClick={() =>
-                      window.open(
-                        `https://rawg.io/games/${game.slug || game.id}`,
-                        "_blank",
-                      )
-                    }
-                    className="h-14 w-14 rounded-xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:text-white hover:border-white/30 hover:scale-95 transition-all"
+                    onClick={() => {
+                      setSelectedGameDetails(game);
+                      setIsDetailsOpen(true);
+                    }}
+                    className="h-14 w-14 rounded-xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:text-plaeen-green hover:border-plaeen-green/30 hover:scale-95 transition-all"
+                    title="View details"
                   >
-                    <ExternalLink size={18} />
+                    <SearchIcon size={18} />
                   </button>
                 </div>
               </div>
@@ -1536,6 +1571,27 @@ export const GameSearchPage = () => {
           </Card>
         </div>
       )}
+
+      {/* Game Details Modal */}
+      <GameDetailsModal
+        game={selectedGameDetails}
+        isOpen={isDetailsOpen}
+        teams={[]}
+        onCreateSession={() => {
+          if (selectedGameDetails) {
+            handleCreateSessionClick(selectedGameDetails);
+          }
+        }}
+        onRecommend={() => {
+          // For search page, recommend would be implemented separately
+          // For now, we can just close the modal
+          setIsDetailsOpen(false);
+        }}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedGameDetails(null);
+        }}
+      />
     </div>
   );
 };

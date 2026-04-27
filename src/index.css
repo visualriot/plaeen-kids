@@ -187,3 +187,17 @@ button {
 .animate-blink-glow {
   animation: blink-glow 2s infinite;
 }
+
+.game-details-modal::-webkit-scrollbar {
+  width: 8px;
+}
+.game-details-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+.game-details-modal::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 4px;
+}
+.game-details-modal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
