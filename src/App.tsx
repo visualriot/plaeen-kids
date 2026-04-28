@@ -136,7 +136,7 @@ function AppContent() {
             alt="Plaeen"
             className="h-12 w-auto animate-pulse"
           />
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
+          <p className="text-white/40 font-bold uppercase text-xs">
             Loading...
           </p>
         </div>
@@ -362,7 +362,11 @@ function AppContent() {
       {!user || role === "none" ? null : (
         <footer className="mt-20 border-t border-white/10 py-12 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
-            <img src="/logo/logo.png" alt="Plaeen" className="h-8 w-auto" />
+            <img
+              src="/logo/logo-text.svg"
+              alt="Plaeen"
+              className="h-20 w-auto"
+            />
           </div>
           <div className="flex justify-center gap-8 text-xs font-medium text-white/40">
             <a href="#" className="hover:text-white">

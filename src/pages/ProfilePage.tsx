@@ -109,7 +109,7 @@ export const ProfilePage = () => {
         <h1 className="text-5xl font-bold text-white uppercase tracking-tight mb-2">
           <span className="text-plaeen-green">Settings</span>
         </h1>
-        <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
+        <p className="text-white/40 font-bold uppercase  text-xs">
           Manage your profile and preferences
         </p>
       </div>
@@ -142,14 +142,14 @@ export const ProfilePage = () => {
                   <Camera size={24} className="text-white" />
                 </div>
               </div>
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-white/20 uppercase ">
                 Profile Avatar
               </p>
             </div>
 
             <div className="flex-1 space-y-6">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-2">
+                <label className="block text-[10px] font-bold uppercase  text-plaeen-green mb-2">
                   Display Name
                 </label>
                 <input
@@ -161,7 +161,7 @@ export const ProfilePage = () => {
                 />
               </div>
               <div className={activeKid ? "hidden" : "block"}>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-2">
+                <label className="block text-[10px] font-bold uppercase  text-plaeen-green mb-2">
                   Avatar URL
                 </label>
                 <input
@@ -196,7 +196,7 @@ export const ProfilePage = () => {
                   }`}
                 >
                   <Icon size={32} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-center">
+                  <span className="text-[10px] font-bold uppercase  text-center">
                     {system.name}
                   </span>
                   {isSelected && (
@@ -213,7 +213,7 @@ export const ProfilePage = () => {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-6 text-lg font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+            className="flex-1 py-6 text-lg font-bold uppercase  shadow-[0_0_30px_rgba(118,233,0,0.3)]"
           >
             {saving ? (
               "Saving..."
@@ -226,7 +226,7 @@ export const ProfilePage = () => {
           <Button
             variant="outline"
             onClick={handleSignOut}
-            className="sm:w-48 py-6 text-lg font-bold uppercase tracking-widest border-red-500/30 text-red-500 hover:bg-red-500/10"
+            className="sm:w-48 py-6 text-lg font-bold uppercase  border-red-500/30 text-red-500 hover:bg-red-500/10"
           >
             <LogOut size={20} className="mr-2" /> Log Out
           </Button>

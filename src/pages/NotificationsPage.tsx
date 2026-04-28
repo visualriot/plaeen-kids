@@ -424,7 +424,7 @@ export const NotificationsPage = () => {
     <div className="mx-auto max-w-4xl px-6 py-12">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] mb-8 transition-colors"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase  text-[10px] mb-8 transition-colors"
       >
         <ArrowLeft size={14} /> Back
       </button>
@@ -434,7 +434,7 @@ export const NotificationsPage = () => {
           <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             Inbox <span className="text-plaeen-green">Center</span>
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
+          <p className="text-white/40 font-bold uppercase  text-xs mt-2">
             Manage your alerts and invitations
           </p>
         </div>
@@ -443,7 +443,7 @@ export const NotificationsPage = () => {
           <Button
             variant="outline"
             onClick={markAllAsRead}
-            className="border-white/10 text-white/40 hover:text-white hover:border-white/20 text-[10px] font-bold uppercase tracking-widest"
+            className="border-white/10 text-white/40 hover:text-white hover:border-white/20 text-[10px] font-bold uppercase "
           >
             Mark all as read
           </Button>
@@ -457,7 +457,7 @@ export const NotificationsPage = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -20 }}
             className={cn(
-              "mb-8 p-4 rounded-2xl border font-bold uppercase tracking-widest text-xs text-center shadow-lg",
+              "mb-8 p-4 rounded-2xl border font-bold uppercase  text-xs text-center shadow-lg",
               feedback.type === "success"
                 ? "bg-plaeen-green/10 text-plaeen-green border-plaeen-green/20"
                 : "bg-white/5 text-white/40 border-white/10",
@@ -472,7 +472,7 @@ export const NotificationsPage = () => {
         {Object.keys(groupedNotifications).length === 0 ? (
           <Card className="bg-white/5 border-dashed border-white/10 p-20 text-center">
             <Bell size={48} className="mx-auto text-white/5 mb-6" />
-            <p className="text-white/20 font-bold uppercase tracking-widest">
+            <p className="text-white/20 font-bold uppercase ">
               Your inbox is empty
             </p>
           </Card>
@@ -481,7 +481,7 @@ export const NotificationsPage = () => {
             ([label, items]: [string, any]) => (
               <div key={label} className="space-y-6">
                 <div className="flex items-center gap-4">
-                  <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] whitespace-nowrap">
+                  <span className="text-[10px] font-bold text-white/20 uppercase  whitespace-nowrap">
                     {label}
                   </span>
                   <div className="h-px w-full bg-white/5" />
@@ -514,19 +514,19 @@ export const NotificationsPage = () => {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1">
-                              <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">
+                              <span className="text-[10px] font-bold text-plaeen-green uppercase ">
                                 {notif.title}
                               </span>
-                              <span className="text-[8px] text-white/20 uppercase tracking-widest">
+                              <span className="text-[8px] text-white/20 uppercase ">
                                 • {format(safeToDate(notif.createdAt), "HH:mm")}
                               </span>
                               {!notif.read && (
-                                <span className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest bg-plaeen-green/10 px-2 py-0.5 rounded">
+                                <span className="text-[8px] font-bold text-plaeen-green uppercase  bg-plaeen-green/10 px-2 py-0.5 rounded">
                                   New
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-white/60 font-medium leading-relaxed mb-4">
+                            <p className="text-sm text-white/60 font-medium  mb-4">
                               {notif.message}
                             </p>
 
@@ -539,7 +539,7 @@ export const NotificationsPage = () => {
                                 <Button
                                   size="sm"
                                   onClick={() => handleTeamInvite(notif, true)}
-                                  className="bg-plaeen-green text-black text-[10px] font-bold uppercase tracking-widest px-6 py-2"
+                                  className="bg-plaeen-green text-black text-[10px] font-bold uppercase  px-6 py-2"
                                 >
                                   Accept
                                 </Button>
@@ -547,7 +547,7 @@ export const NotificationsPage = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleTeamInvite(notif, false)}
-                                  className="border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest px-6 py-2"
+                                  className="border-white/10 text-white/40 text-[10px] font-bold uppercase  px-6 py-2"
                                 >
                                   Decline
                                 </Button>
@@ -564,7 +564,7 @@ export const NotificationsPage = () => {
                                   onClick={() =>
                                     handleFriendRequest(notif, true)
                                   }
-                                  className="bg-plaeen-green text-black text-[10px] font-bold uppercase tracking-widest px-6 py-2"
+                                  className="bg-plaeen-green text-black text-[10px] font-bold uppercase  px-6 py-2"
                                 >
                                   Accept
                                 </Button>
@@ -574,7 +574,7 @@ export const NotificationsPage = () => {
                                   onClick={() =>
                                     handleFriendRequest(notif, false)
                                   }
-                                  className="border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest px-6 py-2"
+                                  className="border-white/10 text-white/40 text-[10px] font-bold uppercase  px-6 py-2"
                                 >
                                   Decline
                                 </Button>
@@ -582,7 +582,7 @@ export const NotificationsPage = () => {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => navigate("/friends")}
-                                  className="text-white/20 text-[8px] font-bold uppercase tracking-widest px-4 py-2 ml-auto"
+                                  className="text-white/20 text-[8px] font-bold uppercase  px-4 py-2 ml-auto"
                                 >
                                   View
                                 </Button>
@@ -623,14 +623,14 @@ export const NotificationsPage = () => {
                                         onClick={() =>
                                           handleMarkAsRead(notif.id)
                                         }
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase "
                                       >
                                         <Check size={14} /> Mark as Read
                                       </button>
                                     )}
                                     <button
                                       onClick={() => handleDelete(notif.id)}
-                                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
+                                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase "
                                     >
                                       <Trash2 size={14} /> Delete Alert
                                     </button>

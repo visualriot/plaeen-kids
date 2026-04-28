@@ -30,20 +30,20 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
 }) => {
   return (
     <div className="space-y-8">
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+      <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
         <Clock size={16} /> Screen Time Control
       </h2>
       <Card className="bg-white/5 border-white/10 p-8 space-y-10">
         <div>
           <div className="flex justify-between items-center mb-4">
-            <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 block">
+            <label className="text-[10px] font-bold uppercase  text-white/40 block">
               Allowance
             </label>
             <div className="relative">
               <select
                 value={allowanceType}
                 onChange={(e) => setAllowanceType(e.target.value as any)}
-                className="appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-2 pr-10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
+                className="appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-2 pr-10 text-[10px] font-bold uppercase  text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2376e900'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                   backgroundRepeat: "no-repeat",
@@ -79,20 +79,20 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
               onChange={(e) => setDailyAllowance(parseInt(e.target.value) || 0)}
               className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xl font-bold text-white text-center focus:outline-none focus:border-plaeen-green/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+            <span className="text-[10px] font-bold text-white/40 uppercase ">
               min/day
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1">
+              <p className="text-[8px] font-bold text-white/20 uppercase  mb-1">
                 Weekly Total
               </p>
               <p className="text-lg font-bold text-white">{weeklyAllowance}m</p>
             </div>
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-              <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1">
+              <p className="text-[8px] font-bold text-white/20 uppercase  mb-1">
                 Monthly Total
               </p>
               <p className="text-lg font-bold text-white">
@@ -103,7 +103,7 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
         </div>
 
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-4 block">
+          <label className="text-[10px] font-bold uppercase  text-white/40 mb-4 block">
             Restricted Days (No Play)
           </label>
           <div className="flex flex-wrap gap-2">
@@ -117,7 +117,7 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
                       : [...prev, day],
                   );
                 }}
-                className={`px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border-2 ${
+                className={`px-3 py-2 rounded-lg text-[10px] font-bold uppercase  transition-all border-2 ${
                   (restrictedDays || []).includes(day)
                     ? "bg-red-500/20 border-red-500 text-red-500"
                     : "bg-white/5 border-white/5 text-white/40 hover:border-white/20"
@@ -132,7 +132,7 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
         <Button
           onClick={onSave}
           disabled={isSaving}
-          className="w-full bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] py-4"
+          className="w-full bg-plaeen-green text-black font-bold uppercase  text-[10px] py-4"
         >
           {isSaving ? "Applying..." : "Apply Allowance Settings"}
         </Button>

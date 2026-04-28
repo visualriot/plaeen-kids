@@ -353,15 +353,13 @@ export const OvertimeDecisionPage = () => {
               size={20}
               className="group-hover:-translate-x-1 transition-transform"
             />
-            <span className="text-[10px] font-bold uppercase tracking-widest">
-              Back
-            </span>
+            <span className="text-[10px] font-bold uppercase ">Back</span>
           </button>
           <div className="text-right">
             <h1 className="text-2xl md:text-4xl font-bold text-white uppercase tracking-tight">
               Overtime Decision
             </h1>
-            <p className="text-plaeen-green text-[10px] font-bold uppercase tracking-[0.3em]">
+            <p className="text-plaeen-green text-[10px] font-bold uppercase ">
               Action Required for {kid.displayName}
             </p>
           </div>
@@ -374,7 +372,7 @@ export const OvertimeDecisionPage = () => {
               <Clock size={32} className="text-red-500" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2">
+              <p className="text-[10px] font-bold text-red-500 uppercase  mb-2">
                 Overtime Amount
               </p>
               <h2 className="text-6xl font-bold text-white">
@@ -394,11 +392,11 @@ export const OvertimeDecisionPage = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-plaeen-green">
                     <Zap size={18} />
-                    <h3 className="text-sm font-bold uppercase tracking-widest">
+                    <h3 className="text-sm font-bold uppercase ">
                       Forgive Overtime
                     </h3>
                   </div>
-                  <p className="text-xs text-white/40 leading-relaxed max-w-md">
+                  <p className="text-xs text-white/40  max-w-md">
                     Resets today's remaining time to 0 without any further
                     penalty. The overtime minutes won't be deducted from any
                     pot.
@@ -407,7 +405,7 @@ export const OvertimeDecisionPage = () => {
                 <Button
                   onClick={() => handleDecision("forgive")}
                   disabled={isProcessing}
-                  className="bg-plaeen-green text-black hover:bg-plaeen-green/90 font-bold uppercase tracking-widest text-[10px] py-6 px-8"
+                  className="bg-plaeen-green text-black hover:bg-plaeen-green/90 font-bold uppercase  text-[10px] py-6 px-8"
                 >
                   Forgive & Reset
                 </Button>
@@ -419,14 +417,14 @@ export const OvertimeDecisionPage = () => {
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-blue-400">
                   <Clock size={18} />
-                  <h3 className="text-sm font-bold uppercase tracking-widest">
+                  <h3 className="text-sm font-bold uppercase ">
                     Extract Minutes
                   </h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                    <label className="text-[10px] font-bold text-white/20 uppercase ">
                       Minutes to Deduct
                     </label>
                     <div className="relative">
@@ -444,7 +442,7 @@ export const OvertimeDecisionPage = () => {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                    <label className="text-[10px] font-bold text-white/20 uppercase ">
                       Select Date
                     </label>
                     <input
@@ -459,7 +457,7 @@ export const OvertimeDecisionPage = () => {
                 <Button
                   onClick={() => handleDecision("extract")}
                   disabled={isProcessing}
-                  className="w-full bg-blue-500 text-white hover:bg-blue-600 font-bold uppercase tracking-widest text-[10px] py-6"
+                  className="w-full bg-blue-500 text-white hover:bg-blue-600 font-bold uppercase  text-[10px] py-6"
                 >
                   Apply Deduction
                 </Button>
@@ -471,13 +469,11 @@ export const OvertimeDecisionPage = () => {
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-red-500">
                   <Shield size={18} />
-                  <h3 className="text-sm font-bold uppercase tracking-widest">
-                    Ban the Day
-                  </h3>
+                  <h3 className="text-sm font-bold uppercase ">Ban the Day</h3>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                  <label className="text-[10px] font-bold text-white/20 uppercase ">
                     Select Date to Ban
                   </label>
                   <div className="flex gap-4">
@@ -490,7 +486,7 @@ export const OvertimeDecisionPage = () => {
                     <Button
                       onClick={() => handleDecision("ban")}
                       disabled={isProcessing}
-                      className="bg-red-500 text-white hover:bg-red-600 font-bold uppercase tracking-widest text-[10px] px-8"
+                      className="bg-red-500 text-white hover:bg-red-600 font-bold uppercase  text-[10px] px-8"
                     >
                       Ban Date
                     </Button>
@@ -514,7 +510,7 @@ export const OvertimeDecisionPage = () => {
                 navigate(`/parent/child/${kid.uid}`);
               }
             }}
-            className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] hover:text-white transition-colors"
+            className="text-[10px] font-bold text-white/20 uppercase  hover:text-white transition-colors"
           >
             Dismiss Alert Without Action
           </button>

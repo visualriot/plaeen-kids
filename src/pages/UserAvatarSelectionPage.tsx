@@ -72,7 +72,7 @@ export const UserAvatarSelectionPage = () => {
     <div className="mx-auto max-w-6xl px-6 py-20">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase tracking-widest text-xs mb-12"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase  text-xs mb-12"
       >
         <ChevronLeft size={16} /> Back
       </button>
@@ -81,7 +81,7 @@ export const UserAvatarSelectionPage = () => {
         <h1 className="text-6xl font-bold text-white uppercase tracking-tighter mb-4">
           Select <span className="text-plaeen-green">Avatar</span>
         </h1>
-        <p className="text-sm font-bold text-white/40 uppercase tracking-widest">
+        <p className="text-sm font-bold text-white/40 uppercase ">
           Choose your identity for the Plaeen network
         </p>
       </div>

@@ -1036,11 +1036,11 @@ export const KidDashboard = () => {
                 {activeKid.displayName.split(" ")[0]}!
               </span>
             </h1>
-            <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
-              {activeKid.uid && (
-                <p className="mt-6">@{activeKid.username.split(" ")[0]}</p>
-              )}
-            </p>
+            {activeKid.uid && (
+              <p className="text-white/40 font-bold uppercase  text-xs mt-6">
+                @{activeKid.username.split(" ")[0]}
+              </p>
+            )}
           </motion.div>
 
           <div className="flex gap-4">
@@ -1118,7 +1118,7 @@ export const KidDashboard = () => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest text-center"
+            className="mb-8 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase  text-center"
           >
             {errorMessage}
           </motion.div>
@@ -1132,7 +1132,7 @@ export const KidDashboard = () => {
               animate={{ opacity: 1, y: 0, x: "-50%" }}
               exit={{ opacity: 0, y: 50, x: "-50%" }}
               className={cn(
-                "fixed bottom-8 left-1/2 z-[100] px-8 py-4 rounded-2xl border font-bold uppercase tracking-widest text-[10px] shadow-[0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+                "fixed bottom-8 left-1/2 z-[100] px-8 py-4 rounded-2xl border font-bold uppercase  text-[10px] shadow-[0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-xl",
                 feedback.type === "success"
                   ? "bg-plaeen-green text-black border-plaeen-green/30"
                   : "bg-white/10 text-white/60 border-white/20",
@@ -1149,7 +1149,7 @@ export const KidDashboard = () => {
           <div className="space-y-12">
             <Card className="bg-white/5 border-white/10 p-8 relative overflow-hidden group">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white uppercase  flex items-center gap-2">
                   <Clock size={18} className="text-plaeen-green text-nowrap" />{" "}
                   Screen Time
                 </h2>
@@ -1159,7 +1159,7 @@ export const KidDashboard = () => {
                   <button
                     key={v}
                     onClick={() => setScreenTimeView(v)}
-                    className={`px-3 py-1 rounded-sm text-[12px] font-semibold uppercase tracking-wide transition-all ${
+                    className={`px-3 py-1 rounded-sm text-[12px] font-semibold uppercase  transition-all ${
                       screenTimeView === v
                         ? "bg-plaeen-green text-black"
                         : "text-white/50 hover:text-white"
@@ -1218,7 +1218,7 @@ export const KidDashboard = () => {
                     >
                       <span
                         className={cn(
-                          "font-bold tracking-tighter leading-none transition-colors",
+                          "font-bold tracking-tighter  transition-colors",
                           isSessionActive ? "text-4xl" : "text-5xl",
                           isOvertime
                             ? "text-red-500"
@@ -1233,7 +1233,7 @@ export const KidDashboard = () => {
                       </span>
                       <span
                         className={cn(
-                          "text-[10px] font-bold uppercase tracking-widest mt-1",
+                          "text-[10px] font-bold uppercase  mt-1",
                           isOvertime
                             ? "text-red-500/60"
                             : isTimeUp && !isSessionActive
@@ -1254,13 +1254,13 @@ export const KidDashboard = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">
+                  <p className="text-[8px] font-bold text-white/40 uppercase  mb-1">
                     Used Today
                   </p>
                   <p className="text-xl font-bold text-white">{used}m</p>
                 </div>
                 <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">
+                  <p className="text-[8px] font-bold text-white/40 uppercase  mb-1">
                     Allowance
                   </p>
                   <p className="text-xl font-bold text-plaeen-green">
@@ -1325,10 +1325,10 @@ export const KidDashboard = () => {
                             )}
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest leading-none mb-1">
+                            <p className="text-[10px] font-bold uppercase   mb-1">
                               {adj.minutes}m {adj.type} applied today
                             </p>
-                            <p className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">
+                            <p className="text-[8px] font-bold uppercase  opacity-60">
                               {adj.reason}
                             </p>
                           </div>
@@ -1350,7 +1350,7 @@ export const KidDashboard = () => {
                 <div className="mt-6 p-4 rounded-2xl bg-plaeen-purple/10 border border-plaeen-purple/20 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Star size={16} className="text-plaeen-purple" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">
+                    <span className="text-[10px] font-bold text-white uppercase ">
                       Bonus Time
                     </span>
                   </div>
@@ -1362,7 +1362,7 @@ export const KidDashboard = () => {
             </Card>
 
             <Card className="bg-plaeen-purple/10 border-plaeen-purple/20 p-8">
-              <h2 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h2 className="text-sm font-bold text-white uppercase  mb-6 flex items-center gap-2">
                 <Trophy size={18} className="text-plaeen-purple" /> Streaks
               </h2>
               <KidStreakWidget
@@ -1391,10 +1391,10 @@ export const KidDashboard = () => {
                       <Zap size={32} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black uppercase tracking-tighter leading-none mb-1">
+                      <h3 className="text-xl font-black uppercase tracking-tighter  mb-1">
                         REWARD ACTIVATED!
                       </h3>
-                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+                      <p className="text-[10px] font-bold uppercase  opacity-70">
                         You gained +{activeKid?.streak?.rewardMinutes} mins
                         daily allowance for your hard work!
                       </p>
@@ -1429,11 +1429,11 @@ export const KidDashboard = () => {
                     >
                       <div className="absolute top-0 right-0 p-3">
                         {session.status === "proposed" ? (
-                          <span className="text-[8px] font-bold bg-amber-400 text-black px-2 py-1 rounded-full uppercase tracking-widest animate-pulse">
+                          <span className="text-[8px] font-bold bg-amber-400 text-black px-2 py-1 rounded-full uppercase  animate-pulse">
                             Invitation
                           </span>
                         ) : (
-                          <span className="text-[8px] font-bold bg-plaeen-green text-black px-2 py-1 rounded-full uppercase tracking-widest">
+                          <span className="text-[8px] font-bold bg-plaeen-green text-black px-2 py-1 rounded-full uppercase ">
                             Scheduled
                           </span>
                         )}
@@ -1493,7 +1493,7 @@ export const KidDashboard = () => {
             {((activeKid.screenTime?.scheduledDeductions?.length || 0) > 0 ||
               (activeKid.screenTime?.bannedDates?.length || 0) > 0) && (
               <section className="space-y-6">
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-500 flex items-center gap-3">
+                <h2 className="text-[10px] font-bold uppercase  text-red-500 flex items-center gap-3">
                   <Shield size={16} /> Active Penalties
                 </h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -1510,7 +1510,7 @@ export const KidDashboard = () => {
                           <p className="text-xs font-bold text-white uppercase tracking-tight">
                             -{deduction.minutes} Minutes
                           </p>
-                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                          <p className="text-[10px] text-white/40 font-bold uppercase ">
                             Scheduled for{" "}
                             {format(
                               new Date(deduction.date + "T12:00:00"),
@@ -1533,7 +1533,7 @@ export const KidDashboard = () => {
                         <p className="text-xs font-bold text-white uppercase tracking-tight">
                           Access Restricted
                         </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-white/40 font-bold uppercase ">
                           On {format(new Date(date + "T12:00:00"), "MMM d")}
                         </p>
                       </div>
@@ -1558,12 +1558,12 @@ export const KidDashboard = () => {
                         <p className="text-xs font-bold text-white uppercase tracking-tight">
                           Minecraft Session
                         </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-white/40 font-bold uppercase ">
                           Today • 45 Minutes
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">
+                    <span className="text-[10px] font-bold text-plaeen-green uppercase ">
                       Completed
                     </span>
                   </div>
@@ -1595,7 +1595,7 @@ export const KidDashboard = () => {
                   <X size={24} />
                 </button>
               </div>
-              <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-8 leading-relaxed">
+              <p className="text-white/40 text-xs font-bold uppercase  mb-8 ">
                 Tell your parents what you've done to earn extra screen time!
               </p>
 
@@ -1611,14 +1611,14 @@ export const KidDashboard = () => {
                   <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-2">
                     Activity Sent!
                   </h3>
-                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                  <p className="text-[10px] text-white/40 font-bold uppercase ">
                     Waiting for parent approval
                   </p>
                 </motion.div>
               ) : (
                 <form onSubmit={handleAddChore} className="space-y-6">
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-purple mb-2 block">
+                    <label className="text-[10px] font-bold uppercase  text-plaeen-purple mb-2 block">
                       What did you do?
                     </label>
                     <input
@@ -1626,7 +1626,7 @@ export const KidDashboard = () => {
                       value={choreTitle}
                       onChange={(e) => setChoreTitle(e.target.value)}
                       placeholder="E.G. DID THE DISHES, CLEANED ROOM"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-plaeen-purple focus:outline-none transition-all uppercase tracking-widest text-sm"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-plaeen-purple focus:outline-none transition-all uppercase  text-sm"
                       required
                       disabled={isSubmittingChore}
                     />
@@ -1634,7 +1634,7 @@ export const KidDashboard = () => {
                   <Button
                     type="submit"
                     disabled={isSubmittingChore}
-                    className="w-full py-6 bg-plaeen-purple hover:bg-plaeen-purple/80 text-white font-bold uppercase tracking-widest"
+                    className="w-full py-6 bg-plaeen-purple hover:bg-plaeen-purple/80 text-white font-bold uppercase "
                   >
                     {isSubmittingChore ? "Sending..." : "Send for Approval"}
                   </Button>
@@ -1666,7 +1666,7 @@ export const KidDashboard = () => {
                   <p className="text-sm font-bold text-white uppercase tracking-tight">
                     Time is Up!
                   </p>
-                  <p className="text-[10px] text-white/80 font-bold uppercase tracking-widest">
+                  <p className="text-[10px] text-white/80 font-bold uppercase ">
                     {remainingMinutes < 5
                       ? `Finish in ${5 - remainingMinutes}m to avoid penalty`
                       : "Penalty applied! End session now"}
@@ -1675,7 +1675,7 @@ export const KidDashboard = () => {
               </div>
               <Button
                 onClick={handleEndSession}
-                className="bg-white text-red-600 hover:bg-white/90 font-bold uppercase tracking-widest text-[10px] px-6 relative z-10"
+                className="bg-white text-red-600 hover:bg-white/90 font-bold uppercase  text-[10px] px-6 relative z-10"
               >
                 End Now
               </Button>

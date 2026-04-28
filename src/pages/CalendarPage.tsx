@@ -112,13 +112,13 @@ export const CalendarPage = () => {
           <h1>
             Your Calendar <span className="text-white/20 text-4xl ml-2">?</span>
           </h1>
-          <p className="mt-2 text-white/40 font-bold tracking-widest uppercase">
+          <p className="mt-2 text-white/40 font-bold  uppercase">
             Set your gaming availability
           </p>
         </div>
         <Button
           variant="outline"
-          className="border-white/20 text-white hover:bg-white/10 gap-2 font-bold uppercase tracking-widest"
+          className="border-white/20 text-white hover:bg-white/10 gap-2 font-bold uppercase "
         >
           Import calendars
         </Button>
@@ -250,7 +250,7 @@ export const CalendarPage = () => {
                           : "border-white/20 bg-white/5 hover:border-plaeen-green/50",
                       )}
                     />
-                    <span className="text-sm font-bold text-white/40 tracking-[0.2em]">
+                    <span className="text-sm font-bold text-white/40 ">
                       {dayName}
                     </span>
                   </div>
@@ -292,7 +292,7 @@ export const CalendarPage = () => {
               )}
             >
               <div className="h-6 w-6 rounded-lg bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
-              <span className="text-sm font-bold text-white tracking-widest uppercase">
+              <span className="text-sm font-bold text-white  uppercase">
                 Always available
               </span>
             </button>
@@ -306,7 +306,7 @@ export const CalendarPage = () => {
               )}
             >
               <div className="h-6 w-6 rounded-lg bg-red-500/50 border border-red-500" />
-              <span className="text-sm font-bold text-white tracking-widest uppercase">
+              <span className="text-sm font-bold text-white  uppercase">
                 Always not available
               </span>
             </button>
@@ -320,7 +320,7 @@ export const CalendarPage = () => {
               )}
             >
               <div className="h-6 w-6 rounded-lg bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-              <span className="text-sm font-bold text-white tracking-widest uppercase">
+              <span className="text-sm font-bold text-white  uppercase">
                 Available once only
               </span>
             </button>
@@ -329,13 +329,13 @@ export const CalendarPage = () => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setAvailability({})}
-              className="text-sm font-bold text-white/20 hover:text-white flex items-center gap-2 transition-colors uppercase tracking-widest"
+              className="text-sm font-bold text-white/20 hover:text-white flex items-center gap-2 transition-colors uppercase "
             >
               <RotateCcw size={18} /> Revert changes
             </button>
             <Button
               onClick={handleSave}
-              className="gap-2 px-8 py-4 text-sm font-bold uppercase tracking-widest"
+              className="gap-2 px-8 py-4 text-sm font-bold uppercase "
             >
               <Save size={20} /> Save changes
             </Button>

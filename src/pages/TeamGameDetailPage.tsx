@@ -189,7 +189,7 @@ export const TeamGameDetailPage = () => {
         <Button
           variant="ghost"
           onClick={() => navigate(`/teams/${teamId}`)}
-          className="text-white/40 hover:text-plaeen-green gap-2 uppercase tracking-widest font-bold mb-8"
+          className="text-white/40 hover:text-plaeen-green gap-2 uppercase  font-bold mb-8"
         >
           <ChevronLeft size={20} /> Back to Team
         </Button>
@@ -205,7 +205,7 @@ export const TeamGameDetailPage = () => {
               {game.genres.map((g) => (
                 <span
                   key={g}
-                  className="px-4 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[10px] font-bold uppercase tracking-widest"
+                  className="px-4 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[10px] font-bold uppercase "
                 >
                   {g}
                 </span>
@@ -222,21 +222,21 @@ export const TeamGameDetailPage = () => {
         <div className="lg:col-span-2 space-y-12">
           {/* Progress Section */}
           <section>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-8 flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green mb-8 flex items-center gap-3">
               <Trophy size={16} /> Team Progress
             </h2>
             <div className="grid md:grid-cols-3 gap-6">
               <Card className="bg-white/5 border-white/10 p-8 text-center group hover:border-plaeen-green/30 transition-all">
                 <Clock className="mx-auto mb-4 text-plaeen-green" size={32} />
                 <p className="text-3xl font-bold text-white mb-1">124h</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-white/20 uppercase ">
                   Total Playtime
                 </p>
               </Card>
               <Card className="bg-white/5 border-white/10 p-8 text-center group hover:border-plaeen-green/30 transition-all">
                 <Trophy className="mx-auto mb-4 text-plaeen-green" size={32} />
                 <p className="text-3xl font-bold text-white mb-1">42/80</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-white/20 uppercase ">
                   Achievements
                 </p>
               </Card>
@@ -246,7 +246,7 @@ export const TeamGameDetailPage = () => {
                   size={32}
                 />
                 <p className="text-3xl font-bold text-white mb-1">Yesterday</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-white/20 uppercase ">
                   Last Session
                 </p>
               </Card>
@@ -255,7 +255,7 @@ export const TeamGameDetailPage = () => {
 
           {/* Goals Section */}
           <section>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-8 flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green mb-8 flex items-center gap-3">
               <Target size={16} /> Current Objectives
             </h2>
             <Card className="bg-white/5 border-white/10 p-8">
@@ -272,7 +272,7 @@ export const TeamGameDetailPage = () => {
                           className="text-plaeen-green opacity-0 group-hover:opacity-100"
                         />
                       </div>
-                      <span className="font-bold text-white/80 uppercase tracking-wide">
+                      <span className="font-bold text-white/80 uppercase ">
                         {goal}
                       </span>
                     </div>
@@ -285,7 +285,7 @@ export const TeamGameDetailPage = () => {
                   </div>
                 ))}
                 {(!game.teamGoals || game.teamGoals.length === 0) && (
-                  <p className="text-center py-8 text-white/20 font-bold uppercase tracking-widest">
+                  <p className="text-center py-8 text-white/20 font-bold uppercase ">
                     No objectives set yet
                   </p>
                 )}
@@ -298,10 +298,7 @@ export const TeamGameDetailPage = () => {
                   placeholder="Add a new goal (e.g. Complete Chapter 4)"
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-white placeholder:text-white/20 focus:border-plaeen-green focus:outline-none transition-all"
                 />
-                <Button
-                  onClick={addGoal}
-                  className="px-8 font-bold uppercase tracking-widest"
-                >
+                <Button onClick={addGoal} className="px-8 font-bold uppercase ">
                   Add
                 </Button>
               </div>
@@ -310,7 +307,7 @@ export const TeamGameDetailPage = () => {
 
           {/* Notes Section */}
           <section>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-8 flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green mb-8 flex items-center gap-3">
               <BookOpen size={16} /> Team Intel & Strategy
             </h2>
             <Card className="bg-white/5 border-white/10 p-8">
@@ -324,14 +321,14 @@ export const TeamGameDetailPage = () => {
                 <Button
                   variant="ghost"
                   onClick={() => setNotes(game.teamNotes || "")}
-                  className="text-white/40 hover:text-white uppercase tracking-widest font-bold"
+                  className="text-white/40 hover:text-white uppercase  font-bold"
                 >
                   <RotateCcw size={18} className="mr-2" /> Revert
                 </Button>
                 <Button
                   onClick={saveNotes}
                   disabled={isSaving}
-                  className="px-12 font-bold uppercase tracking-widest"
+                  className="px-12 font-bold uppercase "
                 >
                   {isSaving ? (
                     "Saving..."
@@ -349,7 +346,7 @@ export const TeamGameDetailPage = () => {
         <div className="space-y-12">
           {/* Game Calendar */}
           <section>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-8 flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green mb-8 flex items-center gap-3">
               <CalendarIcon size={16} /> Game Schedule
             </h2>
             <Card className="bg-white/5 border-white/10 p-8">
@@ -391,7 +388,7 @@ export const TeamGameDetailPage = () => {
                         </div>
                         <span
                           className={cn(
-                            "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full",
+                            "text-[10px] font-bold uppercase  px-3 py-1 rounded-full",
                             session.status === "scheduled"
                               ? "bg-plaeen-green text-black"
                               : "bg-white/10 text-white/40",
@@ -403,13 +400,13 @@ export const TeamGameDetailPage = () => {
                     </div>
                   ))}
                 {sessions.length === 0 && (
-                  <p className="text-center py-12 text-white/20 font-bold uppercase tracking-widest">
+                  <p className="text-center py-12 text-white/20 font-bold uppercase ">
                     No sessions scheduled
                   </p>
                 )}
                 <Button
                   onClick={() => navigate(`/search?teamId=${teamId}`)}
-                  className="w-full py-6 font-bold uppercase tracking-widest bg-plaeen-purple/40 text-plaeen-green border border-plaeen-green/30"
+                  className="w-full py-6 font-bold uppercase  bg-plaeen-purple/40 text-plaeen-green border border-plaeen-green/30"
                 >
                   <Plus size={20} className="mr-2" /> Propose Session
                 </Button>
@@ -419,7 +416,7 @@ export const TeamGameDetailPage = () => {
 
           {/* Steam Integration Mock */}
           <section>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-8 flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green mb-8 flex items-center gap-3">
               <MessageSquare size={16} /> Steam Integration
             </h2>
             <Card className="bg-white/5 border-white/10 p-8 text-center">
@@ -432,7 +429,7 @@ export const TeamGameDetailPage = () => {
               </p>
               <Button
                 variant="outline"
-                className="w-full border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest"
+                className="w-full border-white/20 text-white hover:bg-white/10 font-bold uppercase "
               >
                 Connect Steam
               </Button>

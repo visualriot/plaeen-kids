@@ -310,12 +310,12 @@ export const MyGamesPage = () => {
         {/* Status Badge */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
           {activeKid?.allowedGames?.includes(game.id) && (
-            <div className="bg-plaeen-green text-black px-3 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest shadow-lg">
+            <div className="bg-plaeen-green text-black px-3 py-1 rounded-full text-[8px] font-bold uppercase  shadow-lg">
               Approved
             </div>
           )}
           {teamAssociations && teamAssociations.length > 0 && (
-            <div className="bg-plaeen-purple text-white px-3 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-1">
+            <div className="bg-plaeen-purple text-white px-3 py-1 rounded-full text-[8px] font-bold uppercase  shadow-lg flex items-center gap-1">
               <Zap size={10} /> Playing
             </div>
           )}
@@ -324,7 +324,7 @@ export const MyGamesPage = () => {
         {/* Team Associations (when played) */}
         {teamAssociations && teamAssociations.length > 0 && (
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-            <p className="text-[8px] font-bold text-white/60 uppercase tracking-widest mb-2">
+            <p className="text-[8px] font-bold text-white/60 uppercase  mb-2">
               Playing with:
             </p>
             <div className="flex flex-wrap gap-2">
@@ -336,7 +336,7 @@ export const MyGamesPage = () => {
                       `/teams/${teamAssoc.id}/games/${game.id}?sessionId=${teamAssoc.sessionId}`,
                     )
                   }
-                  className="bg-plaeen-purple/80 hover:bg-plaeen-purple text-white px-2 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-colors flex items-center gap-1"
+                  className="bg-plaeen-purple/80 hover:bg-plaeen-purple text-white px-2 py-1 rounded-lg text-[8px] font-bold uppercase  transition-colors flex items-center gap-1"
                 >
                   <Play size={10} fill="white" /> {teamAssoc.name}
                 </button>
@@ -354,14 +354,14 @@ export const MyGamesPage = () => {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setProposeGameId(game.id)}
-            className="bg-white/5 border border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/30 px-4 py-2 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+            className="bg-white/5 border border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/30 px-4 py-2 rounded-lg text-[8px] font-bold uppercase  transition-colors flex items-center justify-center gap-2"
           >
             <Users size={12} /> Propose
           </button>
 
           <button
             onClick={() => setRecommendGameId(game.id)}
-            className="bg-white/5 border border-white/10 text-white/40 hover:text-plaeen-purple hover:border-plaeen-purple/30 px-4 py-2 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+            className="bg-white/5 border border-white/10 text-white/40 hover:text-plaeen-purple hover:border-plaeen-purple/30 px-4 py-2 rounded-lg text-[8px] font-bold uppercase  transition-colors flex items-center justify-center gap-2"
           >
             <Share2 size={12} /> Recommend
           </button>
@@ -369,7 +369,7 @@ export const MyGamesPage = () => {
 
         <button
           onClick={() => removeFromWishlist(game.id)}
-          className="w-full mt-3 bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/40 px-4 py-2 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+          className="w-full mt-3 bg-red-500/10 border border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/40 px-4 py-2 rounded-lg text-[8px] font-bold uppercase  transition-colors flex items-center justify-center gap-2"
         >
           <Trash2 size={12} /> Remove from Wishlist
         </button>
@@ -391,13 +391,13 @@ export const MyGamesPage = () => {
           <h1 className="drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             My <span className="text-plaeen-green">Games</span>
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
+          <p className="text-white/40 font-bold uppercase  text-xs mt-2">
             Manage your library & wishlist
           </p>
         </div>
         <Button
           onClick={() => navigate("/search")}
-          className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
+          className="bg-plaeen-green text-black font-bold uppercase  px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
         >
           <Search size={20} className="mr-2" /> Explore Games
         </Button>
@@ -407,19 +407,19 @@ export const MyGamesPage = () => {
       <div className="flex gap-4 mb-12 border-b border-white/10 pb-4">
         <button
           onClick={() => setActiveTab("wishlist")}
-          className={`px-6 py-2 font-bold uppercase tracking-widest text-sm transition-all ${activeTab === "wishlist" ? "text-plaeen-green border-b-2 border-plaeen-green" : "text-white/40 hover:text-white"}`}
+          className={`px-6 py-2 font-bold uppercase  text-sm transition-all ${activeTab === "wishlist" ? "text-plaeen-green border-b-2 border-plaeen-green" : "text-white/40 hover:text-white"}`}
         >
           Wishlist ({gamesWishlistOnly.length + approvedGames.length})
         </button>
         <button
           onClick={() => setActiveTab("played")}
-          className={`px-6 py-2 font-bold uppercase tracking-widest text-sm transition-all ${activeTab === "played" ? "text-plaeen-green border-b-2 border-plaeen-green" : "text-white/40 hover:text-white"}`}
+          className={`px-6 py-2 font-bold uppercase  text-sm transition-all ${activeTab === "played" ? "text-plaeen-green border-b-2 border-plaeen-green" : "text-white/40 hover:text-white"}`}
         >
           Played ({gamesBeingPlayed.length})
         </button>
         <button
           onClick={() => setActiveTab("rejected")}
-          className={`px-6 py-2 font-bold uppercase tracking-widest text-sm transition-all ${activeTab === "rejected" ? "text-red-500 border-b-2 border-red-500" : "text-white/40 hover:text-white"}`}
+          className={`px-6 py-2 font-bold uppercase  text-sm transition-all ${activeTab === "rejected" ? "text-red-500 border-b-2 border-red-500" : "text-white/40 hover:text-white"}`}
         >
           Rejected ({rejectedGames.length})
         </button>
@@ -443,13 +443,13 @@ export const MyGamesPage = () => {
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
                   Your wishlist is empty
                 </h2>
-                <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase tracking-widest text-[10px] leading-relaxed">
+                <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase  text-[10px] ">
                   Explore our massive database and add your favorite games to
                   your wishlist!
                 </p>
                 <Button
                   onClick={() => navigate("/search")}
-                  className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-12 py-6"
+                  className="bg-plaeen-green text-black font-bold uppercase  px-12 py-6"
                 >
                   Explore Games
                 </Button>
@@ -476,12 +476,12 @@ export const MyGamesPage = () => {
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
                   No games being played yet
                 </h2>
-                <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase tracking-widest text-[10px] leading-relaxed">
+                <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase  text-[10px] ">
                   Start proposing games to your teams to begin playing together!
                 </p>
                 <Button
                   onClick={() => navigate("/search")}
-                  className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-12 py-6"
+                  className="bg-plaeen-green text-black font-bold uppercase  px-12 py-6"
                 >
                   Browse Games
                 </Button>
@@ -511,7 +511,7 @@ export const MyGamesPage = () => {
                     />
                     <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent" />
                     <div className="absolute top-4 right-4">
-                      <div className="bg-red-500 text-white px-3 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest shadow-lg">
+                      <div className="bg-red-500 text-white px-3 py-1 rounded-full text-[8px] font-bold uppercase  shadow-lg">
                         Denied
                       </div>
                     </div>
@@ -533,7 +533,7 @@ export const MyGamesPage = () => {
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
                   No rejected games
                 </h2>
-                <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase tracking-widest text-[10px] leading-relaxed">
+                <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase  text-[10px] ">
                   All games you request will be reviewed by your parents.
                 </p>
               </Card>
@@ -601,7 +601,7 @@ export const MyGamesPage = () => {
                           );
                           setProposeGameId(null);
                         }}
-                        className="w-full text-left px-4 py-3 bg-white/5 hover:bg-plaeen-green/20 border border-white/10 rounded-lg transition-all text-white font-bold uppercase text-sm tracking-widest flex items-center justify-between"
+                        className="w-full text-left px-4 py-3 bg-white/5 hover:bg-plaeen-green/20 border border-white/10 rounded-lg transition-all text-white font-bold uppercase text-sm  flex items-center justify-between"
                       >
                         {team.name}
                         <Users size={16} className="text-plaeen-green" />
@@ -663,7 +663,7 @@ export const MyGamesPage = () => {
                           );
                           setRecommendGameId(null);
                         }}
-                        className="w-full text-left px-4 py-3 bg-white/5 hover:bg-plaeen-purple/20 border border-white/10 rounded-lg transition-all text-white font-bold uppercase text-sm tracking-widest flex items-center justify-between"
+                        className="w-full text-left px-4 py-3 bg-white/5 hover:bg-plaeen-purple/20 border border-white/10 rounded-lg transition-all text-white font-bold uppercase text-sm  flex items-center justify-between"
                       >
                         {friend.displayName}
                         <Share2 size={16} className="text-plaeen-purple" />

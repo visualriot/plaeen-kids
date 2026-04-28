@@ -263,7 +263,7 @@ export const TeamSettingsPage = () => {
   if (loading || !team)
     return (
       <div className="flex h-screen items-center justify-center bg-plaeen-dark">
-        <div className="text-white font-bold uppercase tracking-widest animate-pulse">
+        <div className="text-white font-bold uppercase  animate-pulse">
           Scanning Data...
         </div>
       </div>
@@ -286,7 +286,7 @@ export const TeamSettingsPage = () => {
     <div className="mx-auto max-w-5xl px-6 py-20">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase tracking-widest text-xs mb-12"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase  text-xs mb-12"
       >
         <ChevronLeft size={16} /> Back to sector
       </button>
@@ -296,7 +296,7 @@ export const TeamSettingsPage = () => {
           <h1 className="text-6xl font-bold text-white uppercase tracking-tighter mb-4">
             Team <span className="text-plaeen-green">Settings</span>
           </h1>
-          <p className="text-sm font-bold text-white/40 uppercase tracking-widest">
+          <p className="text-sm font-bold text-white/40 uppercase ">
             {team.name} • Protocol ID: {team.id.substring(0, 8)}
           </p>
         </div>
@@ -306,7 +306,7 @@ export const TeamSettingsPage = () => {
             <Button
               variant="outline"
               onClick={() => setConfirmModal({ type: "delete" })}
-              className="border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold uppercase tracking-widest py-6"
+              className="border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold uppercase  py-6"
             >
               <Trash2 size={18} className="mr-2" /> Delete Team
             </Button>
@@ -314,7 +314,7 @@ export const TeamSettingsPage = () => {
           <Button
             variant="ghost"
             onClick={() => setConfirmModal({ type: "leave" })}
-            className="text-white/40 hover:text-white font-bold uppercase tracking-widest py-6"
+            className="text-white/40 hover:text-white font-bold uppercase  py-6"
           >
             <LogOut size={18} className="mr-2" /> Leave Team
           </Button>
@@ -326,12 +326,12 @@ export const TeamSettingsPage = () => {
           {/* Members List Section */}
           <section>
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+              <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
                 <Shield size={16} /> Team Roster
               </h2>
               <button
                 onClick={() => setIsAddMemberOpen(true)}
-                className="flex items-center gap-2 text-plaeen-green hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+                className="flex items-center gap-2 text-plaeen-green hover:text-white transition-colors text-xs font-bold uppercase "
               >
                 <Plus size={16} /> Add Member
               </button>
@@ -380,7 +380,7 @@ export const TeamSettingsPage = () => {
                           </p>
                           <span
                             className={cn(
-                              "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                              "text-[8px] font-bold uppercase  px-2 py-0.5 rounded",
                               isMemberAdmin
                                 ? "bg-plaeen-green/10 text-plaeen-green"
                                 : "bg-white/5 text-white/40",
@@ -389,7 +389,7 @@ export const TeamSettingsPage = () => {
                             {isMemberAdmin ? "Admin" : "Member"}
                           </span>
                         </div>
-                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-white/40 font-bold uppercase ">
                           @{member.username}
                         </p>
                       </div>
@@ -403,7 +403,7 @@ export const TeamSettingsPage = () => {
                               handleToggleAdmin(member.uid, isMemberAdmin)
                             }
                             className={cn(
-                              "px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase tracking-widest transition-all",
+                              "px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase  transition-all",
                               isMemberAdmin
                                 ? "bg-plaeen-green/20 text-plaeen-green border border-plaeen-green/30"
                                 : "bg-white/5 text-white/40 hover:text-white",
@@ -422,7 +422,7 @@ export const TeamSettingsPage = () => {
                       {isMe && !isMemberAdmin && (
                         <button
                           onClick={() => setConfirmModal({ type: "leave" })}
-                          className="px-3 py-1.5 bg-red-500/10 text-red-500 rounded-lg text-[8px] font-bold uppercase tracking-widest"
+                          className="px-3 py-1.5 bg-red-500/10 text-red-500 rounded-lg text-[8px] font-bold uppercase "
                         >
                           Leave Team
                         </button>
@@ -437,7 +437,7 @@ export const TeamSettingsPage = () => {
           {/* Pending Members */}
           {team.pendingMembers && team.pendingMembers.length > 0 && (
             <section>
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-amber-500 flex items-center gap-3 mb-8">
+              <h2 className="text-[10px] font-bold uppercase  text-amber-500 flex items-center gap-3 mb-8">
                 <Sparkles size={16} /> Pending Invitations
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -482,12 +482,12 @@ export const TeamSettingsPage = () => {
         <div className="space-y-12">
           {/* Identity Section - Now available to all members */}
           <section>
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-8 flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green mb-8 flex items-center gap-3">
               <ImageIcon size={16} /> Team Identity
             </h2>
             <Card className="bg-white/5 border-white/5 p-8 space-y-10">
               <div>
-                <label className="block text-[8px] font-bold uppercase tracking-[0.3em] text-white/40 mb-4">
+                <label className="block text-[8px] font-bold uppercase  text-white/40 mb-4">
                   Team Avatar
                 </label>
                 <div className="flex flex-col gap-6">
@@ -510,7 +510,7 @@ export const TeamSettingsPage = () => {
                         `/team-avatar-selection?teamId=${teamId}&returnTo=${encodeURIComponent(window.location.pathname)}`,
                       )
                     }
-                    className="w-full py-4 text-xs font-bold uppercase tracking-[0.2em] border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green/10"
+                    className="w-full py-4 text-xs font-bold uppercase  border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green/10"
                   >
                     Select New Avatar
                   </Button>
@@ -518,7 +518,7 @@ export const TeamSettingsPage = () => {
               </div>
 
               <div>
-                <label className="block text-[8px] font-bold uppercase tracking-[0.3em] text-white/40 mb-4">
+                <label className="block text-[8px] font-bold uppercase  text-white/40 mb-4">
                   Team Callsign
                 </label>
                 <input
@@ -532,7 +532,7 @@ export const TeamSettingsPage = () => {
 
               <Button
                 onClick={handleUpdateBasic}
-                className="w-full py-6 font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(118,233,0,0.2)]"
+                className="w-full py-6 font-bold uppercase  shadow-[0_0_20px_rgba(118,233,0,0.2)]"
                 disabled={isUpdating || !editingName.trim()}
               >
                 {isUpdating ? "Synchronizing..." : "Save Configuration"}
@@ -585,7 +585,7 @@ export const TeamSettingsPage = () => {
                           <p className="text-sm font-bold text-white uppercase">
                             {friend.displayName}
                           </p>
-                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                          <p className="text-[10px] text-white/40 font-bold uppercase ">
                             @{friend.username}
                           </p>
                         </div>
@@ -605,7 +605,7 @@ export const TeamSettingsPage = () => {
                     !(team.pendingMembers || []).includes(f.uid),
                 ).length === 0 && (
                   <div className="py-12 text-center">
-                    <p className="text-white/20 font-bold uppercase tracking-widest text-xs">
+                    <p className="text-white/20 font-bold uppercase  text-xs">
                       All friends are already in high command
                     </p>
                   </div>
@@ -645,7 +645,7 @@ export const TeamSettingsPage = () => {
                   ? "Decommission Team?"
                   : "Leave Sector?"}
               </h2>
-              <p className="text-white/40 text-sm mb-10 font-bold uppercase tracking-widest leading-relaxed">
+              <p className="text-white/40 text-sm mb-10 font-bold uppercase  ">
                 {confirmModal.type === "delete"
                   ? "This will permanently purge all team history, shared games, and scheduled sessions. This action is terminal."
                   : "You will lose access to team channels, sessions, and shared game history."}
@@ -658,7 +658,7 @@ export const TeamSettingsPage = () => {
                       : handleLeaveTeam()
                   }
                   className={cn(
-                    "w-full py-6 font-bold uppercase tracking-widest",
+                    "w-full py-6 font-bold uppercase ",
                     confirmModal.type === "delete"
                       ? "bg-red-500 hover:bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.3)]"
                       : "bg-amber-500 hover:bg-amber-600 shadow-[0_0_20px_rgba(245,158,11,0.3)]",
@@ -669,7 +669,7 @@ export const TeamSettingsPage = () => {
                 <Button
                   variant="ghost"
                   onClick={() => setConfirmModal(null)}
-                  className="w-full text-white/40 hover:text-white font-bold uppercase tracking-widest py-6"
+                  className="w-full text-white/40 hover:text-white font-bold uppercase  py-6"
                 >
                   Abort
                 </Button>
@@ -704,7 +704,7 @@ export const TeamSettingsPage = () => {
                     : "bg-white",
                 )}
               />
-              <span className="text-xs font-bold uppercase tracking-widest">
+              <span className="text-xs font-bold uppercase ">
                 {feedback.message}
               </span>
             </div>

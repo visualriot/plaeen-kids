@@ -423,9 +423,7 @@ export const ChildManagementPage = () => {
           </div>
           <div className="space-y-3">
             <h1>{formatName(kid.displayName)}</h1>
-            <p className="text-sm tracking-widest text-white/50">
-              @{kid.username}
-            </p>
+            <p className="text-sm  text-white/50">@{kid.username}</p>
           </div>
         </div>
       </div>
@@ -451,7 +449,7 @@ export const ChildManagementPage = () => {
                       <p className="text-xs font-bold text-white uppercase tracking-tight">
                         Overtime Detected: {req.data.overtimeMinutes} Minutes
                       </p>
-                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">
+                      <p className="text-[10px] text-white/40 font-bold uppercase  mt-1">
                         Session on{" "}
                         {format(
                           req.createdAt?.toDate() || new Date(),
@@ -464,7 +462,7 @@ export const ChildManagementPage = () => {
                     onClick={() =>
                       navigate(`/parent/overtime-decision/${req.id}`)
                     }
-                    className="bg-red-500 text-white font-bold uppercase tracking-widest text-[10px] px-8 py-4"
+                    className="bg-red-500 text-white font-bold uppercase  text-[10px] px-8 py-4"
                   >
                     Handle Decision
                   </Button>
@@ -488,7 +486,7 @@ export const ChildManagementPage = () => {
                   <select
                     value={allowanceType}
                     onChange={(e) => setAllowanceType(e.target.value as any)}
-                    className="appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-2 pr-10 text-[10px] font-bold uppercase tracking-widest text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
+                    className="appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-2 pr-10 text-[10px] font-bold uppercase  text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
                     style={{
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2376e900'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                       backgroundRepeat: "no-repeat",
@@ -537,7 +535,7 @@ export const ChildManagementPage = () => {
 
               <div className="grid grid-cols-2 gap-4 mt-6">
                 <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1">
+                  <p className="text-[8px] font-bold text-white/20 uppercase  mb-1">
                     Weekly Total
                   </p>
                   <p className="text-lg font-bold text-white">
@@ -545,7 +543,7 @@ export const ChildManagementPage = () => {
                   </p>
                 </div>
                 <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                  <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mb-1">
+                  <p className="text-[8px] font-bold text-white/20 uppercase  mb-1">
                     Monthly Total
                   </p>
                   <p className="text-lg font-bold text-white">
@@ -570,7 +568,7 @@ export const ChildManagementPage = () => {
                         );
                       }}
                       className={cn(
-                        "px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border-2",
+                        "px-3 py-2 rounded-lg text-[10px] font-bold uppercase  transition-all border-2",
                         restrictedDays.includes(day)
                           ? "bg-red-500/20 border-red-500 text-red-500"
                           : "bg-white/5 border-white/5 text-white/40 hover:border-white/20",
@@ -596,7 +594,7 @@ export const ChildManagementPage = () => {
                   onClick={handleResetDaily}
                   variant="tertiary"
                   size="sm"
-                  className="w-full tracking-widest"
+                  className="w-full "
                 >
                   <RefreshCw size={14} className="mr-2" /> Reset Daily Allowance
                 </Button>
@@ -654,7 +652,7 @@ export const ChildManagementPage = () => {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
               />
             </div>
             <div>
@@ -678,19 +676,19 @@ export const ChildManagementPage = () => {
                 }}
                 placeholder="SET_USERNAME"
                 className={cn(
-                  "w-full bg-white/5 border rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none transition-all uppercase tracking-widest",
+                  "w-full bg-white/5 border rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none transition-all uppercase ",
                   usernameError
                     ? "border-red-500 focus:border-red-500"
                     : "border-white/10 focus:border-plaeen-green",
                 )}
               />
               {usernameError && (
-                <p className="text-[8px] text-red-500 font-bold uppercase tracking-widest mt-2">
+                <p className="text-[8px] text-red-500 font-bold uppercase  mt-2">
                   {usernameError}
                 </p>
               )}
               {!kid.username && !usernameError && (
-                <p className="text-[8px] text-amber-500 font-bold uppercase tracking-widest mt-2">
+                <p className="text-[8px] text-amber-500 font-bold uppercase  mt-2">
                   <Info size={10} className="inline mr-1" /> Username required
                   for social features
                 </p>
@@ -704,7 +702,7 @@ export const ChildManagementPage = () => {
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
               />
             </div>
 
@@ -714,7 +712,7 @@ export const ChildManagementPage = () => {
                   <p className="text-[12px] font-bold text-white uppercase">
                     Parental Control
                   </p>
-                  <p className="font-light italic mt-1 tracking-widest">
+                  <p className="font-light italic mt-1 ">
                     Only show child-friendly games
                   </p>
                 </div>
@@ -734,7 +732,7 @@ export const ChildManagementPage = () => {
             </div>
 
             {error && (
-              <p className="text-red-500 text-[8px] font-bold uppercase tracking-widest">
+              <p className="text-red-500 text-[8px] font-bold uppercase ">
                 {error}
               </p>
             )}
@@ -777,7 +775,7 @@ export const ChildManagementPage = () => {
 
             return (
               <section className="space-y-6">
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+                <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
                   <Zap size={16} /> Today's Active Feedback
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -817,7 +815,7 @@ export const ChildManagementPage = () => {
                           >
                             {adj.minutes}m {adj.type} applied today
                           </p>
-                          <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">
+                          <p className="text-[8px] text-white/40 font-bold uppercase ">
                             {adj.reason}
                           </p>
                         </div>
@@ -829,7 +827,7 @@ export const ChildManagementPage = () => {
                             : removeAdjustment(adj.id)
                         }
                         variant="ghost"
-                        className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-red-500"
+                        className="text-[8px] font-bold uppercase  text-white/20 hover:text-red-500"
                       >
                         Cancel
                       </Button>
@@ -862,7 +860,7 @@ export const ChildManagementPage = () => {
                         <p className="text-xs font-bold text-white uppercase tracking-tight">
                           -{deduction.minutes}m Deduction
                         </p>
-                        <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">
+                        <p className="text-[8px] text-white/40 font-bold uppercase ">
                           Scheduled for {deduction.date}
                         </p>
                       </div>
@@ -870,7 +868,7 @@ export const ChildManagementPage = () => {
                     <Button
                       onClick={() => removePenalty("deduction", deduction)}
                       variant="ghost"
-                      className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-red-500"
+                      className="text-[8px] font-bold uppercase  text-white/20 hover:text-red-500"
                     >
                       Reverse
                     </Button>
@@ -892,7 +890,7 @@ export const ChildManagementPage = () => {
                       <p className="text-xs font-bold text-white uppercase tracking-tight">
                         Full Day Ban
                       </p>
-                      <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">
+                      <p className="text-[8px] text-white/40 font-bold uppercase ">
                         {date}
                       </p>
                     </div>
@@ -900,7 +898,7 @@ export const ChildManagementPage = () => {
                   <Button
                     onClick={() => removePenalty("ban", date)}
                     variant="ghost"
-                    className="text-[8px] font-bold uppercase tracking-widest text-white/20 hover:text-red-500"
+                    className="text-[8px] font-bold uppercase  text-white/20 hover:text-red-500"
                   >
                     Reverse
                   </Button>
@@ -919,7 +917,7 @@ export const ChildManagementPage = () => {
           {/* Action Required / Overtime Decisions */}
           {pendingApprovals.length > 0 && (
             <section className="space-y-6">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-red-500 flex items-center gap-3">
+              <h2 className="text-[10px] font-bold uppercase  text-red-500 flex items-center gap-3">
                 <Bell size={16} className="animate-bounce" /> Action Required:
                 Overtime Decisions
               </h2>
@@ -931,7 +929,7 @@ export const ChildManagementPage = () => {
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1">
+                        <p className="text-[10px] font-bold text-red-500 uppercase  mb-1">
                           Overtime Detected
                         </p>
                         <h3 className="text-xl font-bold text-white tracking-tight">
@@ -950,7 +948,7 @@ export const ChildManagementPage = () => {
                       onClick={() =>
                         navigate(`/parent/overtime-decision/${req.id}`)
                       }
-                      className="w-full bg-red-500 text-white hover:bg-red-600 font-bold uppercase tracking-widest text-[10px] py-4"
+                      className="w-full bg-red-500 text-white hover:bg-red-600 font-bold uppercase  text-[10px] py-4"
                     >
                       Handle Decision
                     </Button>
@@ -970,16 +968,16 @@ export const ChildManagementPage = () => {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase ">
                         Date
                       </th>
-                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase ">
                         Duration
                       </th>
-                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase ">
                         Overtime
                       </th>
-                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase tracking-widest">
+                      <th className="px-6 py-4 text-[8px] font-bold text-white/20 uppercase ">
                         Status
                       </th>
                     </tr>
@@ -1013,7 +1011,7 @@ export const ChildManagementPage = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${
+                            className={`text-[8px] font-bold uppercase  px-2 py-1 rounded-full ${
                               session.status === "overtime_pending"
                                 ? "bg-red-500/10 text-red-500"
                                 : "bg-plaeen-green/10 text-plaeen-green"
@@ -1055,7 +1053,7 @@ export const ChildManagementPage = () => {
                   placeholder="SEARCH GAMES..."
                   value={gameSearch}
                   onChange={(e) => setGameSearch(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-4 text-[11px] font-bold uppercase tracking-widest text-white focus:border-plaeen-green focus:outline-none transition-all w-64"
+                  className="bg-white/5 border border-white/10 rounded-full pl-10 pr-4 py-4 text-[11px] font-bold uppercase  text-white focus:border-plaeen-green focus:outline-none transition-all w-64"
                 />
               </div>
             </div>
@@ -1078,7 +1076,7 @@ export const ChildManagementPage = () => {
                       <p className="text-xs font-bold text-white uppercase tracking-tight">
                         Game ID: {gameId}
                       </p>
-                      <p className="text-[8px] text-white/20 font-bold uppercase tracking-widest">
+                      <p className="text-[8px] text-white/20 font-bold uppercase ">
                         Approved
                       </p>
                     </div>
@@ -1093,7 +1091,7 @@ export const ChildManagementPage = () => {
               ))}
               <button className="border-2 border-dashed border-white/20 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/30 transition-all group">
                 <Plus size={32} />
-                <span className="text-[12px] font-bold uppercase tracking-widest">
+                <span className="text-[12px] font-bold uppercase ">
                   Add New Game
                 </span>
               </button>

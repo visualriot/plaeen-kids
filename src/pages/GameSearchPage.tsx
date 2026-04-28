@@ -855,7 +855,7 @@ export const GameSearchPage = () => {
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
       {apiKeyMissing && (
-        <div className="mb-8 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-sm font-bold uppercase tracking-widest text-center">
+        <div className="mb-8 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-sm font-bold uppercase  text-center">
           RAWG API Key is missing. Using AI-generated game data as fallback.
           <span className="block text-[10px] mt-1 opacity-60">
             Please configure RAWG_API_KEY in settings for real game data.
@@ -868,7 +868,7 @@ export const GameSearchPage = () => {
         <Button
           variant="outline"
           onClick={() => navigate(-1)}
-          className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest px-8"
+          className="border-white/20 text-white hover:bg-white/10 font-bold uppercase  px-8"
         >
           Go Back
         </Button>
@@ -884,7 +884,7 @@ export const GameSearchPage = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
           <div className="absolute inset-0 flex flex-col justify-center p-12 md:p-20">
-            <div className="text-plaeen-green text-xs font-bold uppercase tracking-[0.4em] mb-4">
+            <div className="text-plaeen-green text-xs font-bold uppercase  mb-4">
               Our Recommendation
             </div>
             <h2 className="text-6xl md:text-8xl font-bold text-white uppercase tracking-tighter mb-8 max-w-2xl">
@@ -967,7 +967,7 @@ export const GameSearchPage = () => {
                   setOpenDropdown(openDropdown === "genre" ? null : "genre")
                 }
                 className={cn(
-                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap",
+                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase  flex items-center gap-2 transition-all whitespace-nowrap",
                   selectedGenres.length > 0
                     ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
                     : openDropdown === "genre"
@@ -993,7 +993,7 @@ export const GameSearchPage = () => {
                           );
                         }}
                         className={cn(
-                          "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all whitespace-nowrap flex items-center gap-3",
+                          "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all whitespace-nowrap flex items-center gap-3",
                           selectedGenres.includes(genre.id)
                             ? "bg-plaeen-green/20 text-plaeen-green"
                             : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
@@ -1018,13 +1018,13 @@ export const GameSearchPage = () => {
                   <div className="flex gap-0 border-t border-white/10">
                     <button
                       onClick={resetGenreFilters}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
                     >
                       Reset
                     </button>
                     <button
                       onClick={() => setOpenDropdown(null)}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
                     >
                       Apply
                     </button>
@@ -1042,7 +1042,7 @@ export const GameSearchPage = () => {
                   )
                 }
                 className={cn(
-                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap",
+                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase  flex items-center gap-2 transition-all whitespace-nowrap",
                   selectedPlatforms.length > 0 || multiplatformOnly
                     ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
                     : openDropdown === "platform"
@@ -1063,7 +1063,7 @@ export const GameSearchPage = () => {
                         setMultiplatformOnly(!multiplatformOnly);
                       }}
                       className={cn(
-                        "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all border-b border-white/10 whitespace-nowrap flex items-center gap-3",
+                        "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all border-b border-white/10 whitespace-nowrap flex items-center gap-3",
                         multiplatformOnly
                           ? "bg-plaeen-green/20 text-plaeen-green"
                           : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
@@ -1094,7 +1094,7 @@ export const GameSearchPage = () => {
                           );
                         }}
                         className={cn(
-                          "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all whitespace-nowrap flex items-center gap-3",
+                          "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all whitespace-nowrap flex items-center gap-3",
                           selectedPlatforms.includes(platform.id)
                             ? "bg-plaeen-green/20 text-plaeen-green"
                             : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
@@ -1119,13 +1119,13 @@ export const GameSearchPage = () => {
                   <div className="flex gap-0 border-t border-white/10">
                     <button
                       onClick={resetPlatformFilters}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
                     >
                       Reset
                     </button>
                     <button
                       onClick={() => setOpenDropdown(null)}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
+                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
                     >
                       Apply Filters
                     </button>
@@ -1154,7 +1154,7 @@ export const GameSearchPage = () => {
                   )}
                 />
               </button>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+              <span className="text-[10px] font-bold uppercase  text-white/50">
                 Multiplayer Only
               </span>
             </div>
@@ -1168,7 +1168,7 @@ export const GameSearchPage = () => {
                 onClick={() =>
                   setOpenDropdown(openDropdown === "sort" ? null : "sort")
                 }
-                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white/70 transition-colors"
+                className="flex items-center gap-2 text-[10px] font-bold uppercase  text-white/50 hover:text-white/70 transition-colors"
               >
                 Sort By:{" "}
                 <span className="text-plaeen-green">{getSortLabel()}</span>
@@ -1184,7 +1184,7 @@ export const GameSearchPage = () => {
                         setOpenDropdown(null);
                       }}
                       className={cn(
-                        "w-full px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-left transition-all whitespace-nowrap",
+                        "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all whitespace-nowrap",
                         sortBy === opt.value
                           ? "bg-plaeen-green/20 text-plaeen-green"
                           : "text-white/60 hover:text-white hover:bg-white/5",
@@ -1224,7 +1224,7 @@ export const GameSearchPage = () => {
       {loading && page === 1 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-6">
           <div className="h-16 w-16 border-4 border-plaeen-green border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(118,233,0,0.3)]" />
-          <p className="text-plaeen-green font-bold uppercase tracking-[0.3em] animate-pulse">
+          <p className="text-plaeen-green font-bold uppercase  animate-pulse">
             Scanning Database...
           </p>
         </div>
@@ -1251,7 +1251,7 @@ export const GameSearchPage = () => {
                 </h3>
 
                 <div className="space-y-2 mb-6">
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex justify-between text-[10px] font-bold uppercase ">
                     <span className="text-white/20">Release date</span>
                     <span className="text-white/60">
                       {game.releaseDate !== "TBA"
@@ -1259,13 +1259,13 @@ export const GameSearchPage = () => {
                         : "TBA"}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex justify-between text-[10px] font-bold uppercase ">
                     <span className="text-white/20">Genre</span>
                     <span className="text-white/60 truncate max-w-[150px]">
                       {game.genres.join(", ")}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex justify-between text-[10px] font-bold uppercase ">
                     <span className="text-white/20">Platforms</span>
                     <div className="flex gap-2">
                       {game.platforms.slice(0, 3).map((p) => (
@@ -1285,7 +1285,7 @@ export const GameSearchPage = () => {
                     <Button
                       onClick={() => requestGameAccess(game)}
                       disabled={isRequesting}
-                      className="flex-1 font-bold uppercase tracking-widest text-[10px] py-3 bg-white/5 text-white/40 border border-white/10 hover:border-plaeen-green hover:text-plaeen-green transition-all"
+                      className="flex-1 font-bold uppercase  text-[10px] py-3 bg-white/5 text-white/40 border border-white/10 hover:border-plaeen-green hover:text-plaeen-green transition-all"
                     >
                       Request Access
                     </Button>
@@ -1294,7 +1294,7 @@ export const GameSearchPage = () => {
                       onClick={() => handleCreateSessionClick(game)}
                       variant="secondary"
                       size="sm"
-                      className="flex-1 tracking-wider"
+                      className="flex-1 "
                     >
                       Create Session
                     </Button>
@@ -1337,7 +1337,7 @@ export const GameSearchPage = () => {
           <Button
             onClick={loadMore}
             disabled={loading}
-            className="px-12 py-6 text-lg font-bold uppercase tracking-widest bg-plaeen-green text-black hover:scale-105 transition-transform shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+            className="px-12 py-6 text-lg font-bold uppercase  bg-plaeen-green text-black hover:scale-105 transition-transform shadow-[0_0_30px_rgba(118,233,0,0.3)]"
           >
             {loading ? "Loading..." : "Load More"}
           </Button>
@@ -1373,12 +1373,12 @@ export const GameSearchPage = () => {
                     {selectedGame.genres.map((g) => (
                       <span
                         key={g}
-                        className="px-4 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[10px] font-bold uppercase tracking-widest"
+                        className="px-4 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[10px] font-bold uppercase "
                       >
                         {g}
                       </span>
                     ))}
-                    <span className="px-4 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+                    <span className="px-4 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[10px] font-bold uppercase ">
                       Released:{" "}
                       {selectedGame.releaseDate !== "TBA"
                         ? format(
@@ -1393,7 +1393,7 @@ export const GameSearchPage = () => {
                   <div className="text-5xl font-bold text-plaeen-green mb-1">
                     {selectedGame.rating}%
                   </div>
-                  <div className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">
+                  <div className="text-[10px] font-bold text-white/20 uppercase ">
                     Metascore
                   </div>
                 </div>
@@ -1401,24 +1401,24 @@ export const GameSearchPage = () => {
 
               <div className="grid md:grid-cols-3 gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-6">
+                  <h3 className="text-[10px] font-bold uppercase  text-plaeen-green mb-6">
                     About the game
                   </h3>
                   {loadingDetails ? (
                     <div className="flex items-center gap-4 text-plaeen-green animate-pulse">
                       <Sparkles size={20} />
-                      <span className="font-bold uppercase tracking-widest">
+                      <span className="font-bold uppercase ">
                         Fetching full intel...
                       </span>
                     </div>
                   ) : (
-                    <p className="text-lg text-white/60 leading-relaxed font-medium">
+                    <p className="text-lg text-white/60  font-medium">
                       {selectedGame.description}
                     </p>
                   )}
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-6">
+                  <h3 className="text-[10px] font-bold uppercase  text-plaeen-green mb-6">
                     Platforms
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1443,7 +1443,7 @@ export const GameSearchPage = () => {
                       <Button
                         onClick={() => requestGameAccess(selectedGame)}
                         disabled={isRequesting}
-                        className="w-full py-6 font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-white/40 hover:border-plaeen-green hover:text-plaeen-green gap-3"
+                        className="w-full py-6 font-bold uppercase  bg-white/5 border border-white/10 text-white/40 hover:border-plaeen-green hover:text-plaeen-green gap-3"
                       >
                         <Shield size={20} /> Request Parent Approval
                       </Button>
@@ -1465,7 +1465,7 @@ export const GameSearchPage = () => {
                           "_blank",
                         )
                       }
-                      className="w-full py-6 font-bold uppercase tracking-widest border-white/20 text-white hover:bg-white/10 gap-3"
+                      className="w-full py-6 font-bold uppercase  border-white/20 text-white hover:bg-white/10 gap-3"
                     >
                       <ExternalLink size={20} /> Check on RAWG
                     </Button>
@@ -1480,7 +1480,7 @@ export const GameSearchPage = () => {
       {!loading && games.length === 0 && hasSubmittedSearch && (
         <div className="text-center py-20">
           <Gamepad2 size={64} className="mx-auto text-white/10 mb-6" />
-          <p className="text-xl font-bold text-white/20 uppercase tracking-widest">
+          <p className="text-xl font-bold text-white/20 uppercase ">
             No games found in this sector
           </p>
         </div>

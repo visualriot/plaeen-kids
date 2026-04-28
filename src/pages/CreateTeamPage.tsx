@@ -240,7 +240,7 @@ export const CreateTeamPage = () => {
         <div className="text-left mb-12">
           <button
             onClick={() => navigate("/teams")}
-            className="flex items-center gap-2 text-white/40 hover:text-white transition-colors font-bold uppercase tracking-widest text-[10px] mb-6"
+            className="flex items-center gap-2 text-white/40 hover:text-white transition-colors font-bold uppercase  text-[10px] mb-6"
           >
             <ChevronLeft size={14} /> Back to Teams
           </button>
@@ -248,7 +248,7 @@ export const CreateTeamPage = () => {
             Create <span className="text-plaeen-green">Team</span>
           </h1>
           {role === "kid" && (
-            <div className="flex items-center gap-2 mt-4 text-plaeen-green font-bold uppercase tracking-widest text-[10px]">
+            <div className="flex items-center gap-2 mt-4 text-plaeen-green font-bold uppercase  text-[10px]">
               <Shield size={14} /> Private & Kid-Safe
             </div>
           )}
@@ -274,7 +274,7 @@ export const CreateTeamPage = () => {
               )}
             />
             {nameError && (
-              <p className="mt-3 text-xs font-bold text-red-500 uppercase tracking-widest">
+              <p className="mt-3 text-xs font-bold text-red-500 uppercase ">
                 {nameError}
               </p>
             )}
@@ -285,7 +285,7 @@ export const CreateTeamPage = () => {
             <label>Add friends to play with</label>
             {friends.length === 0 ? (
               <div className="p-12 rounded-3xl bg-white/5 border-2 border-dashed border-white/5 text-center">
-                <p className="text-xs font-bold text-white/20 uppercase tracking-widest">
+                <p className="text-xs font-bold text-white/20 uppercase ">
                   No friends found yet
                 </p>
               </div>
@@ -310,7 +310,7 @@ export const CreateTeamPage = () => {
                       <span className="text-base font-black uppercase truncate">
                         {friend.displayName}
                       </span>
-                      <span className="text-[10px] opacity-40 font-bold tracking-[0.2em] truncate">
+                      <span className="text-[10px] opacity-40 font-bold  truncate">
                         @{friend.username}
                       </span>
                     </div>
@@ -340,7 +340,7 @@ export const CreateTeamPage = () => {
               <label>Select team avatar</label>
 
               <div className="space-y-4">
-                <p className="text-[10px] font-black text-plaeen-green uppercase tracking-[0.3em]">
+                <p className="text-[10px] font-black text-plaeen-green uppercase ">
                   Select Collection:
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -352,7 +352,7 @@ export const CreateTeamPage = () => {
                         if (scrollRef.current) scrollRef.current.scrollLeft = 0;
                       }}
                       className={cn(
-                        "px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 cursor-pointer",
+                        "px-5 py-2.5 rounded-full text-[10px] font-black uppercase  transition-all border-2 cursor-pointer",
                         activeCategory === cat.id
                           ? "bg-plaeen-green border-plaeen-green text-black shadow-lg"
                           : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white",
@@ -415,7 +415,7 @@ export const CreateTeamPage = () => {
                 ))}
               </div>
             </div>
-            <p className="mt-4 text-[10px] font-bold text-white/40 uppercase tracking-[0.4em] text-center">
+            <p className="mt-4 text-[10px] font-bold text-white/40 uppercase  text-center">
               ← Scroll or swipe for more options →
             </p>
           </section>
@@ -424,7 +424,7 @@ export const CreateTeamPage = () => {
           <div className="pt-16 border-t border-white/5">
             <Button
               onClick={handleCreateTeam}
-              className="w-full py-8 text-2xl font-black cursor-pointer uppercase tracking-[0.2em] rounded-2xl shadow-2xl transition-transform active:scale-[0.98]"
+              className="w-full py-8 text-2xl font-black cursor-pointer uppercase  rounded-2xl shadow-2xl transition-transform active:scale-[0.98]"
               disabled={!teamName.trim() || isSubmitting}
             >
               {isSubmitting ? (

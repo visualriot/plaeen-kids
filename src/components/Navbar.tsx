@@ -137,7 +137,7 @@ export const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase  transition-all ${
                   location.pathname === link.path
                     ? "text-plaeen-green bg-plaeen-green/10"
                     : "text-white/40 hover:text-white hover:bg-white/5"
@@ -188,12 +188,12 @@ export const Navbar = () => {
                 />
               </div>
               <div className="hidden sm:block text-left pr-2">
-                <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-none mb-1">
+                <p className="text-[10px] font-bold text-white uppercase   mb-1">
                   {formatName(
                     activeKid?.displayName || user?.displayName || "User",
                   )}
                 </p>
-                <p className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest leading-none">
+                <p className="text-[8px] font-bold text-plaeen-green uppercase  ">
                   {role === "kid" ? "Gamer" : "Guardian"}
                 </p>
               </div>
@@ -212,28 +212,28 @@ export const Navbar = () => {
                   className="absolute right-0 mt-4 w-64 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl p-2 z-[70] backdrop-blur-xl"
                 >
                   <div className="p-4 border-b border-white/5 mb-2">
-                    <p className="text-xs font-bold text-white uppercase tracking-widest">
+                    <p className="text-xs font-bold text-white uppercase ">
                       Account Settings
                     </p>
                   </div>
 
                   <button
                     onClick={handleSwitchProfile}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase tracking-widest"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase "
                   >
                     <RefreshCw size={16} /> Switch Profile
                   </button>
 
                   <Link
                     to="/kid-calendar"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase "
                   >
                     <Calendar size={16} /> Calendar
                   </Link>
 
                   <Link
                     to={role === "kid" ? "/profile" : "/parent/settings"}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase "
                   >
                     <UserIcon size={16} /> Settings
                   </Link>
@@ -242,7 +242,7 @@ export const Navbar = () => {
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase tracking-widest"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase "
                   >
                     <LogOut size={16} /> Sign Out
                   </button>
@@ -276,7 +276,7 @@ export const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-4 p-4 rounded-2xl text-sm font-bold uppercase tracking-widest transition-all ${
+                  className={`flex items-center gap-4 p-4 rounded-2xl text-sm font-bold uppercase  transition-all ${
                     location.pathname === link.path
                       ? "text-plaeen-green bg-plaeen-green/10"
                       : "text-white/40 hover:text-white hover:bg-white/5"

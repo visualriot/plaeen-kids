@@ -346,7 +346,7 @@ export const TeamDetailPage = () => {
 
   if (loading || !team)
     return (
-      <div className="flex h-[60vh] items-center justify-center text-white font-bold uppercase tracking-widest">
+      <div className="flex h-[60vh] items-center justify-center text-white font-bold uppercase ">
         Loading Team Data...
       </div>
     );
@@ -385,7 +385,7 @@ export const TeamDetailPage = () => {
               >
                 <div className="flex items-center gap-3">
                   <div className="h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)] animate-pulse" />
-                  <p className="text-xs font-bold text-white uppercase tracking-widest">
+                  <p className="text-xs font-bold text-white uppercase ">
                     <span className="text-plaeen-green">{event.userName}</span>{" "}
                     joined the team!
                   </p>
@@ -419,14 +419,14 @@ export const TeamDetailPage = () => {
               <div className="mt-6 flex items-center gap-4">
                 <Button
                   onClick={() => navigate(`/search?teamId=${teamId}`)}
-                  className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
+                  className="bg-plaeen-green text-black font-bold uppercase  px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
                 >
                   <Plus size={20} className="mr-2" /> Add Session
                 </Button>
                 <Button
                   onClick={() => navigate(`/teams/${teamId}/settings`)}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest px-8 py-6"
+                  className="border-white/20 text-white hover:bg-white/10 font-bold uppercase  px-8 py-6"
                 >
                   <Settings size={20} className="mr-2" /> Team Settings
                 </Button>
@@ -438,10 +438,10 @@ export const TeamDetailPage = () => {
                 <Bell size={24} />
               </div>
               <div>
-                <p className="text-xs font-bold text-white uppercase tracking-widest">
+                <p className="text-xs font-bold text-white uppercase ">
                   Notifications
                 </p>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest">
+                <p className="text-[10px] text-white/40 uppercase ">
                   {
                     visibleSessions.filter(
                       (s) =>
@@ -487,7 +487,7 @@ export const TeamDetailPage = () => {
                       )}
                     </div>
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover/member:opacity-100 transition-opacity whitespace-nowrap z-20">
-                      <p className="text-[10px] font-bold text-white uppercase tracking-widest">
+                      <p className="text-[10px] font-bold text-white uppercase ">
                         {member.displayName}{" "}
                         {team.adminIds?.includes(member.uid) && "(Admin)"}
                       </p>
@@ -509,7 +509,7 @@ export const TeamDetailPage = () => {
                     </div>
                   </div>
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-plaeen-dark border border-white/10 px-3 py-1 rounded-lg opacity-0 group-hover/member:opacity-100 transition-opacity whitespace-nowrap z-20">
-                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
+                    <p className="text-[10px] font-bold text-amber-500 uppercase ">
                       {member.displayName} (Pending)
                     </p>
                   </div>
@@ -530,7 +530,7 @@ export const TeamDetailPage = () => {
       <div className="grid lg:grid-cols-4 gap-12">
         {/* Games Played Section */}
         <div className="lg:col-span-1 space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+          <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
             <Gamepad2 size={16} /> Games Played
           </h2>
           <div className="space-y-4">
@@ -555,7 +555,7 @@ export const TeamDetailPage = () => {
             <Button
               variant="outline"
               onClick={() => navigate(`/search?teamId=${teamId}`)}
-              className="w-full py-8 border-dashed border-white/10 text-white/20 hover:text-plaeen-green hover:border-plaeen-green transition-all uppercase tracking-widest font-bold"
+              className="w-full py-8 border-dashed border-white/10 text-white/20 hover:text-plaeen-green hover:border-plaeen-green transition-all uppercase  font-bold"
             >
               <Plus size={20} className="mr-2" /> Add Game
             </Button>
@@ -565,7 +565,7 @@ export const TeamDetailPage = () => {
         {/* Game Proposals Section */}
         <div className="lg:col-span-4 space-y-8 mt-12">
           <div className="flex items-center justify-between">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-purple flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-purple flex items-center gap-3">
               <Sparkles size={16} /> Game Proposals
             </h2>
           </div>
@@ -637,7 +637,7 @@ export const TeamDetailPage = () => {
               (s) => s.status === "proposed" && !s.startTime,
             ).length === 0 && (
               <div className="col-span-full py-12 text-center border-2 border-dashed border-white/5 rounded-[2rem]">
-                <p className="text-white/20 font-bold uppercase tracking-widest text-xs">
+                <p className="text-white/20 font-bold uppercase  text-xs">
                   No active game proposals
                 </p>
               </div>
@@ -648,7 +648,7 @@ export const TeamDetailPage = () => {
         {/* Unified Calendar Section */}
         <div className="lg:col-span-4 space-y-8 mt-12">
           <div className="flex items-center justify-between">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
               <CalendarIcon size={16} /> Unified Schedule
             </h2>
             <div className="flex items-center gap-4">
@@ -658,7 +658,7 @@ export const TeamDetailPage = () => {
               >
                 <ChevronLeft size={24} />
               </button>
-              <span className="text-sm font-bold text-white uppercase tracking-widest">
+              <span className="text-sm font-bold text-white uppercase ">
                 {format(days[0], "MMM d")} - {format(days[6], "MMM d")}
               </span>
               <button
@@ -692,7 +692,7 @@ export const TeamDetailPage = () => {
                     key={dayKey}
                     className="grid grid-cols-[80px_repeat(24,1fr)] gap-0.5 mb-0.5 items-center md:gap-3 md:mb-3"
                   >
-                    <div className="text-[8px] md:text-[10px] font-bold text-white/40 uppercase tracking-tight md:tracking-widest">
+                    <div className="text-[8px] md:text-[10px] font-bold text-white/40 uppercase tracking-tight md:">
                       {format(day, "EEE d")}
                     </div>
                     {hours.map((hour) => {
@@ -773,7 +773,7 @@ export const TeamDetailPage = () => {
                             >
                               {session ? (
                                 <div className="flex flex-col items-center gap-1">
-                                  <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">
+                                  <p className="text-[10px] font-bold text-plaeen-green uppercase ">
                                     {session.gameName}
                                   </p>
                                   <p className="text-[8px] text-white/40 font-bold uppercase">
@@ -782,16 +782,16 @@ export const TeamDetailPage = () => {
                                 </div>
                               ) : isFullyAvailable ? (
                                 <div className="flex flex-col items-center gap-1">
-                                  <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-[0.2em] mb-1">
+                                  <p className="text-[10px] font-bold text-plaeen-green uppercase  mb-1">
                                     All team available!
                                   </p>
-                                  <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">
+                                  <p className="text-[10px] text-white/60 font-medium uppercase ">
                                     Click to propose session
                                   </p>
                                 </div>
                               ) : (
                                 <div className="space-y-1">
-                                  <p className="text-[10px] font-bold text-plaeen-purple uppercase tracking-[0.2em]">
+                                  <p className="text-[10px] font-bold text-plaeen-purple uppercase ">
                                     Available:
                                   </p>
                                   {availableMembers.map((m) => (
@@ -807,7 +807,7 @@ export const TeamDetailPage = () => {
                                       {availableMembers.length} /{" "}
                                       {members.length} Players Available
                                     </p>
-                                    <p className="text-[9px] text-plaeen-green font-bold uppercase tracking-wider">
+                                    <p className="text-[9px] text-plaeen-green font-bold uppercase ">
                                       Click to propose session
                                     </p>
                                   </div>
@@ -826,31 +826,31 @@ export const TeamDetailPage = () => {
             <div className="mt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 pt-8 border-t border-white/5">
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded bg-plaeen-green shadow-[0_0_15px_rgba(118,233,0,0.6)] border border-white/40" />
-                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-white/80 uppercase ">
                   Scheduled Session
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.4)] border border-white/20" />
-                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-white/80 uppercase ">
                   Active Proposal
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded bg-plaeen-green/40 border border-plaeen-green/60" />
-                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-white/80 uppercase ">
                   Team Available
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded bg-[#a855f7] border border-[#c084fc]" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-white uppercase ">
                   Partially Available (2+)
                 </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="h-4 w-4 rounded bg-white/20 border border-white/10" />
-                <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-white/80 uppercase ">
                   Unavailable
                 </span>
               </div>
@@ -858,7 +858,7 @@ export const TeamDetailPage = () => {
 
             <div className="mt-6 p-4 rounded-xl bg-plaeen-purple/5 border border-plaeen-purple/20 flex items-center gap-3">
               <Sparkles size={14} className="text-plaeen-purple" />
-              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-white/40 uppercase ">
                 Click on any slot to propose a new gaming session for your team.
               </p>
             </div>
@@ -902,7 +902,7 @@ export const TeamDetailPage = () => {
                 </div>
               ))}
               {friends.length === 0 && (
-                <p className="text-center py-8 text-white/20 font-bold uppercase tracking-widest">
+                <p className="text-center py-8 text-white/20 font-bold uppercase ">
                   No friends to invite
                 </p>
               )}
@@ -916,7 +916,7 @@ export const TeamDetailPage = () => {
           <Card className="w-full max-w-2xl bg-plaeen-dark border-plaeen-green/30 p-10 shadow-[0_0_50px_rgba(118,233,0,0.1)]">
             <div className="flex justify-between items-start mb-10">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green mb-2">
+                <p className="text-[10px] font-bold uppercase  text-plaeen-green mb-2">
                   Session Proposed by{" "}
                   <span className="text-white">
                     {selectedSession.proposedByName}
@@ -925,7 +925,7 @@ export const TeamDetailPage = () => {
                 <h2 className="text-5xl font-bold text-white uppercase tracking-tighter mb-2">
                   {selectedSession.gameName}
                 </h2>
-                <div className="flex items-center gap-4 text-white/40 font-bold uppercase tracking-widest text-[10px]">
+                <div className="flex items-center gap-4 text-white/40 font-bold uppercase  text-[10px]">
                   <div className="flex items-center gap-1">
                     <CalendarIcon size={14} />
                     {format(selectedSession.startTime.toDate(), "EEEE, MMM d")}
@@ -962,7 +962,7 @@ export const TeamDetailPage = () => {
 
             <div className="grid md:grid-cols-2 gap-12 mb-10">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-6 block">
+                <label className="text-[10px] font-bold uppercase  text-plaeen-green mb-6 block">
                   Invitees Status
                 </label>
                 <div className="space-y-3">
@@ -1008,7 +1008,7 @@ export const TeamDetailPage = () => {
 
               <div className="space-y-8">
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-6 block">
+                  <label className="text-[10px] font-bold uppercase  text-plaeen-green mb-6 block">
                     Admin Note
                   </label>
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/10 italic text-white/60 text-sm">
@@ -1020,7 +1020,7 @@ export const TeamDetailPage = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-4 block">
+                  <label className="text-[10px] font-bold uppercase  text-plaeen-green mb-4 block">
                     Personal Allowance
                   </label>
                   {(() => {
@@ -1040,7 +1040,7 @@ export const TeamDetailPage = () => {
                         )}
                       >
                         <div>
-                          <p className="text-xs font-bold text-white uppercase tracking-widest leading-none mb-1">
+                          <p className="text-xs font-bold text-white uppercase   mb-1">
                             Remaining Today
                           </p>
                           <p
@@ -1075,7 +1075,7 @@ export const TeamDetailPage = () => {
 
             <div className="space-y-4">
               <div className="relative">
-                <label className="absolute left-4 -top-2 px-2 bg-plaeen-dark text-[10px] font-bold text-white/40 uppercase tracking-widest z-10">
+                <label className="absolute left-4 -top-2 px-2 bg-plaeen-dark text-[10px] font-bold text-white/40 uppercase  z-10">
                   Add a note
                 </label>
                 <textarea
@@ -1089,7 +1089,7 @@ export const TeamDetailPage = () => {
               <div className="grid grid-cols-3 gap-4">
                 <Button
                   onClick={() => respondToSession("accepted", responseNote)}
-                  className="bg-plaeen-green text-black font-bold uppercase tracking-widest py-6"
+                  className="bg-plaeen-green text-black font-bold uppercase  py-6"
                 >
                   {selectedSession.responses?.[activeUid]?.status === "accepted"
                     ? "Update Response"
@@ -1098,14 +1098,14 @@ export const TeamDetailPage = () => {
                 <Button
                   variant="outline"
                   onClick={() => respondToSession("maybe", responseNote)}
-                  className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-widest py-6"
+                  className="border-white/20 text-white hover:bg-white/10 font-bold uppercase  py-6"
                 >
                   Maybe
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => respondToSession("rejected", responseNote)}
-                  className="text-red-400 hover:bg-red-500/10 font-bold uppercase tracking-widest py-6"
+                  className="text-red-400 hover:bg-red-500/10 font-bold uppercase  py-6"
                 >
                   {selectedSession.responses?.[activeUid]?.status === "rejected"
                     ? "Withdrawn"

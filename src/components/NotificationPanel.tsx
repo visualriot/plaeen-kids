@@ -404,7 +404,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           className="absolute right-0 top-full mt-2 w-80 md:w-96 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl z-[70] overflow-hidden backdrop-blur-xl"
         >
           <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <h3 className="text-xs font-bold text-white uppercase tracking-widest">
+            <h3 className="text-xs font-bold text-white uppercase ">
               Notifications
             </h3>
           </div>
@@ -416,7 +416,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 className={cn(
-                  "px-4 py-2 border-b font-bold uppercase tracking-widest text-[8px] text-center",
+                  "px-4 py-2 border-b font-bold uppercase  text-[8px] text-center",
                   feedback.type === "success"
                     ? "bg-plaeen-green/10 text-plaeen-green border-plaeen-green/20"
                     : "bg-white/5 text-white/40 border-white/10",
@@ -431,7 +431,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             {notifications.length === 0 ? (
               <div className="p-12 text-center">
                 <Bell size={32} className="mx-auto text-white/5 mb-4" />
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-white/20 uppercase ">
                   All clear
                 </p>
               </div>
@@ -454,13 +454,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                           >
                             {formatName(notif.title)}
                           </p>
-                          <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest shrink-0">
+                          <span className="text-[8px] font-bold text-white/20 uppercase  shrink-0">
                             {notif.createdAt
                               ? format(safeToDate(notif.createdAt), "HH:mm")
                               : "Just now"}
                           </span>
                         </div>
-                        <p className="text-[10px] text-white/40 font-medium leading-relaxed mb-3">
+                        <p className="text-[10px] text-white/40 font-medium  mb-3">
                           {notif.message}
                         </p>
 
@@ -473,7 +473,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             <Button
                               size="sm"
                               onClick={() => handleTeamInvite(notif, true)}
-                              className="bg-plaeen-green text-black text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
+                              className="bg-plaeen-green text-black text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
                             >
                               Accept
                             </Button>
@@ -481,7 +481,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                               size="sm"
                               variant="outline"
                               onClick={() => handleTeamInvite(notif, false)}
-                              className="border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
+                              className="border-white/10 text-white/40 text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
                             >
                               Decline
                             </Button>
@@ -496,7 +496,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             <Button
                               size="sm"
                               onClick={() => handleFriendRequest(notif, true)}
-                              className="bg-plaeen-green text-black text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
+                              className="bg-plaeen-green text-black text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
                             >
                               Accept
                             </Button>
@@ -504,7 +504,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                               size="sm"
                               variant="outline"
                               onClick={() => handleFriendRequest(notif, false)}
-                              className="border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 h-auto"
+                              className="border-white/10 text-white/40 text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
                             >
                               Decline
                             </Button>
@@ -512,7 +512,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                               size="sm"
                               variant="ghost"
                               onClick={() => navigate("/friends")}
-                              className="text-white/20 text-[6px] font-bold uppercase tracking-widest px-2 py-1.5 h-auto ml-auto"
+                              className="text-white/20 text-[6px] font-bold uppercase  px-2 py-1.5 h-auto ml-auto"
                             >
                               View
                             </Button>
@@ -535,7 +535,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="w-full text-[8px] font-bold uppercase tracking-widest text-white/40 hover:text-white"
+              className="w-full text-[8px] font-bold uppercase  text-white/40 hover:text-white"
               onClick={() => {
                 onClose();
                 navigate("/notifications");

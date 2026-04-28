@@ -151,7 +151,7 @@ export const ApprovalsPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <button
         onClick={() => navigate("/parent-dashboard")}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] mb-8 transition-colors"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase  text-[10px] mb-8 transition-colors"
       >
         <ArrowLeft size={14} /> Back to Guardian Hub
       </button>
@@ -160,7 +160,7 @@ export const ApprovalsPage = () => {
         <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
           Approval <span className="text-plaeen-green">Queue</span>
         </h1>
-        <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
+        <p className="text-white/40 font-bold uppercase  text-xs mt-2">
           Review and Authorize Requests
         </p>
       </div>
@@ -168,7 +168,7 @@ export const ApprovalsPage = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         {/* Pending Requests */}
         <div className="lg:col-span-2 space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+          <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
             <Bell size={16} /> Pending Action ({pending.length})
           </h2>
 
@@ -192,10 +192,10 @@ export const ApprovalsPage = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-1">
-                        <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">
+                        <span className="text-[10px] font-bold text-plaeen-green uppercase ">
                           {req.childName}
                         </span>
-                        <span className="text-[8px] text-white/20 uppercase tracking-widest">
+                        <span className="text-[8px] text-white/20 uppercase ">
                           • {format(safeToDate(req.createdAt), "MMM d, HH:mm")}
                         </span>
                       </div>
@@ -221,7 +221,7 @@ export const ApprovalsPage = () => {
                             duration: {req.data.sessionDuration}m.
                           </p>
                           <div className="flex items-center gap-4">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-white/20">
+                            <label className="text-[10px] font-bold uppercase  text-white/20">
                               Penalty (Min):
                             </label>
                             <input
@@ -251,23 +251,23 @@ export const ApprovalsPage = () => {
                           />
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-3 mb-3">
-                              <span className="px-3 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[8px] font-bold uppercase tracking-widest">
+                              <span className="px-3 py-1 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-plaeen-green text-[8px] font-bold uppercase ">
                                 {req.data.rating
                                   ? `Metascore: ${req.data.rating}%`
                                   : "Rating: N/A"}
                               </span>
                               {req.data.esrbRating && (
-                                <span className="px-3 py-1 rounded-full bg-plaeen-purple/10 border border-plaeen-purple/20 text-plaeen-purple text-[8px] font-bold uppercase tracking-widest">
+                                <span className="px-3 py-1 rounded-full bg-plaeen-purple/10 border border-plaeen-purple/20 text-plaeen-purple text-[8px] font-bold uppercase ">
                                   ESRB: {req.data.esrbRating}
                                 </span>
                               )}
-                              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[8px] font-bold uppercase tracking-widest">
+                              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/40 text-[8px] font-bold uppercase ">
                                 {req.data.genres
                                   ? req.data.genres.join(", ")
                                   : "No Genre"}
                               </span>
                             </div>
-                            <p className="text-[10px] text-white/60 leading-relaxed line-clamp-3 mb-4">
+                            <p className="text-[10px] text-white/60  line-clamp-3 mb-4">
                               {req.data.description ||
                                 "No description available."}
                             </p>
@@ -275,7 +275,7 @@ export const ApprovalsPage = () => {
                               href={`https://rawg.io/games/${req.data.slug || req.data.gameId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 text-[8px] font-bold text-plaeen-green uppercase tracking-widest hover:underline"
+                              className="inline-flex items-center gap-2 text-[8px] font-bold text-plaeen-green uppercase  hover:underline"
                             >
                               View on RAWG.io <Gamepad2 size={12} />
                             </a>
@@ -297,14 +297,14 @@ export const ApprovalsPage = () => {
                     <Button
                       onClick={() => handleAction(req, "denied")}
                       variant="outline"
-                      className="flex-1 md:flex-none border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold uppercase tracking-widest text-[10px] px-8"
+                      className="flex-1 md:flex-none border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white font-bold uppercase  text-[10px] px-8"
                     >
                       <X size={16} className="mr-2" />{" "}
                       {req.type === "overtime" ? "Punish" : "Deny"}
                     </Button>
                     <Button
                       onClick={() => handleAction(req, "approved")}
-                      className="flex-1 md:flex-none bg-plaeen-green text-black font-bold uppercase tracking-widest text-[10px] px-8 shadow-[0_0_15px_rgba(118,233,0,0.3)]"
+                      className="flex-1 md:flex-none bg-plaeen-green text-black font-bold uppercase  text-[10px] px-8 shadow-[0_0_15px_rgba(118,233,0,0.3)]"
                     >
                       <Check size={16} className="mr-2" />{" "}
                       {req.type === "overtime" ? "Forgive" : "Approve"}
@@ -315,7 +315,7 @@ export const ApprovalsPage = () => {
             ))}
             {pending.length === 0 && (
               <Card className="bg-white/5 border-dashed border-white/10 p-12 text-center">
-                <p className="text-white/20 font-bold uppercase tracking-widest">
+                <p className="text-white/20 font-bold uppercase ">
                   No pending requests
                 </p>
               </Card>
@@ -325,7 +325,7 @@ export const ApprovalsPage = () => {
 
         {/* History */}
         <div className="space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 flex items-center gap-3">
+          <h2 className="text-[10px] font-bold uppercase  text-white/40 flex items-center gap-3">
             <Clock size={16} /> Recent History
           </h2>
           <div className="space-y-4">
@@ -335,11 +335,11 @@ export const ApprovalsPage = () => {
                 className="bg-white/5 border-white/10 p-4 opacity-60"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                  <span className="text-[8px] font-bold text-white/40 uppercase ">
                     {req.childName}
                   </span>
                   <span
-                    className={`text-[8px] font-bold uppercase tracking-widest ${req.status === "approved" ? "text-plaeen-green" : "text-red-500"}`}
+                    className={`text-[8px] font-bold uppercase  ${req.status === "approved" ? "text-plaeen-green" : "text-red-500"}`}
                   >
                     {req.status}
                   </span>
@@ -355,7 +355,7 @@ export const ApprovalsPage = () => {
                           ? `Overtime: ${req.data.overtimeMinutes}m`
                           : req.data.teamName}
                 </p>
-                <p className="text-[8px] text-white/20 uppercase tracking-widest mt-2">
+                <p className="text-[8px] text-white/20 uppercase  mt-2">
                   {format(req.createdAt.toDate(), "MMM d, HH:mm")}
                 </p>
               </Card>

@@ -282,7 +282,7 @@ export const OnboardingPage = () => {
               <h1 className="text-5xl font-bold text-white uppercase tracking-tighter mb-4">
                 Add Your <span className="text-plaeen-green">Kids</span>
               </h1>
-              <p className="text-white/40 font-bold tracking-[0.3em] text-xs">
+              <p className="text-white/40 font-bold  text-xs">
                 You can always adjust these settings later in your dashboard.
               </p>
             </div>
@@ -290,7 +290,7 @@ export const OnboardingPage = () => {
             <div className="grid lg:grid-cols-2 gap-12 mb-12">
               <div className="space-y-8">
                 <div className="space-y-4">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">
+                  <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
                     Kid's Name
                   </label>
                   <input
@@ -300,12 +300,12 @@ export const OnboardingPage = () => {
                       setCurrentKid({ ...currentKid, name: e.target.value })
                     }
                     placeholder="e.g. MAX"
-                    className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                    className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase "
                   />
                 </div>
 
                 <div className="space-y-4">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">
+                  <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
                     Unique Username
                   </label>
                   <input
@@ -325,7 +325,7 @@ export const OnboardingPage = () => {
                     }}
                     placeholder="e.g. CYBER_MAX"
                     className={cn(
-                      "w-full rounded-xl border-2 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:outline-none transition-all uppercase tracking-widest",
+                      "w-full rounded-xl border-2 bg-white/5 px-6 py-4 text-white font-bold placeholder:text-white/10 focus:outline-none transition-all uppercase ",
                       error && currentKid.username
                         ? "border-red-500 focus:border-red-500"
                         : "border-white/5 focus:border-plaeen-green",
@@ -335,7 +335,7 @@ export const OnboardingPage = () => {
 
                 <div className="flex gap-6">
                   <div className="space-y-4 flex-1">
-                    <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">
+                    <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
                       Date of Birth
                     </label>
                     <input
@@ -347,11 +347,11 @@ export const OnboardingPage = () => {
                           birthDate: e.target.value,
                         })
                       }
-                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest"
+                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase "
                     />
                   </div>
                   <div className="space-y-4 flex-1">
-                    <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">
+                    <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
                       Allowance (Min)
                     </label>
                     <div className="flex gap-2">
@@ -364,7 +364,7 @@ export const OnboardingPage = () => {
                             dailyAllowance: parseInt(e.target.value),
                           })
                         }
-                        className="w-32 rounded-xl border-2 border-white/5 bg-white/5 px-4 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="w-32 rounded-xl border-2 border-white/5 bg-white/5 px-4 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase  [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                       <select
                         value={currentKid.allowanceType}
@@ -374,7 +374,7 @@ export const OnboardingPage = () => {
                             allowanceType: e.target.value as any,
                           })
                         }
-                        className="flex-1 rounded-xl border-2 border-white/5 bg-white/5 px-4 py-4 text-xs font-bold uppercase tracking-widest text-white focus:border-plaeen-green focus:outline-none cursor-pointer transition-all appearance-none backdrop-blur-xl"
+                        className="flex-1 rounded-xl border-2 border-white/5 bg-white/5 px-4 py-4 text-xs font-bold uppercase  text-white focus:border-plaeen-green focus:outline-none cursor-pointer transition-all appearance-none backdrop-blur-xl"
                         style={{
                           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                           backgroundRepeat: "no-repeat",
@@ -406,7 +406,7 @@ export const OnboardingPage = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="block text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green">
+                  <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
                     Restricted Days (No Play)
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -415,7 +415,7 @@ export const OnboardingPage = () => {
                         key={day}
                         onClick={() => toggleDay(day)}
                         className={cn(
-                          "px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border-2",
+                          "px-4 py-2 rounded-lg text-[10px] font-bold uppercase  transition-all border-2",
                           currentKid.restrictedDays.includes(day)
                             ? "bg-red-500/20 border-red-500 text-red-500"
                             : "bg-white/5 border-white/5 text-white/40 hover:border-white/20",
@@ -431,10 +431,10 @@ export const OnboardingPage = () => {
                   <div className="flex items-center gap-4">
                     <Shield className="text-plaeen-green" size={24} />
                     <div>
-                      <p className="text-xs font-bold text-white uppercase tracking-widest">
+                      <p className="text-xs font-bold text-white uppercase ">
                         Parental Control
                       </p>
-                      <p className="text-[10px] text-white/40 uppercase tracking-widest mt-1">
+                      <p className="text-[10px] text-white/40 uppercase  mt-1">
                         Restricted content & approvals
                       </p>
                     </div>
@@ -463,7 +463,7 @@ export const OnboardingPage = () => {
                 </div>
 
                 {error && (
-                  <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest text-center">
+                  <p className="text-red-500 text-[10px] font-bold uppercase  text-center">
                     {error}
                   </p>
                 )}
@@ -478,7 +478,7 @@ export const OnboardingPage = () => {
               </div>
 
               <div className="space-y-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
+                <h3 className="text-[10px] font-bold uppercase  text-white/40">
                   Family ({kids.length})
                 </h3>
                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
@@ -492,10 +492,10 @@ export const OnboardingPage = () => {
                           {k.name[0]}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white uppercase tracking-widest">
+                          <p className="text-sm font-bold text-white uppercase ">
                             {k.name}
                           </p>
-                          <p className="text-[10px] text-white/40 uppercase tracking-widest">
+                          <p className="text-[10px] text-white/40 uppercase ">
                             @{k.username}
                           </p>
                         </div>
@@ -511,7 +511,7 @@ export const OnboardingPage = () => {
                   {kids.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center py-20 text-center opacity-20">
                       <Sparkles size={48} className="mb-4" />
-                      <p className="text-xs font-bold uppercase tracking-widest">
+                      <p className="text-xs font-bold uppercase ">
                         Your family is empty
                       </p>
                     </div>
@@ -523,13 +523,13 @@ export const OnboardingPage = () => {
             <div className="max-w-md mx-auto space-y-4 border-t border-white/5 pt-12">
               <Button
                 onClick={() => setStep(2)}
-                className="w-full py-8 text-xl font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+                className="w-full py-8 text-xl font-bold uppercase  shadow-[0_0_30px_rgba(118,233,0,0.3)]"
               >
                 Continue <ArrowRight size={24} className="ml-2" />
               </Button>
               <button
                 onClick={skipOnboarding}
-                className="w-full text-[10px] font-bold text-white/20 hover:text-white uppercase tracking-[0.3em] transition-colors"
+                className="w-full text-[10px] font-bold text-white/20 hover:text-white uppercase  transition-colors"
               >
                 Skip for now
               </button>
@@ -546,7 +546,7 @@ export const OnboardingPage = () => {
               <h1 className="text-5xl font-bold text-white uppercase tracking-tighter mb-4">
                 Secure <span className="text-plaeen-green">Access</span>
               </h1>
-              <p className="text-white/40 font-bold uppercase tracking-[0.3em] text-xs">
+              <p className="text-white/40 font-bold uppercase  text-xs">
                 Set your 4-digit guardian PIN
               </p>
             </div>
@@ -592,7 +592,7 @@ export const OnboardingPage = () => {
               </div>
 
               {error && (
-                <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest text-center">
+                <p className="text-red-500 text-[10px] font-bold uppercase  text-center">
                   {error}
                 </p>
               )}

@@ -30,7 +30,7 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
 }) => {
   return (
     <div className="space-y-8">
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+      <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
         <Flame size={16} /> Streak & Rewards
       </h2>
       <Card className="bg-white/5 border-white/10 p-8 space-y-4">
@@ -53,7 +53,7 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
               <p className="text-xs font-bold text-white uppercase tracking-tight">
                 Current Streak
               </p>
-              <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest mt-1">
+              <p className="text-[8px] text-white/40 font-bold uppercase  mt-1">
                 Last Update:{" "}
                 {lastUpdate
                   ? format(new Date(lastUpdate), "MMM d, HH:mm")
@@ -85,7 +85,7 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">
+                <label className="text-[9px] font-bold uppercase  text-white/40">
                   Streak Target
                 </label>
                 <span className="text-xs font-black text-plaeen-green uppercase">
@@ -108,7 +108,7 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
 
             <div className="space-y-2 pt-2">
               <div className="flex justify-between items-center">
-                <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">
+                <label className="text-[9px] font-bold uppercase  text-white/40">
                   Reward Bonus
                 </label>
                 <span className="text-xs font-black text-plaeen-green uppercase">

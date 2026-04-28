@@ -390,7 +390,7 @@ export const ParentDashboard = () => {
           </Link>
           <Button
             onClick={() => setIsAddKidOpen(true)}
-            className="bg-plaeen-green text-black font-bold uppercase tracking-widest px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
+            className="bg-plaeen-green text-black font-bold uppercase  px-8 py-6 shadow-[0_0_20px_rgba(118,233,0,0.4)]"
           >
             <Plus size={20} className="mr-2" /> Register Kid
           </Button>
@@ -412,7 +412,7 @@ export const ParentDashboard = () => {
                   <Bell size={24} className="text-white animate-bounce" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">
+                  <p className="text-[10px] font-bold text-white/60 uppercase  mb-1">
                     {activeAlert.childName} Needs Attention
                   </p>
                   <p className="text-lg font-bold text-white tracking-tight">
@@ -451,7 +451,7 @@ export const ParentDashboard = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <h3>{formatName(kid.displayName)}</h3>
                         {kid.screenTime?.isSessionActive && (
-                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-[8px] font-bold text-plaeen-green uppercase tracking-widest animate-pulse">
+                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-[8px] font-bold text-plaeen-green uppercase  animate-pulse">
                             <span className="h-1.5 w-1.5 rounded-full bg-plaeen-green"></span>
                             Live
                           </span>
@@ -473,7 +473,7 @@ export const ParentDashboard = () => {
                             );
                             if (currentOvertime > 0) {
                               return (
-                                <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[8px] font-bold text-red-500 uppercase tracking-widest">
+                                <span className="px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-[8px] font-bold text-red-500 uppercase ">
                                   Overtime: {currentOvertime}m
                                 </span>
                               );
@@ -482,7 +482,7 @@ export const ParentDashboard = () => {
                           })()}
                       </div>
                       <div className="flex flex-wrap gap-4">
-                        <div className="flex items-center gap-2 text-[11px] font-medium text-white/60 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
+                        <div className="flex items-center gap-2 text-[11px] font-medium text-white/60 uppercase  bg-white/5 px-3 py-1 rounded-full">
                           <Clock size={12} className="text-plaeen-green" />
                           {(() => {
                             const usedToday = kid.screenTime?.usedToday || 0;
@@ -502,7 +502,7 @@ export const ParentDashboard = () => {
                           })()}
                           m Remaining
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] font-medium text-white/60 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
+                        <div className="flex items-center gap-2 text-[11px] font-medium text-white/60 uppercase  bg-white/5 px-3 py-1 rounded-full">
                           <Gamepad2 size={12} className="text-plaeen-green" />
                           {(kid.allowedGames || []).length} Games Allowed
                         </div>
@@ -540,7 +540,7 @@ export const ParentDashboard = () => {
                           setRepairKid(kid);
                           setRepairUsername("");
                         }}
-                        className="bg-amber-500 text-black font-bold uppercase tracking-widest text-[8px] px-4 py-2"
+                        className="bg-amber-500 text-black font-bold uppercase  text-[8px] px-4 py-2"
                       >
                         Set Username
                       </Button>
@@ -551,7 +551,7 @@ export const ParentDashboard = () => {
             ))}
             {kids.length === 0 && (
               <Card className="bg-white/5 border-dashed border-white/10 p-12 text-center">
-                <p className="text-white/20 font-bold uppercase tracking-widest">
+                <p className="text-white/20 font-bold uppercase ">
                   No kid accounts registered yet
                 </p>
               </Card>
@@ -591,7 +591,7 @@ export const ParentDashboard = () => {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-[8px] font-bold text-plaeen-green uppercase tracking-widest mb-1">
+                      <p className="text-[8px] font-bold text-plaeen-green uppercase  mb-1">
                         {req.childName}
                       </p>
                       <p className="text-xs font-bold text-white uppercase tracking-tight">
@@ -614,7 +614,7 @@ export const ParentDashboard = () => {
                       <Button
                         size="sm"
                         onClick={() => navigate("/parent/approvals")}
-                        className="w-full bg-white/5 text-white/40 border border-white/10 hover:border-plaeen-green hover:text-plaeen-green py-2 font-bold uppercase tracking-widest text-[8px]"
+                        className="w-full bg-white/5 text-white/40 border border-white/10 hover:border-plaeen-green hover:text-plaeen-green py-2 font-bold uppercase  text-[8px]"
                       >
                         See Game Details
                       </Button>
@@ -624,7 +624,7 @@ export const ParentDashboard = () => {
                         <Button
                           size="sm"
                           onClick={() => setSelectedApproval(req)}
-                          className="flex-1 bg-plaeen-purple/10 text-plaeen-purple border border-plaeen-purple/20 hover:bg-plaeen-purple hover:text-white py-2 font-bold uppercase tracking-widest text-[8px]"
+                          className="flex-1 bg-plaeen-purple/10 text-plaeen-purple border border-plaeen-purple/20 hover:bg-plaeen-purple hover:text-white py-2 font-bold uppercase  text-[8px]"
                         >
                           Review & Reward
                         </Button>
@@ -634,7 +634,7 @@ export const ParentDashboard = () => {
                           onClick={() =>
                             navigate(`/parent/overtime-decision/${req.id}`)
                           }
-                          className="flex-1 bg-red-500 text-white border border-red-500/20 hover:bg-red-600 py-2 font-bold uppercase tracking-widest text-[8px] shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                          className="flex-1 bg-red-500 text-white border border-red-500/20 hover:bg-red-600 py-2 font-bold uppercase  text-[8px] shadow-[0_0_15px_rgba(239,68,68,0.3)]"
                         >
                           Handle Decision
                         </Button>
@@ -649,7 +649,7 @@ export const ParentDashboard = () => {
                                 req.data.requestedMinutes,
                               )
                             }
-                            className="flex-1 bg-plaeen-green/10 text-plaeen-green border border-plaeen-green/20 hover:bg-plaeen-green hover:text-black py-2 text-[8px] font-bold uppercase tracking-widest"
+                            className="flex-1 bg-plaeen-green/10 text-plaeen-green border border-plaeen-green/20 hover:bg-plaeen-green hover:text-black py-2 text-[8px] font-bold uppercase "
                           >
                             Approve {req.data.requestedMinutes}m
                           </Button>
@@ -684,7 +684,7 @@ export const ParentDashboard = () => {
                 </Card>
               ))}
               {approvals.length === 0 && (
-                <p className="text-center py-8 ghost-text font-bold uppercase tracking-widest border border-dashed border-white/20 rounded-2xl">
+                <p className="text-center py-8 ghost-text font-bold uppercase  border border-dashed border-white/20 rounded-2xl">
                   All clear
                 </p>
               )}
@@ -720,19 +720,19 @@ export const ParentDashboard = () => {
               {selectedApproval.type === "overtime" ? (
                 <div className="space-y-8">
                   <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20">
-                    <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-2">
+                    <p className="text-[10px] font-bold text-red-500 uppercase  mb-2">
                       {selectedApproval.childName} went overtime
                     </p>
                     <p className="text-4xl font-bold text-white tracking-tighter mb-1">
                       {selectedApproval.data.overtimeMinutes}m
                     </p>
-                    <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                    <p className="text-[10px] text-white/40 font-bold uppercase ">
                       Exceeded allowance
                     </p>
                   </div>
 
                   <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-purple block">
+                    <label className="text-[10px] font-bold uppercase  text-plaeen-purple block">
                       Extract from Allowance
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -796,7 +796,7 @@ export const ParentDashboard = () => {
                       handleApproval(selectedApproval.id, "denied")
                     }
                     variant="outline"
-                    className="w-full py-6 border-white/10 text-white/40 hover:text-white font-bold uppercase tracking-widest"
+                    className="w-full py-6 border-white/10 text-white/40 hover:text-white font-bold uppercase "
                   >
                     Forgive Overtime
                   </Button>
@@ -804,7 +804,7 @@ export const ParentDashboard = () => {
               ) : (
                 <>
                   <div className="mb-8">
-                    <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest mb-2">
+                    <p className="text-[10px] font-bold text-plaeen-green uppercase  mb-2">
                       {selectedApproval.childName} says:
                     </p>
                     <p className="text-xl font-bold text-white uppercase tracking-tight italic">
@@ -814,7 +814,7 @@ export const ParentDashboard = () => {
 
                   <div className="space-y-6">
                     <div>
-                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-purple mb-4 block">
+                      <label className="text-[10px] font-bold uppercase  text-plaeen-purple mb-4 block">
                         Allocate Screen Time Reward
                       </label>
                       <div className="flex items-center justify-between gap-4">
@@ -842,7 +842,7 @@ export const ParentDashboard = () => {
                             rewardMinutes,
                           )
                         }
-                        className="flex-1 py-6 bg-plaeen-green text-black font-bold uppercase tracking-widest"
+                        className="flex-1 py-6 bg-plaeen-green text-black font-bold uppercase "
                       >
                         Approve +{rewardMinutes}m
                       </Button>
@@ -851,7 +851,7 @@ export const ParentDashboard = () => {
                           handleApproval(selectedApproval.id, "denied")
                         }
                         variant="outline"
-                        className="flex-1 py-6 border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold uppercase tracking-widest"
+                        className="flex-1 py-6 border-red-500/20 text-red-500 hover:bg-red-500/10 font-bold uppercase "
                       >
                         Deny
                       </Button>
@@ -887,7 +887,7 @@ export const ParentDashboard = () => {
               </div>
               <form onSubmit={createKidAccount} className="space-y-6">
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-2 block">
+                  <label className="text-[10px] font-bold uppercase  text-plaeen-green mb-2 block">
                     Display Name
                   </label>
                   <input
@@ -895,12 +895,12 @@ export const ParentDashboard = () => {
                     value={newKidName}
                     onChange={(e) => setNewKidName(e.target.value)}
                     placeholder="KID'S NAME"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest text-sm"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder:text-white/10 focus:border-plaeen-green focus:outline-none transition-all uppercase  text-sm"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-2 block">
+                  <label className="text-[10px] font-bold uppercase  text-plaeen-green mb-2 block">
                     Username
                   </label>
                   <input
@@ -920,7 +920,7 @@ export const ParentDashboard = () => {
                     }}
                     placeholder="KID_USERNAME"
                     className={cn(
-                      "w-full bg-white/5 border rounded-xl p-4 text-white placeholder:text-white/10 focus:outline-none transition-all uppercase tracking-widest text-sm",
+                      "w-full bg-white/5 border rounded-xl p-4 text-white placeholder:text-white/10 focus:outline-none transition-all uppercase  text-sm",
                       usernameError
                         ? "border-red-500 focus:border-red-500"
                         : "border-white/10 focus:border-plaeen-green",
@@ -928,31 +928,31 @@ export const ParentDashboard = () => {
                     required
                   />
                   {usernameError && (
-                    <p className="text-red-500 text-[8px] font-bold uppercase tracking-widest mt-2">
+                    <p className="text-red-500 text-[8px] font-bold uppercase  mt-2">
                       {usernameError}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-plaeen-green mb-2 block">
+                  <label className="text-[10px] font-bold uppercase  text-plaeen-green mb-2 block">
                     Date of Birth
                   </label>
                   <input
                     type="date"
                     value={newKidBirthDate}
                     onChange={(e) => setNewKidBirthDate(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:border-plaeen-green focus:outline-none transition-all uppercase tracking-widest text-sm"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:border-plaeen-green focus:outline-none transition-all uppercase  text-sm"
                     required
                   />
                 </div>
                 {error && (
-                  <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest text-center">
+                  <p className="text-red-500 text-[10px] font-bold uppercase  text-center">
                     {error}
                   </p>
                 )}
                 <Button
                   type="submit"
-                  className="w-full py-6 font-bold uppercase tracking-widest"
+                  className="w-full py-6 font-bold uppercase "
                 >
                   Create Account
                 </Button>
@@ -977,7 +977,7 @@ export const ParentDashboard = () => {
                   <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
                     Set Username
                   </h2>
-                  <p className="text-amber-500 text-[10px] font-bold uppercase tracking-widest mt-1">
+                  <p className="text-amber-500 text-[10px] font-bold uppercase  mt-1">
                     Required for social features
                   </p>
                 </div>
@@ -997,7 +997,7 @@ export const ParentDashboard = () => {
                     </span>{" "}
                     will allow them to be found by friends.
                   </p>
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500 mb-2 block">
+                  <label className="text-[10px] font-bold uppercase  text-amber-500 mb-2 block">
                     New Username
                   </label>
                   <input
@@ -1017,7 +1017,7 @@ export const ParentDashboard = () => {
                     }}
                     placeholder="KID_USERNAME"
                     className={cn(
-                      "w-full bg-white/5 border rounded-xl p-4 text-white placeholder:text-white/10 focus:outline-none transition-all uppercase tracking-widest text-sm",
+                      "w-full bg-white/5 border rounded-xl p-4 text-white placeholder:text-white/10 focus:outline-none transition-all uppercase  text-sm",
                       repairUsernameError
                         ? "border-red-500 focus:border-red-500"
                         : "border-white/10 focus:border-amber-500",
@@ -1025,19 +1025,19 @@ export const ParentDashboard = () => {
                     required
                   />
                   {repairUsernameError && (
-                    <p className="text-red-500 text-[8px] font-bold uppercase tracking-widest mt-2">
+                    <p className="text-red-500 text-[8px] font-bold uppercase  mt-2">
                       {repairUsernameError}
                     </p>
                   )}
                 </div>
                 {error && (
-                  <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest text-center">
+                  <p className="text-red-500 text-[10px] font-bold uppercase  text-center">
                     {error}
                   </p>
                 )}
                 <Button
                   type="submit"
-                  className="w-full py-6 bg-amber-500 text-black font-bold uppercase tracking-widest"
+                  className="w-full py-6 bg-amber-500 text-black font-bold uppercase "
                 >
                   Update Identity
                 </Button>

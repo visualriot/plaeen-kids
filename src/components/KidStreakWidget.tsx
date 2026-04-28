@@ -50,11 +50,11 @@ export const KidStreakWidget = ({
             {currentProgress}
           </span>
         </div>
-        <h3 className="text-2xl my-2 font-black text-white uppercase tracking-wider leading-none">
+        <h3 className="text-2xl my-2 font-black text-white uppercase  ">
           {currentProgress} DAY STREAK!
         </h3>
         {remaining > 0 && (
-          <p className="text-[12px] text-white-60 tracking-[0.2em] mt-2 italic">
+          <p className="text-[12px] text-white-60  mt-2 italic">
             {remaining} more to gain reward.
           </p>
         )}

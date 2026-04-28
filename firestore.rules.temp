@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 0. Global Safety Net - DENY everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- TEMPORARY: Allow users to create their own profile ---
+    match /users/{userId} {
+      // Allow anyone to read their own profile
+      allow get: if isSignedIn() && isOwner(userId);
+      
+      // Allow authenticated users to create their own profile (for new user registration)
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      // Allow users to update their own profile
+      allow update: if isSignedIn() && isOwner(userId);
+      
+      // Allow users to delete their own profile
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    match /users_public/{userId} {
+      // Allow anyone to read public profiles
+      allow read: if isSignedIn();
+      
+      // Allow users to create their own public profile
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      // Allow users to update their own public profile
+      allow update: if isSignedIn() && isOwner(userId);
+      
+      // Allow users to delete their own public profile
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+  }
+}

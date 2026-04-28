@@ -235,7 +235,7 @@ export const TeamsPage = () => {
                 size={64}
                 className="text-white/30 group-hover:text-plaeen-green transition-colors"
               />
-              <p className="text-lg font-bold uppercase tracking-wider font-white/40 group-hover:text-plaeen-green">
+              <p className="text-lg font-bold uppercase  font-white/40 group-hover:text-plaeen-green">
                 Add new team
               </p>
             </button>
@@ -316,10 +316,10 @@ export const TeamsPage = () => {
                 </div>
 
                 <div className="flex flex-col items-center gap-1">
-                  <span className="text-2xl font-bold text-white/60 group-hover:text-white uppercase tracking-widest transition-colors text-center">
+                  <span className="text-2xl font-bold text-white/60 group-hover:text-white uppercase  transition-colors text-center">
                     {displayName}
                   </span>
-                  <span className="text-sm font-bold text-white/20 group-hover:text-white/30 uppercase tracking-widest transition-colors">
+                  <span className="text-sm font-bold text-white/20 group-hover:text-white/30 uppercase  transition-colors">
                     {team.members?.length || 0}{" "}
                     {(team.members?.length || 0) === 1 ? "Member" : "Members"}
                   </span>
@@ -350,10 +350,10 @@ export const TeamsPage = () => {
                 />
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-2xl font-bold text-white/40 group-hover:text-white uppercase tracking-widest transition-colors text-center">
+                <span className="text-2xl font-bold text-white/40 group-hover:text-white uppercase  transition-colors text-center">
                   Add New Team
                 </span>
-                <span className="text-sm font-bold text-white/10 group-hover:text-white/20 uppercase tracking-widest transition-colors">
+                <span className="text-sm font-bold text-white/10 group-hover:text-white/20 uppercase  transition-colors">
                   Join the battle
                 </span>
               </div>
@@ -386,7 +386,7 @@ export const TeamsPage = () => {
                 <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">
                   {isDeleting ? "Delete Team?" : "Leave Team?"}
                 </h2>
-                <p className="text-white/40 text-sm mb-8 font-bold uppercase tracking-widest leading-relaxed">
+                <p className="text-white/40 text-sm mb-8 font-bold uppercase  ">
                   {isDeleting
                     ? "This will permanently remove the team and all its history."
                     : "You will no longer be able to access this team's sessions and games."}
@@ -399,7 +399,7 @@ export const TeamsPage = () => {
                         : handleLeaveTeam(confirmModal.teamId)
                     }
                     className={cn(
-                      "flex-1 py-6 font-bold uppercase tracking-widest",
+                      "flex-1 py-6 font-bold uppercase ",
                       isDeleting
                         ? "bg-red-500 hover:bg-red-600 text-white"
                         : "bg-amber-500 hover:bg-amber-600 text-white",
@@ -410,7 +410,7 @@ export const TeamsPage = () => {
                   <Button
                     variant="outline"
                     onClick={() => setConfirmModal(null)}
-                    className="flex-1 border-white/10 text-white hover:bg-white/5 py-6 font-bold uppercase tracking-widest"
+                    className="flex-1 border-white/10 text-white hover:bg-white/5 py-6 font-bold uppercase "
                   >
                     Cancel
                   </Button>

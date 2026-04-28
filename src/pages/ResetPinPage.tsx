@@ -82,7 +82,7 @@ export const ResetPinPage = () => {
       <div className="min-h-screen bg-plaeen-dark flex items-center justify-center p-6">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 border-4 border-plaeen-green border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
+          <p className="text-white/40 font-bold uppercase  text-xs">
             Decrypting Protocol...
           </p>
         </div>
@@ -111,17 +111,17 @@ export const ResetPinPage = () => {
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-2">
                   PIN <span className="text-plaeen-green">Updated</span>
                 </h2>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">
+                <p className="text-white/40 text-[10px] font-bold uppercase ">
                   Access protocols have been reset
                 </p>
               </div>
-              <p className="text-white/60 text-sm font-medium leading-relaxed">
+              <p className="text-white/60 text-sm font-medium ">
                 Your new parental PIN has been successfully saved to the
                 encrypted mainframe. You can now access your profile.
               </p>
               <Button
                 onClick={() => navigate("/select-profile")}
-                className="w-full py-6 font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)] flex items-center justify-center gap-2"
+                className="w-full py-6 font-bold uppercase  shadow-[0_0_30px_rgba(118,233,0,0.3)] flex items-center justify-center gap-2"
               >
                 Go to Profile Selection <ArrowRight size={18} />
               </Button>
@@ -137,17 +137,17 @@ export const ResetPinPage = () => {
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-2">
                   Protocol <span className="text-red-500">Error</span>
                 </h2>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">
+                <p className="text-white/40 text-[10px] font-bold uppercase ">
                   Security breach or timeout
                 </p>
               </div>
-              <p className="text-red-400/80 text-sm font-bold uppercase tracking-widest">
+              <p className="text-red-400/80 text-sm font-bold uppercase ">
                 {error}
               </p>
               <Button
                 onClick={() => navigate("/select-profile")}
                 variant="outline"
-                className="w-full border-white/10 text-white/40 hover:text-white uppercase tracking-widest py-6"
+                className="w-full border-white/10 text-white/40 hover:text-white uppercase  py-6"
               >
                 Back to Logistics
               </Button>
@@ -159,7 +159,7 @@ export const ResetPinPage = () => {
                 <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-2">
                   New <span className="text-plaeen-green">PIN</span>
                 </h2>
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">
+                <p className="text-white/40 text-[10px] font-bold uppercase ">
                   Configure administrative access
                 </p>
               </div>
@@ -167,7 +167,7 @@ export const ResetPinPage = () => {
               <form onSubmit={handleReset} className="space-y-8">
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-plaeen-green uppercase tracking-[0.4em] ml-1">
+                    <label className="text-[10px] font-bold text-plaeen-green uppercase  ml-1">
                       New 4-Digit PIN
                     </label>
                     <input
@@ -178,12 +178,12 @@ export const ResetPinPage = () => {
                       onChange={(e) =>
                         setNewPin(e.target.value.replace(/\D/g, ""))
                       }
-                      className="w-full bg-white/5 border-2 border-white/5 rounded-2xl px-6 py-5 text-2xl text-center font-bold tracking-[0.5em] text-white focus:border-plaeen-green focus:outline-none transition-all placeholder:text-white/10"
+                      className="w-full bg-white/5 border-2 border-white/5 rounded-2xl px-6 py-5 text-2xl text-center font-bold  text-white focus:border-plaeen-green focus:outline-none transition-all placeholder:text-white/10"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-plaeen-green uppercase tracking-[0.4em] ml-1">
+                    <label className="text-[10px] font-bold text-plaeen-green uppercase  ml-1">
                       Confirm PIN
                     </label>
                     <input
@@ -194,7 +194,7 @@ export const ResetPinPage = () => {
                       onChange={(e) =>
                         setConfirmPin(e.target.value.replace(/\D/g, ""))
                       }
-                      className="w-full bg-white/5 border-2 border-white/5 rounded-2xl px-6 py-5 text-2xl text-center font-bold tracking-[0.5em] text-white focus:border-plaeen-green focus:outline-none transition-all placeholder:text-white/10"
+                      className="w-full bg-white/5 border-2 border-white/5 rounded-2xl px-6 py-5 text-2xl text-center font-bold  text-white focus:border-plaeen-green focus:outline-none transition-all placeholder:text-white/10"
                     />
                   </div>
                 </div>
@@ -202,7 +202,7 @@ export const ResetPinPage = () => {
                 <Button
                   type="submit"
                   disabled={isSubmitting || newPin.length !== 4}
-                  className="w-full py-6 font-bold uppercase tracking-widest shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+                  className="w-full py-6 font-bold uppercase  shadow-[0_0_30px_rgba(118,233,0,0.3)]"
                 >
                   {isSubmitting ? "Updating Core..." : "Update Parental PIN"}
                 </Button>

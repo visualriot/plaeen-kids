@@ -298,7 +298,7 @@ export const ParentActivityPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <button
         onClick={() => navigate("/parent-dashboard")}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase tracking-widest text-[10px] mb-8 transition-colors"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase  text-[10px] mb-8 transition-colors"
       >
         <ArrowLeft size={14} /> Back to Guardian Hub
       </button>
@@ -307,7 +307,7 @@ export const ParentActivityPage = () => {
         <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
           Activity <span className="text-plaeen-green">Log</span>
         </h1>
-        <p className="text-white/40 font-bold uppercase tracking-[0.4em] text-xs mt-2">
+        <p className="text-white/40 font-bold uppercase  text-xs mt-2">
           Real-time Monitoring & History
         </p>
       </div>
@@ -315,7 +315,7 @@ export const ParentActivityPage = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2 space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
               <Bell size={16} />{" "}
               {filterByType === "time_warning"
                 ? "Warning History"
@@ -328,7 +328,7 @@ export const ParentActivityPage = () => {
               <button
                 onClick={markAllAsRead}
                 disabled={notifications.filter((n) => !n.read).length === 0}
-                className="px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest bg-white/5 border border-white/10 text-white/40 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+                className="px-3 py-2 rounded-lg text-[9px] font-bold uppercase  bg-white/5 border border-white/10 text-white/40 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all"
               >
                 Mark All Read
               </button>
@@ -340,9 +340,7 @@ export const ParentActivityPage = () => {
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${sortBy === "date" ? "bg-plaeen-green text-black" : "text-white/40 hover:text-white"}`}
                 >
                   <Clock size={12} />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">
-                    Date
-                  </span>
+                  <span className="text-[9px] font-bold uppercase ">Date</span>
                   {sortBy === "date" && (
                     <span className="text-[8px]">
                       {sortOrder === "asc" ? "↑" : "↓"}
@@ -355,9 +353,7 @@ export const ParentActivityPage = () => {
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${sortBy === "kid" ? "bg-plaeen-green text-black" : "text-white/40 hover:text-white"}`}
                 >
                   <User size={12} />
-                  <span className="text-[9px] font-bold uppercase tracking-widest">
-                    Kid
-                  </span>
+                  <span className="text-[9px] font-bold uppercase ">Kid</span>
                   {sortBy === "kid" && (
                     <span className="text-[8px]">
                       {sortOrder === "asc" ? "↑" : "↓"}
@@ -370,7 +366,7 @@ export const ParentActivityPage = () => {
                 <select
                   value={currentFilterValue}
                   onChange={(e) => handleFilterChange(e.target.value)}
-                  className="appearance-none bg-white/5 border border-white/10 text-white text-[9px] font-bold uppercase tracking-widest pl-8 pr-10 py-2 rounded-lg focus:outline-none focus:border-plaeen-green transition-all cursor-pointer hover:bg-white/10"
+                  className="appearance-none bg-white/5 border border-white/10 text-white text-[9px] font-bold uppercase  pl-8 pr-10 py-2 rounded-lg focus:outline-none focus:border-plaeen-green transition-all cursor-pointer hover:bg-white/10"
                 >
                   <option value="all" className="bg-[#0A0514] text-white">
                     All Activity
@@ -425,7 +421,7 @@ export const ParentActivityPage = () => {
                   onClick={() => toggleGroup(group.title)}
                   className="w-full flex items-center gap-4 group"
                 >
-                  <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] whitespace-nowrap group-hover:text-plaeen-green transition-colors">
+                  <span className="text-[10px] font-bold text-white/20 uppercase  whitespace-nowrap group-hover:text-plaeen-green transition-colors">
                     {group.title}
                   </span>
                   <div className="h-px w-full bg-white/5 group-hover:bg-plaeen-green/20 transition-colors" />
@@ -472,10 +468,10 @@ export const ParentActivityPage = () => {
                               </div>
                               <div>
                                 <div className="flex items-center gap-3 mb-1">
-                                  <span className="text-[10px] font-bold text-plaeen-green uppercase tracking-widest">
+                                  <span className="text-[10px] font-bold text-plaeen-green uppercase ">
                                     {notif.childName}
                                   </span>
-                                  <span className="text-[8px] text-white/20 uppercase tracking-widest">
+                                  <span className="text-[8px] text-white/20 uppercase ">
                                     •{" "}
                                     {notif.createdAt
                                       ? format(
@@ -507,16 +503,16 @@ export const ParentActivityPage = () => {
                                                   `/parent/overtime-decision/${targetId}`,
                                                 );
                                               }}
-                                              className="bg-plaeen-green text-black text-[9px] font-bold uppercase tracking-widest px-4 py-2 h-auto"
+                                              className="bg-plaeen-green text-black text-[9px] font-bold uppercase  px-4 py-2 h-auto"
                                             >
                                               Handle Decision
                                             </Button>
-                                            <span className="text-[8px] font-bold text-red-500 uppercase tracking-widest animate-pulse">
+                                            <span className="text-[8px] font-bold text-red-500 uppercase  animate-pulse">
                                               Action Required
                                             </span>
                                           </div>
                                         ) : (
-                                          <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">
+                                          <p className="text-[10px] font-bold text-white/60 uppercase ">
                                             Status:{" "}
                                             <span className="text-plaeen-green">
                                               {notif.decision?.message ||
@@ -543,12 +539,12 @@ export const ParentActivityPage = () => {
 
             {groupedNotifications.length === 0 && (
               <Card className="bg-white/5 border-dashed border-white/10 p-12 text-center">
-                <p className="text-white/20 font-bold uppercase tracking-widest">
+                <p className="text-white/20 font-bold uppercase ">
                   No activity matches your filters
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="mt-4 text-plaeen-green text-[10px] font-bold uppercase tracking-widest hover:underline"
+                  className="mt-4 text-plaeen-green text-[10px] font-bold uppercase  hover:underline"
                 >
                   Clear all filters
                 </button>
@@ -558,13 +554,13 @@ export const ParentActivityPage = () => {
         </div>
 
         <div className="space-y-8">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 flex items-center gap-3">
+          <h2 className="text-[10px] font-bold uppercase  text-white/40 flex items-center gap-3">
             <Clock size={16} /> Summary
           </h2>
 
           <div className="space-y-6">
             <Card className="bg-white/5 border-white/10 p-8">
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-6">
+              <p className="text-[10px] font-bold text-white/20 uppercase  mb-6">
                 Total Sessions Today
               </p>
               <div className="space-y-4">
@@ -574,10 +570,10 @@ export const ParentActivityPage = () => {
                     className="flex justify-between items-end border-b border-white/5 pb-4 last:border-0 last:pb-0"
                   >
                     <div>
-                      <p className="text-xs font-bold text-white uppercase tracking-widest">
+                      <p className="text-xs font-bold text-white uppercase ">
                         {kid.displayName}
                       </p>
-                      <p className="text-[10px] text-white/40 uppercase tracking-widest">
+                      <p className="text-[10px] text-white/40 uppercase ">
                         {kid.sessionsToday} Sessions
                       </p>
                     </div>
@@ -585,7 +581,7 @@ export const ParentActivityPage = () => {
                       <p className="text-2xl font-bold text-plaeen-green">
                         {kid.totalMinutesPlayedToday}m
                       </p>
-                      <p className="text-[8px] text-white/20 uppercase tracking-widest">
+                      <p className="text-[8px] text-white/20 uppercase ">
                         Played Today
                       </p>
                     </div>
@@ -600,7 +596,7 @@ export const ParentActivityPage = () => {
             </Card>
 
             <Card className="bg-white/5 border-white/10 p-8">
-              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-6">
+              <p className="text-[10px] font-bold text-white/20 uppercase  mb-6">
                 Warnings Triggered (30d)
               </p>
               <div className="space-y-4">
@@ -616,10 +612,10 @@ export const ParentActivityPage = () => {
                     className="w-full flex justify-between items-center group hover:bg-white/5 p-2 -m-2 rounded-xl transition-all"
                   >
                     <div className="text-left">
-                      <p className="text-xs font-bold text-white uppercase tracking-widest group-hover:text-plaeen-green transition-colors">
+                      <p className="text-xs font-bold text-white uppercase  group-hover:text-plaeen-green transition-colors">
                         {kid.displayName}
                       </p>
-                      <p className="text-[8px] text-white/20 uppercase tracking-widest">
+                      <p className="text-[8px] text-white/20 uppercase ">
                         Click to view history
                       </p>
                     </div>

@@ -409,7 +409,7 @@ export const FriendsPage = () => {
 
       {message && (
         <div
-          className={`mb-8 p-4 rounded-xl border font-bold uppercase tracking-widest text-xs ${
+          className={`mb-8 p-4 rounded-xl border font-bold uppercase  text-xs ${
             message.type === "success"
               ? "bg-plaeen-green/10 border-plaeen-green/20 text-plaeen-green"
               : "bg-red-500/10 border-red-500/20 text-red-400"
@@ -457,7 +457,7 @@ export const FriendsPage = () => {
                         <p className="font-bold text-white uppercase tracking-tight">
                           {formatName(u.displayName)}
                         </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-white/40 font-bold uppercase ">
                           @{u.username}
                         </p>
                       </div>
@@ -505,7 +505,7 @@ export const FriendsPage = () => {
                         <p className="font-bold text-white uppercase tracking-tight">
                           {formatName(friend.displayName)}
                         </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                        <p className="text-[10px] text-white/40 font-bold uppercase ">
                           @{friend.username}
                         </p>
                       </div>
@@ -527,7 +527,7 @@ export const FriendsPage = () => {
         <aside className="space-y-8">
           {confirmDelete && (
             <Card className="bg-red-500/10 border-red-500/20">
-              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">
+              <h3 className="text-sm font-bold text-white uppercase  mb-4">
                 Remove Friend?
               </h3>
               <p className="text-xs text-white/60 mb-6">
@@ -593,7 +593,7 @@ export const FriendsPage = () => {
                           )}
                         </p>
                         {!isIncoming && (
-                          <span className="text-[8px] font-bold uppercase tracking-widest text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">
+                          <span className="text-[8px] font-bold uppercase  text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">
                             Pending
                           </span>
                         )}

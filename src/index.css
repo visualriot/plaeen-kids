@@ -18,6 +18,10 @@
   font-display: swap;
 }
 
+:root {
+  color-scheme: dark;
+}
+
 @theme {
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Geist", sans-serif;
@@ -32,7 +36,7 @@
 
 @layer base {
   body {
-    @apply bg-plaeen-dark text-white font-sans antialiased selection:bg-plaeen-green selection:text-black;
+    @apply bg-plaeen-dark font-sans antialiased;
     background-image:
       radial-gradient(circle at 50% -20%, #2d1b4d 0%, #0a0514 100%),
       radial-gradient(
@@ -48,51 +52,42 @@
     background-attachment: fixed;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-black tracking-tight;
-  }
-
   h1 {
-    @apply text-4xl md:text-6xl leading-none tracking-wider;
+    @apply text-4xl md:text-6xl  font-bold tracking-wider;
     font-family: "Abolition", sans-serif;
   }
   h2 {
-    @apply text-[12px] leading-tight font-bold uppercase tracking-[0.4em] text-plaeen-green;
+    @apply text-[12px]  font-bold  text-plaeen-green;
   }
   h3 {
-    @apply text-2xl font-bold text-white uppercase tracking-tight;
+    @apply text-2xl font-bold text-white uppercase;
   }
   h4 {
     @apply text-xl md:text-2xl;
   }
 
+  h5 {
+    @apply text-neutral-400;
+  }
+
   p {
-    @apply leading-relaxed text-white/80;
+    @apply text-neutral-300;
   }
 
   label {
-    @apply block text-[11px] font-semibold text-white/50 uppercase tracking-[0.3em];
-  }
-
-  p {
-    @apply text-[11px] text-white/60;
+    @apply block text-[11px] font-semibold text-white/50 uppercase;
   }
 
   .ghost-text {
-    @apply text-sm text-white/30 tracking-wider uppercase font-semibold;
+    @apply text-sm text-neutral-500 uppercase font-semibold;
   }
 
   .note {
-    @apply text-base text-white/50 mt-2 tracking-wider font-normal font-sans;
+    @apply text-base text-neutral-400 mt-2 font-normal font-sans;
   }
 
   .link {
-    @apply font-medium tracking-wide text-sm text-white/20 hover:text-plaeen-green/80 transition-colors;
+    @apply font-medium text-sm text-neutral-600 hover:text-plaeen-green/80 transition-colors;
   }
 }
 
@@ -102,6 +97,12 @@
 
 button {
   cursor: pointer;
+}
+
+button {
+  color: inherit;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .neon-glow {
@@ -119,6 +120,8 @@ button {
 .neon-glow-strong {
   box-shadow: 0 0 40px rgba(118, 233, 0, 0.5);
 }
+
+/* SCROLLBARS */
 
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -172,6 +175,22 @@ button {
   scrollbar-width: none;
 }
 
+.game-details-modal::-webkit-scrollbar {
+  width: 8px;
+}
+.game-details-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+.game-details-modal::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 4px;
+}
+.game-details-modal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ANIMATIONS */
+
 @keyframes blink-glow {
   0%,
   100% {
@@ -186,18 +205,4 @@ button {
 
 .animate-blink-glow {
   animation: blink-glow 2s infinite;
-}
-
-.game-details-modal::-webkit-scrollbar {
-  width: 8px;
-}
-.game-details-modal::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-}
-.game-details-modal::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
-  border-radius: 4px;
-}
-.game-details-modal::-webkit-scrollbar-thumb:hover {
-  background: #555;
 }

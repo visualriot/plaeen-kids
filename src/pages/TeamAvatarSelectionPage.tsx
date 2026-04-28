@@ -92,7 +92,7 @@ export const TeamAvatarSelectionPage = () => {
     <div className="mx-auto max-w-6xl px-6 py-20">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase tracking-widest text-xs mb-12"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase  text-xs mb-12"
       >
         <ChevronLeft size={16} /> Back
       </button>
@@ -101,7 +101,7 @@ export const TeamAvatarSelectionPage = () => {
         <h1 className="text-6xl font-bold text-white uppercase tracking-tighter mb-4">
           Team <span className="text-plaeen-green">Avatar</span>
         </h1>
-        <p className="text-sm font-bold text-white/40 uppercase tracking-widest">
+        <p className="text-sm font-bold text-white/40 uppercase ">
           Choose an icon for your squad
         </p>
       </div>
@@ -109,7 +109,7 @@ export const TeamAvatarSelectionPage = () => {
       <div className="space-y-16">
         {categories.map((category) => (
           <section key={category.name}>
-            <h2 className="text-plaeen-green font-bold uppercase tracking-[0.4em] text-xs mb-8">
+            <h2 className="text-plaeen-green font-bold uppercase  text-xs mb-8">
               {category.name}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-4">

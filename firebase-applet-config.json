@@ -1,10 +1,10 @@
 {
-  "projectId": "gen-lang-client-0438205062",
-  "appId": "1:168215130489:web:96b155678d31ddc6477fa8",
-  "apiKey": "AIzaSyAVgCBAP_7y0JdQqYVR15U6hTHyAGJacAw",
-  "authDomain": "gen-lang-client-0438205062.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-10a474a9-8ded-4e45-b26f-a00e228d9be4",
-  "storageBucket": "gen-lang-client-0438205062.firebasestorage.app",
-  "messagingSenderId": "168215130489",
-  "measurementId": ""
+  "projectId": "plaeen-kids",
+  "appId": "1:94416002095:web:b99da26110814bd2bc3ada",
+  "apiKey": "AIzaSyArPppnscev6TRrK2vRPSwuKIgZlsYah7U",
+  "authDomain": "plaeen-kids.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "plaeen-kids.firebasestorage.app",
+  "messagingSenderId": "94416002095",
+  "measurementId": "G-RS73P3MJ01"
 }

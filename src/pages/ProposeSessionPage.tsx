@@ -146,7 +146,7 @@ export const ProposeSessionPage = () => {
 
   if (loading)
     return (
-      <div className="flex h-screen items-center justify-center text-white font-bold uppercase tracking-widest">
+      <div className="flex h-screen items-center justify-center text-white font-bold uppercase ">
         Loading Proposal Intel...
       </div>
     );
@@ -165,7 +165,7 @@ export const ProposeSessionPage = () => {
             <h1 className="text-4xl md:text-6xl font-bold text-white uppercase tracking-tighter">
               Propose <span className="text-plaeen-green">Session</span>
             </h1>
-            <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mt-2">
+            <p className="text-white/40 font-bold uppercase  text-[10px] mt-2">
               Team: <span className="text-white">{team?.name}</span>
             </p>
           </div>
@@ -182,7 +182,7 @@ export const ProposeSessionPage = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-plaeen-dark to-transparent opacity-60" />
                 <div className="absolute bottom-6 left-6">
-                  <p className="text-[10px] font-bold text-plaeen-green uppercase tracking-[0.3em] mb-1">
+                  <p className="text-[10px] font-bold text-plaeen-green uppercase  mb-1">
                     Selected Game
                   </p>
                   <h3 className="text-2xl font-bold text-white uppercase tracking-tight">
@@ -192,7 +192,7 @@ export const ProposeSessionPage = () => {
               </div>
             ) : (
               <div className="aspect-video rounded-3xl bg-white/5 border border-dashed border-white/10 flex items-center justify-center">
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest text-center px-4">
+                <p className="text-[10px] font-bold text-white/20 uppercase  text-center px-4">
                   Select a game
                 </p>
               </div>
@@ -204,7 +204,7 @@ export const ProposeSessionPage = () => {
                   <CalendarIcon size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  <p className="text-[10px] font-bold text-white/40 uppercase ">
                     Target Date
                   </p>
                   <p className="text-lg font-bold text-white uppercase">
@@ -219,7 +219,7 @@ export const ProposeSessionPage = () => {
                   <Clock size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                  <p className="text-[10px] font-bold text-white/40 uppercase ">
                     Time Slot
                   </p>
                   <p className="text-lg font-bold text-white uppercase">
@@ -232,7 +232,7 @@ export const ProposeSessionPage = () => {
 
             {/* Team Readiness */}
             <div className="space-y-4">
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 px-2">
+              <h2 className="text-[10px] font-bold uppercase  text-white/40 px-2">
                 Team Readiness
               </h2>
               <div className="grid gap-3">
@@ -288,10 +288,10 @@ export const ProposeSessionPage = () => {
             {/* Game Selection */}
             <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-plaeen-green flex items-center gap-3">
+                <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
                   <Gamepad2 size={16} /> Choose Your Game
                 </h2>
-                <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-white/20 uppercase ">
                   {teamGames.length} Available
                 </span>
               </div>
@@ -333,7 +333,7 @@ export const ProposeSessionPage = () => {
 
             {/* Duration Selector */}
             <section>
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 mb-6">
+              <h2 className="text-[10px] font-bold uppercase  text-white/40 mb-6">
                 Session Duration
               </h2>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
@@ -342,7 +342,7 @@ export const ProposeSessionPage = () => {
                     key={duration}
                     onClick={() => setSessionDuration(duration)}
                     className={cn(
-                      "py-6 rounded-2xl border-2 font-bold transition-all uppercase tracking-widest",
+                      "py-6 rounded-2xl border-2 font-bold transition-all uppercase ",
                       sessionDuration === duration
                         ? "bg-plaeen-purple border-plaeen-purple text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]"
                         : "bg-white/5 border-white/5 text-white/40 hover:border-white/20",
@@ -359,7 +359,7 @@ export const ProposeSessionPage = () => {
             {/* Note Section */}
             <section>
               <div className="relative group">
-                <label className="absolute -top-3 left-8 px-3 bg-plaeen-dark text-[10px] font-bold text-plaeen-green uppercase tracking-[0.4em] z-10">
+                <label className="absolute -top-3 left-8 px-3 bg-plaeen-dark text-[10px] font-bold text-plaeen-green uppercase  z-10">
                   Add Session Goal
                 </label>
                 <textarea
@@ -375,7 +375,7 @@ export const ProposeSessionPage = () => {
               <Button
                 onClick={handlePropose}
                 disabled={!selectedGame}
-                className="w-full py-10 text-2xl font-bold uppercase tracking-[0.2em] shadow-[0_0_50px_rgba(118,233,0,0.3)] bg-plaeen-green text-black hover:scale-[1.02] transition-transform group"
+                className="w-full py-10 text-2xl font-bold uppercase  shadow-[0_0_50px_rgba(118,233,0,0.3)] bg-plaeen-green text-black hover:scale-[1.02] transition-transform group"
               >
                 <Sparkles
                   size={32}

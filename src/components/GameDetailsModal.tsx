@@ -101,7 +101,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                       {game.name}
                     </h1>
                     {game.releaseDate && (
-                      <p className="text-xs text-white/50 font-semibold uppercase tracking-wider">
+                      <p className="text-xs text-white/50 font-semibold uppercase ">
                         Released: {new Date(game.releaseDate).getFullYear()}
                       </p>
                     )}
@@ -120,10 +120,10 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 {game.description &&
                   game.description !== "No description available." && (
                     <div>
-                      <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3">
+                      <h2 className="text-sm font-semibold text-white/60 uppercase  mb-3">
                         About
                       </h2>
-                      <p className="text-white/70 leading-relaxed text-sm">
+                      <p className="text-white/70  text-sm">
                         {game.description}
                       </p>
                     </div>
@@ -132,7 +132,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 {/* Platforms Section */}
                 {game.platforms && game.platforms.length > 0 && (
                   <div>
-                    <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-white/60 uppercase  mb-3 flex items-center gap-2">
                       <Gamepad2 size={16} className="text-white/40" /> Platforms
                     </h2>
                     <div className="flex flex-wrap gap-2">
@@ -152,7 +152,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 {/* Genres Section */}
                 {game.genres && game.genres.length > 0 && (
                   <div>
-                    <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-white/60 uppercase  mb-3 flex items-center gap-2">
                       <Tag size={16} className="text-white/40" /> Genres
                     </h2>
                     <div className="flex flex-wrap gap-2">
@@ -172,7 +172,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 {/* Tags */}
                 {game.tags && game.tags.length > 0 && (
                   <div>
-                    <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3">
+                    <h2 className="text-sm font-semibold text-white/60 uppercase  mb-3">
                       Tags
                     </h2>
                     <div className="flex flex-wrap gap-3">
@@ -194,7 +194,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 {/* Teams Playing This Game */}
                 {teams && teams.length > 0 && (
                   <div>
-                    <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-white/60 uppercase  mb-3 flex items-center gap-2">
                       <Gamepad2 size={16} className="text-white/40" /> Playing
                       with Teams
                     </h2>
@@ -247,7 +247,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                         {game.name}
                       </h1>
                       {game.releaseDate && (
-                        <p className="text-xs text-white/50 font-semibold uppercase tracking-wider">
+                        <p className="text-xs text-white/50 font-semibold uppercase ">
                           Released: {new Date(game.releaseDate).getFullYear()}
                         </p>
                       )}
@@ -266,10 +266,10 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                   {game.description &&
                     game.description !== "No description available." && (
                       <div>
-                        <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider mb-3">
+                        <h2 className="text-sm font-semibold text-white/60 uppercase  mb-3">
                           About
                         </h2>
-                        <p className="text-white/70 leading-relaxed text-sm">
+                        <p className="text-white/70  text-sm">
                           {game.description}
                         </p>
                       </div>
