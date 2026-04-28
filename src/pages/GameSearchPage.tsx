@@ -37,12 +37,9 @@ import {
   Shield,
   Search as SearchIcon,
 } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 interface Game {
   id: string;
@@ -557,74 +554,12 @@ export const GameSearchPage = () => {
         }
       } catch (err) {
         console.error("Explore error:", err);
-        // Fallback to Gemini
-        try {
-          const prompt = `Act as a game database API. Provide 6 popular trending games. 
-        Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).`;
 
-          const geminiResponse = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-          });
+        if (requestId !== latestRequestRef.current) return;
 
-          const text = geminiResponse.text || "";
-          const cleanedText = text.replace(/```json|```/g, "").trim();
-          const fallbackGames = JSON.parse(cleanedText);
-          if (requestId !== latestRequestRef.current) return;
-
-          if (pageNum === 1) {
-            setGames(fallbackGames);
-            setRecommendation(fallbackGames[0]);
-          } else {
-            setGames((prev) => [...prev, ...fallbackGames]);
-          }
-        } catch (geminiErr) {
-          console.error("Gemini fallback error:", geminiErr);
-          const defaultGames = [
-            {
-              id: "1",
-              name: "Elden Ring",
-              description:
-                "Rise, Tarnished, and be led by grace to brandish the power of the Elden Ring.",
-              platforms: ["PC", "PS5", "Xbox"],
-              genres: ["RPG"],
-              image: "https://picsum.photos/seed/elden/600/400",
-              rating: 96,
-              releaseDate: "2022-02-25",
-              isChildFriendly: false,
-            },
-            {
-              id: "2",
-              name: "Valorant",
-              description: "A 5v5 character-based tactical shooter.",
-              platforms: ["PC"],
-              genres: ["Shooter"],
-              image: "https://picsum.photos/seed/valorant/600/400",
-              rating: 80,
-              releaseDate: "2020-06-02",
-              isChildFriendly: false,
-            },
-            {
-              id: "3",
-              name: "Minecraft",
-              description:
-                "Explore infinite worlds and build everything from the simplest of homes to the grandest of castles.",
-              platforms: ["PC", "Mobile", "Console"],
-              genres: ["Sandbox"],
-              image: "https://picsum.photos/seed/minecraft/600/400",
-              rating: 90,
-              releaseDate: "2011-11-18",
-              isChildFriendly: true,
-            },
-          ];
-          if (requestId !== latestRequestRef.current) return;
-
-          if (pageNum === 1) {
-            setGames(defaultGames);
-            setRecommendation(defaultGames[0]);
-          } else {
-            setGames((prev) => [...prev, ...defaultGames]);
-          }
+        if (pageNum === 1) {
+          setGames([]);
+          setRecommendation(null);
         }
       } finally {
         if (requestId === latestRequestRef.current) {
@@ -679,36 +614,43 @@ export const GameSearchPage = () => {
         }
       } catch (err) {
         console.error("Search error:", err);
-        // Fallback to Gemini if backend API fails
-        try {
-          const prompt = `Act as a game database API. Search for games matching "${normalizedQuery}". 
-        Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).
-        Filter results based on: ${role === "kid" && kidData?.restrictedMode ? "ONLY child-friendly games" : "all games"}.`;
 
-          const geminiResponse = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-          });
+        if (requestId !== latestRequestRef.current) return;
 
-          const text = geminiResponse.text || "";
-          const cleanedText = text.replace(/```json|```/g, "").trim();
-          const fallbackGames = JSON.parse(cleanedText);
-          if (requestId !== latestRequestRef.current) return;
-
-          if (pageNum === 1) {
-            setGames(fallbackGames);
-          } else {
-            setGames((prev) => [...prev, ...fallbackGames]);
-          }
-        } catch (geminiErr) {
-          console.error("Gemini fallback error:", geminiErr);
-          if (requestId !== latestRequestRef.current) return;
-
-          // Don't fall back to explore for search - just show empty results
-          if (pageNum === 1) {
-            setGames([]);
-          }
+        if (pageNum === 1) {
+          setGames([]);
         }
+
+        // Fallback to Gemini if backend API fails
+        // try {
+        //   const prompt = `Act as a game database API. Search for games matching "${normalizedQuery}".
+        // Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).
+        // Filter results based on: ${role === "kid" && kidData?.restrictedMode ? "ONLY child-friendly games" : "all games"}.`;
+
+        //   const geminiResponse = await ai.models.generateContent({
+        //     model: "gemini-3-flash-preview",
+        //     contents: prompt,
+        //   });
+
+        //   const text = geminiResponse.text || "";
+        //   const cleanedText = text.replace(/```json|```/g, "").trim();
+        //   const fallbackGames = JSON.parse(cleanedText);
+        //   if (requestId !== latestRequestRef.current) return;
+
+        //   if (pageNum === 1) {
+        //     setGames(fallbackGames);
+        //   } else {
+        //     setGames((prev) => [...prev, ...fallbackGames]);
+        //   }
+        // } catch (geminiErr) {
+        //   console.error("Gemini fallback error:", geminiErr);
+        //   if (requestId !== latestRequestRef.current) return;
+
+        //   // Don't fall back to explore for search - just show empty results
+        //   if (pageNum === 1) {
+        //     setGames([]);
+        //   }
+        // }
       } finally {
         if (requestId === latestRequestRef.current) {
           setLoading(false);
