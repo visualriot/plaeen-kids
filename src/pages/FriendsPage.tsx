@@ -333,52 +333,58 @@ export const FriendsPage = () => {
           friends: arrayUnion(activeUid),
         });
 
-        // Create notification for sender
-        const senderPublicDoc = await getDoc(
-          doc(db, "users_public", request.fromId),
-        );
-        if (senderPublicDoc.exists()) {
-          const senderData = senderPublicDoc.data();
-          if (senderData.parentId) {
-            await addDoc(collection(db, "notifications"), {
-              userId: request.fromId,
-              parentId: senderData.parentId,
-              type: "friend_accepted",
-              title: "Friend Request Accepted",
-              message: `${kidData?.displayName || user?.displayName || "Anonymous"} accepted your friend request!`,
-              createdAt: serverTimestamp(),
-              read: false,
-              fromId: activeUid,
-            });
+        try {
+          const senderPublicDoc = await getDoc(
+            doc(db, "users_public", request.fromId),
+          );
+          if (senderPublicDoc.exists()) {
+            const senderData = senderPublicDoc.data();
+            if (senderData.parentId) {
+              await addDoc(collection(db, "notifications"), {
+                userId: request.fromId,
+                parentId: senderData.parentId,
+                type: "friend_accepted",
+                title: "Friend Request Accepted",
+                message: `${kidData?.displayName || user?.displayName || "Anonymous"} accepted your friend request!`,
+                createdAt: serverTimestamp(),
+                read: false,
+                fromId: activeUid,
+              });
+            }
           }
+        } catch (notificationErr) {
+          console.warn("Friend accepted notification failed:", notificationErr);
         }
       } else {
         await updateDoc(requestRef, { status: "rejected" });
       }
 
-      // Delete the corresponding notification
-      let notifQuery;
-      if (isParentViewingKid) {
-        notifQuery = query(
-          collection(db, "notifications"),
-          where("userId", "==", activeUid),
-          where("parentId", "==", user?.uid),
-          where("fromId", "==", request.fromId),
-          where("type", "==", "friend_request"),
+      try {
+        let notifQuery;
+        if (isParentViewingKid) {
+          notifQuery = query(
+            collection(db, "notifications"),
+            where("userId", "==", activeUid),
+            where("parentId", "==", user?.uid),
+            where("fromId", "==", request.fromId),
+            where("type", "==", "friend_request"),
+          );
+        } else {
+          notifQuery = query(
+            collection(db, "notifications"),
+            where("userId", "==", activeUid),
+            where("fromId", "==", request.fromId),
+            where("type", "==", "friend_request"),
+          );
+        }
+        const notifSnap = await getDocs(notifQuery);
+        const deletePromises = notifSnap.docs.map((d) =>
+          deleteDoc(doc(db, "notifications", d.id)),
         );
-      } else {
-        notifQuery = query(
-          collection(db, "notifications"),
-          where("userId", "==", activeUid),
-          where("fromId", "==", request.fromId),
-          where("type", "==", "friend_request"),
-        );
+        await Promise.all(deletePromises);
+      } catch (cleanupErr) {
+        console.warn("Friend request notification cleanup failed:", cleanupErr);
       }
-      const notifSnap = await getDocs(notifQuery);
-      const deletePromises = notifSnap.docs.map((d) =>
-        deleteDoc(doc(db, "notifications", d.id)),
-      );
-      await Promise.all(deletePromises);
     } catch (err) {
       console.error("Error handling request:", err);
     }

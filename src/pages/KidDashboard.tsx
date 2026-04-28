@@ -545,20 +545,26 @@ export const KidDashboard = () => {
             friends: arrayUnion(activeKid.uid),
           });
 
-          const senderPublicDoc = await getDoc(doc(db, "users_public", fromId));
-          if (senderPublicDoc.exists()) {
-            const senderData = senderPublicDoc.data();
-            await addDoc(collection(db, "notifications"), {
-              userId: fromId,
-              parentId: senderData.parentId || null,
-              type: "friend_accepted",
-              title: "Friend Request Accepted",
-              message: `${activeKid.displayName} accepted your friend request!`,
-              createdAt: serverTimestamp(),
-              read: false,
-              fromId: activeKid.uid,
-              fromParentId: activeKid.parentId,
-            });
+          try {
+            const senderPublicDoc = await getDoc(
+              doc(db, "users_public", fromId),
+            );
+            if (senderPublicDoc.exists()) {
+              const senderData = senderPublicDoc.data();
+              await addDoc(collection(db, "notifications"), {
+                userId: fromId,
+                parentId: senderData.parentId || null,
+                type: "friend_accepted",
+                title: "Friend Request Accepted",
+                message: `${activeKid.displayName} accepted your friend request!`,
+                createdAt: serverTimestamp(),
+                read: false,
+                fromId: activeKid.uid,
+                fromParentId: activeKid.parentId,
+              });
+            }
+          } catch (notificationErr) {
+            console.warn("Friend accepted notification failed:", notificationErr);
           }
         }
       } else if (fromId) {
@@ -580,40 +586,41 @@ export const KidDashboard = () => {
         }
       }
 
-      // Delete the specific notification by ID
-      if (notificationId) {
-        await deleteDoc(doc(db, "notifications", notificationId));
-      }
-
-      // Also find and delete any other notifications from this same person
-      if (fromId) {
-        const qClean = isParentViewingKid
-          ? query(
-              collection(db, "notifications"),
-              where("userId", "==", activeKid.uid),
-              where("parentId", "==", user.uid),
-              where("type", "==", "friend_request"),
-            )
-          : query(
-              collection(db, "notifications"),
-              where("userId", "==", activeKid.uid),
-              where("type", "==", "friend_request"),
-            );
-        const snap = await getDocs(qClean);
-        const batch = writeBatch(db);
-        snap.docs.forEach((d) => {
-          const dData = d.data();
-          const dFromId = dData.fromId || dData.data?.fromId;
-          if (dFromId === fromId && d.id !== notificationId) {
-            batch.delete(d.ref);
-          }
-        });
-        if (snap.docs.length > 0) {
-          await batch.commit();
+      try {
+        if (notificationId) {
+          await deleteDoc(doc(db, "notifications", notificationId));
         }
+
+        if (fromId) {
+          const qClean = isParentViewingKid
+            ? query(
+                collection(db, "notifications"),
+                where("userId", "==", activeKid.uid),
+                where("parentId", "==", user.uid),
+                where("type", "==", "friend_request"),
+              )
+            : query(
+                collection(db, "notifications"),
+                where("userId", "==", activeKid.uid),
+                where("type", "==", "friend_request"),
+              );
+          const snap = await getDocs(qClean);
+          const batch = writeBatch(db);
+          snap.docs.forEach((d) => {
+            const dData = d.data();
+            const dFromId = dData.fromId || dData.data?.fromId;
+            if (dFromId === fromId && d.id !== notificationId) {
+              batch.delete(d.ref);
+            }
+          });
+          if (snap.docs.length > 0) {
+            await batch.commit();
+          }
+        }
+      } catch (cleanupErr) {
+        console.warn("Friend request notification cleanup failed:", cleanupErr);
       }
 
-      // Now remove from UI state AFTER deletion completes to ensure it's gone
       setNotifications((prev) =>
         prev.filter((n) => {
           if (n.type !== "friend_request") return true;

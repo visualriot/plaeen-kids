@@ -158,6 +158,9 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           await updateDoc(groupRef, {
             members: arrayUnion(userId),
             pendingMembers: arrayRemove(userId),
+            ...(activeKid?.parentId
+              ? { parentIds: arrayUnion(activeKid.parentId) }
+              : {}),
           });
 
           await addDoc(collection(db, "groups", gid, "events"), {
@@ -270,20 +273,25 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             friends: arrayUnion(userId),
           });
 
-          // Send acceptance notification
-          const senderPublicDoc = await getDoc(doc(db, "users_public", fromId));
-          if (senderPublicDoc.exists()) {
-            const senderData = senderPublicDoc.data();
-            await addDoc(collection(db, "notifications"), {
-              userId: fromId,
-              parentId: senderData.parentId || null,
-              type: "friend_accepted",
-              title: "Friend Request Accepted",
-              message: `${activeKid?.displayName || parentProfile?.displayName || "Anonymous"} accepted your friend request!`,
-              createdAt: serverTimestamp(),
-              read: false,
-              fromId: userId,
-            });
+          try {
+            const senderPublicDoc = await getDoc(
+              doc(db, "users_public", fromId),
+            );
+            if (senderPublicDoc.exists()) {
+              const senderData = senderPublicDoc.data();
+              await addDoc(collection(db, "notifications"), {
+                userId: fromId,
+                parentId: senderData.parentId || null,
+                type: "friend_accepted",
+                title: "Friend Request Accepted",
+                message: `${activeKid?.displayName || parentProfile?.displayName || "Anonymous"} accepted your friend request!`,
+                createdAt: serverTimestamp(),
+                read: false,
+                fromId: userId,
+              });
+            }
+          } catch (notificationErr) {
+            console.warn("Friend accepted notification failed:", notificationErr);
           }
         }
       } else if (fromId) {
@@ -306,44 +314,44 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         }
       }
 
-      // Delete the specific notification by ID
-      if (notificationId) {
-        await deleteDoc(doc(db, "notifications", notificationId));
-      }
-
-      // Also find and delete any other notifications from this same person
-      if (fromId) {
-        let qClean;
-        if (isParentViewingKid) {
-          qClean = query(
-            collection(db, "notifications"),
-            where("userId", "==", userId),
-            where("parentId", "==", user?.uid),
-            where("type", "==", "friend_request"),
-          );
-        } else {
-          qClean = query(
-            collection(db, "notifications"),
-            where("userId", "==", userId),
-            where("type", "==", "friend_request"),
-          );
+      try {
+        if (notificationId) {
+          await deleteDoc(doc(db, "notifications", notificationId));
         }
-        const snap = await getDocs(qClean);
-        const batch = writeBatch(db);
-        snap.docs.forEach((d) => {
-          const dData = d.data() as any;
-          const dFromId = dData.fromId || dData.data?.fromId;
-          if (dFromId === fromId && d.id !== notificationId) {
-            batch.delete(d.ref);
+
+        if (fromId) {
+          let qClean;
+          if (isParentViewingKid) {
+            qClean = query(
+              collection(db, "notifications"),
+              where("userId", "==", userId),
+              where("parentId", "==", user?.uid),
+              where("type", "==", "friend_request"),
+            );
+          } else {
+            qClean = query(
+              collection(db, "notifications"),
+              where("userId", "==", userId),
+              where("type", "==", "friend_request"),
+            );
           }
-        });
-        if (snap.docs.length > 0) {
-          await batch.commit();
+          const snap = await getDocs(qClean);
+          const batch = writeBatch(db);
+          snap.docs.forEach((d) => {
+            const dData = d.data() as any;
+            const dFromId = dData.fromId || dData.data?.fromId;
+            if (dFromId === fromId && d.id !== notificationId) {
+              batch.delete(d.ref);
+            }
+          });
+          if (snap.docs.length > 0) {
+            await batch.commit();
+          }
         }
+      } catch (cleanupErr) {
+        console.warn("Friend request notification cleanup failed:", cleanupErr);
       }
 
-      // Now remove from UI state AFTER deletion completes to ensure it's gone
-      // This prevents the real-time listener from re-adding it
       setNotifications((prev) =>
         prev.filter((n) => {
           if (n.type !== "friend_request") return true;
