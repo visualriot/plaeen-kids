@@ -99,12 +99,6 @@ button {
   cursor: pointer;
 }
 
-button {
-  color: inherit;
-  fill: currentColor;
-  stroke: currentColor;
-}
-
 .neon-glow {
   box-shadow: 0 0 20px rgba(118, 233, 0, 0.3);
 }

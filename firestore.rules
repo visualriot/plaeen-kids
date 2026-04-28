@@ -127,7 +127,13 @@ service cloud.firestore {
         isOwner(userId) || 
         isParentOf(userId) || 
         (existing().get('parentId', '') == request.auth.uid) ||
-        (incoming().get('parentId', '') == request.auth.uid)
+        (incoming().get('parentId', '') == request.auth.uid) ||
+        // Allow users to add/remove themselves from the friends list
+        (incoming().diff(existing()).affectedKeys().hasOnly(['friends']) &&
+         (
+           (incoming().get('friends', []).hasAny([request.auth.uid]) && !existing().get('friends', []).hasAny([request.auth.uid])) ||
+           (!incoming().get('friends', []).hasAny([request.auth.uid]) && existing().get('friends', []).hasAny([request.auth.uid]))
+         ))
       );
       allow delete: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
     }
@@ -171,7 +177,7 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow get: if isSignedIn() && (
-        resource.data.members.hasAny([request.auth.uid]) || 
+        resource.data.members.hasAny([request.auth.uid]) ||
         resource.data.get('parentIds', []).hasAny([request.auth.uid]) ||
         isParentOfAnyMember(resource.data.members)
       );
@@ -183,7 +189,14 @@ service cloud.firestore {
       );
       
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (resource.data.members.hasAny([request.auth.uid]) || isGroupAdmin(groupId));
+      allow update: if isSignedIn() && (
+        resource.data.members.hasAny([request.auth.uid]) ||
+        isGroupAdmin(groupId) ||
+        // Allow pending members to accept/reject invitations
+        ((resource.data.get('pendingMembers', []).hasAny([request.auth.uid]) ||
+          isParentOfAnyMember(resource.data.get('pendingMembers', []))) &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['members', 'pendingMembers', 'parentIds']))
+      );
       allow delete: if isSignedIn() && isGroupAdmin(groupId);
 
       match /sessions/{sessionId} {
@@ -204,7 +217,7 @@ service cloud.firestore {
       }
 
       match /events/{eventId} {
-        allow read, create: if isGroupMember(groupId);
+        allow read, create: if isGroupMember(groupId) || resource.data.get('pendingMembers', []).hasAny([request.auth.uid]);
       }
     }
 

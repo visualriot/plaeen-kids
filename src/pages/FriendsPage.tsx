@@ -357,8 +357,6 @@ export const FriendsPage = () => {
       }
 
       // Delete the corresponding notification
-      const isParentViewingKid =
-        role === "parent" && kidData && activeUid !== user?.uid;
       let notifQuery;
       if (isParentViewingKid) {
         notifQuery = query(

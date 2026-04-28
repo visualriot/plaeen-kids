@@ -53,7 +53,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   } | null>(null);
   const navigate = useNavigate();
 
-  const { activeKid, parentProfile, role, isParentViewingKid } = useProfile();
+  const { activeKid, parentProfile, isParentViewingKid } = useProfile();
   const [user] = useAuthState(auth);
 
   useEffect(() => {
@@ -118,20 +118,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   const handleTeamInvite = async (notif: any, accept: boolean) => {
-    // Optimistic UI update - filter all related ones locally
     const gid =
       notif.data?.groupId ||
       notif.data?.teamId ||
       notif.groupId ||
       notif.teamId;
     const teamName = notif.data?.teamName || notif.teamName || "New Team";
-
-    setNotifications((prev) =>
-      prev.filter((n) => {
-        const nGid = n.data?.groupId || n.data?.teamId || n.groupId || n.teamId;
-        return !(n.type === "team_invite" && nGid === gid);
-      }),
-    );
+    const notificationId = notif.id;
 
     try {
       if (gid) {
@@ -177,17 +170,18 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             createdAt: serverTimestamp(),
             expiresAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000),
           });
-          showFeedback("You just joined the team!");
         } else {
           await updateDoc(groupRef, {
             pendingMembers: arrayRemove(userId),
           });
-          showFeedback("Invitation declined", "info");
         }
 
-        // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
-        const isParentViewingKid =
-          role === "parent" && activeKid && userId !== user?.uid;
+        // Delete the specific notification by ID
+        if (notificationId) {
+          await deleteDoc(doc(db, "notifications", notificationId));
+        }
+
+        // Also find and delete any other notifications from this same team
         let qClean;
         if (isParentViewingKid) {
           qClean = query(
@@ -212,13 +206,33 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             dData.data?.teamId ||
             dData.groupId ||
             dData.teamId;
-          if (dGid === gid) {
+          if (dGid === gid && d.id !== notificationId) {
             batch.delete(d.ref);
           }
         });
-        await batch.commit();
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
+
+        // Now remove from UI state AFTER deletion completes to ensure it's gone
+        // This prevents the real-time listener from re-adding it
+        setNotifications((prev) =>
+          prev.filter((n) => {
+            if (n.type !== "team_invite") return true;
+            const nGid =
+              n.data?.groupId || n.data?.teamId || n.groupId || n.teamId;
+            return nGid !== gid;
+          }),
+        );
+
+        showFeedback(
+          accept ? "You just joined the team!" : "Invitation declined",
+          accept ? "success" : "info",
+        );
       } else {
         await deleteDoc(doc(db, "notifications", notif.id));
+        setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+        showFeedback("Invitation declined", "info");
       }
     } catch (err) {
       console.error("Error handling team invite:", err);
@@ -228,14 +242,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
 
   const handleFriendRequest = async (notif: any, accept: boolean) => {
     const fromId = notif.fromId || notif.data?.fromId;
-
-    // Optimistic UI update
-    setNotifications((prev) =>
-      prev.filter((n) => {
-        const nFromId = n.fromId || n.data?.fromId;
-        return !(n.type === "friend_request" && nFromId === fromId);
-      }),
-    );
+    const notificationId = notif.id;
 
     try {
       if (accept) {
@@ -278,7 +285,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               fromId: userId,
             });
           }
-          showFeedback("Friend request accepted!");
         }
       } else if (fromId) {
         // Reject logic
@@ -298,13 +304,15 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             status: "rejected",
           });
         }
-        showFeedback("Request declined", "info");
       }
 
-      // AGGRESSIVE CLEANUP: Find all notifications for this friend request
+      // Delete the specific notification by ID
+      if (notificationId) {
+        await deleteDoc(doc(db, "notifications", notificationId));
+      }
+
+      // Also find and delete any other notifications from this same person
       if (fromId) {
-        const isParentViewingKid =
-          role === "parent" && activeKid && userId !== user?.uid;
         let qClean;
         if (isParentViewingKid) {
           qClean = query(
@@ -325,16 +333,32 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         snap.docs.forEach((d) => {
           const dData = d.data() as any;
           const dFromId = dData.fromId || dData.data?.fromId;
-          if (dFromId === fromId) {
+          if (dFromId === fromId && d.id !== notificationId) {
             batch.delete(d.ref);
           }
         });
-        await batch.commit();
-      } else {
-        await deleteDoc(doc(db, "notifications", notif.id));
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
       }
+
+      // Now remove from UI state AFTER deletion completes to ensure it's gone
+      // This prevents the real-time listener from re-adding it
+      setNotifications((prev) =>
+        prev.filter((n) => {
+          if (n.type !== "friend_request") return true;
+          const nFromId = n.fromId || n.data?.fromId;
+          return nFromId !== fromId;
+        }),
+      );
+
+      showFeedback(
+        accept ? "Friend request accepted!" : "Request declined",
+        accept ? "success" : "info",
+      );
     } catch (err) {
       console.error("Error handling friend request:", err);
+      showFeedback("Update failed", "info");
     }
   };
 

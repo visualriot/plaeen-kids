@@ -46,7 +46,7 @@ import type { Notification } from "@/lib/types";
 
 export const NotificationsPage = () => {
   const [user] = useAuthState(auth);
-  const { activeKid, role, parentProfile, isParentViewingKid } = useProfile();
+  const { activeKid, parentProfile, isParentViewingKid } = useProfile();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [feedback, setFeedback] = useState<{
     message: string;
@@ -127,20 +127,14 @@ export const NotificationsPage = () => {
   };
 
   const handleTeamInvite = async (notif: any, accept: boolean) => {
-    // Optimistic UI update - filter all related ones locally
     const gid =
       notif.data?.groupId ||
       notif.data?.teamId ||
       notif.groupId ||
       notif.teamId;
     const teamName = notif.data?.teamName || notif.teamName || "New Team";
-
-    setNotifications((prev) =>
-      prev.filter((n) => {
-        const nGid = n.data?.groupId || n.data?.teamId || n.groupId || n.teamId;
-        return !(n.type === "team_invite" && nGid === gid);
-      }),
-    );
+    const notificationId = notif.id;
+    if (!activeUid || !activeKid) return;
 
     try {
       if (gid) {
@@ -187,17 +181,18 @@ export const NotificationsPage = () => {
             createdAt: serverTimestamp(),
             expiresAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           });
-          showFeedback("You just joined the team!");
         } else {
           await updateDoc(groupRef, {
             pendingMembers: arrayRemove(activeUid),
           });
-          showFeedback("Invitation declined", "info");
         }
 
-        // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
-        const isParentViewingKid =
-          role === "parent" && activeKid && activeUid !== user?.uid;
+        // Delete the specific notification by ID
+        if (notificationId) {
+          await deleteDoc(doc(db, "notifications", notificationId));
+        }
+
+        // Find and delete any other notifications from this same team
         let qClean;
         if (isParentViewingKid) {
           qClean = query(
@@ -222,13 +217,32 @@ export const NotificationsPage = () => {
             dData.data?.teamId ||
             dData.groupId ||
             dData.teamId;
-          if (dGid === gid) {
+          if (dGid === gid && d.id !== notificationId) {
             batch.delete(d.ref);
           }
         });
-        await batch.commit();
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
+
+        // Now remove from UI state AFTER deletion completes to ensure it's gone
+        setNotifications((prev) =>
+          prev.filter((n) => {
+            if (n.type !== "team_invite") return true;
+            const nGid =
+              n.data?.groupId || n.data?.teamId || n.groupId || n.teamId;
+            return nGid !== gid;
+          }),
+        );
+
+        showFeedback(
+          accept ? "You just joined the team!" : "Invitation declined",
+          accept ? "success" : "info",
+        );
       } else {
         await deleteDoc(doc(db, "notifications", notif.id));
+        setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+        showFeedback("Invitation declined", "info");
       }
     } catch (err) {
       console.error("Error handling team invite:", err);
@@ -238,14 +252,8 @@ export const NotificationsPage = () => {
 
   const handleFriendRequest = async (notif: any, accept: boolean) => {
     const fromId = notif.fromId || notif.data?.fromId;
-
-    // Optimistic UI update
-    setNotifications((prev) =>
-      prev.filter((n) => {
-        const nFromId = n.fromId || n.data?.fromId;
-        return !(n.type === "friend_request" && nFromId === fromId);
-      }),
-    );
+    const notificationId = notif.id;
+    if (!activeUid || !activeKid) return;
 
     try {
       if (accept) {
@@ -287,7 +295,6 @@ export const NotificationsPage = () => {
               fromId: activeUid,
             });
           }
-          showFeedback("Friend request accepted!");
         }
       } else if (fromId) {
         let requestId = notif.requestId || notif.data?.requestId;
@@ -306,13 +313,15 @@ export const NotificationsPage = () => {
             status: "rejected",
           });
         }
-        showFeedback("Request declined", "info");
       }
 
-      // AGGRESSIVE CLEANUP: Find all notifications for this friend request
+      // Delete the specific notification by ID
+      if (notificationId) {
+        await deleteDoc(doc(db, "notifications", notificationId));
+      }
+
+      // Also find and delete any other notifications from this same person
       if (fromId) {
-        const isParentViewingKid =
-          role === "parent" && activeKid && activeUid !== user?.uid;
         let qClean;
         if (isParentViewingKid) {
           qClean = query(
@@ -333,16 +342,31 @@ export const NotificationsPage = () => {
         snap.docs.forEach((d) => {
           const dData = d.data() as any;
           const dFromId = dData.fromId || dData.data?.fromId;
-          if (dFromId === fromId) {
+          if (dFromId === fromId && d.id !== notificationId) {
             batch.delete(d.ref);
           }
         });
-        await batch.commit();
-      } else {
-        await deleteDoc(doc(db, "notifications", notif.id));
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
       }
+
+      // Now remove from UI state AFTER deletion completes to ensure it's gone
+      setNotifications((prev) =>
+        prev.filter((n) => {
+          if (n.type !== "friend_request") return true;
+          const nFromId = n.fromId || n.data?.fromId;
+          return nFromId !== fromId;
+        }),
+      );
+
+      showFeedback(
+        accept ? "Friend request accepted!" : "Request declined",
+        accept ? "success" : "info",
+      );
     } catch (err) {
       console.error("Error handling friend request:", err);
+      showFeedback("Update failed", "info");
     }
   };
 

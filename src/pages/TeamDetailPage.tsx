@@ -101,7 +101,7 @@ export const TeamDetailPage = () => {
       doc(db, "groups", teamId),
       (docSnap) => {
         if (docSnap.exists()) {
-          const data = docSnap.data() as Team;
+          const data = docSnap.data() as Omit<Team, "id">;
           const adminIds =
             data.adminIds || (data.ownerId ? [data.ownerId] : []);
           setTeam({ id: docSnap.id, ...data, adminIds });
@@ -251,9 +251,16 @@ export const TeamDetailPage = () => {
         pendingMembers: arrayUnion(memberId),
       });
 
+      // Get the invitee's parentId from users_public
+      const memberPublicDoc = await getDoc(doc(db, "users_public", memberId));
+      const memberParentId = memberPublicDoc.exists()
+        ? memberPublicDoc.data()?.parentId
+        : null;
+
       // Send notification for invitation
       await addDoc(collection(db, "notifications"), {
         userId: memberId,
+        parentId: memberParentId || null,
         type: "team_invite",
         title: "Team Invitation",
         message: `${kidData?.displayName || parentProfile?.displayName || "A friend"} invited you to join the team "${team.name}"`,
@@ -305,7 +312,7 @@ export const TeamDetailPage = () => {
   };
 
   const requestAllowanceIncrease = async (session: Session) => {
-    if (!kidData || !kidData.parentId) return;
+    if (!kidData || !kidData.parentId || !teamId) return;
     try {
       await addDoc(collection(db, "approvals"), {
         parentId: kidData.parentId,
@@ -372,9 +379,9 @@ export const TeamDetailPage = () => {
           {activeEvents.map((event) => (
             <motion.div
               key={event.id}
-              initial={{ opacity: 0, height: 0, mb: 0 }}
-              animate={{ opacity: 1, height: "auto", mb: 8 }}
-              exit={{ opacity: 0, height: 0, mb: 0 }}
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: "auto", marginBottom: 8 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               className="overflow-hidden"
             >
               <div
@@ -613,7 +620,7 @@ export const TeamDetailPage = () => {
                       </div>
                       <Button
                         size="sm"
-                        variant={hasVoted ? "outline" : "default"}
+                        variant={hasVoted ? "outline" : "primary"}
                         className={
                           hasVoted
                             ? "border-plaeen-purple text-plaeen-purple"
@@ -721,7 +728,9 @@ export const TeamDetailPage = () => {
                       });
 
                       const isProposedByMe = session?.proposedBy === activeUid;
-                      const hasResponded = session?.responses?.[activeUid];
+                      const hasResponded = activeUid
+                        ? session?.responses?.[activeUid]
+                        : undefined;
                       const shouldBlink =
                         session?.status === "proposed" && !hasResponded;
 
@@ -1091,7 +1100,8 @@ export const TeamDetailPage = () => {
                   onClick={() => respondToSession("accepted", responseNote)}
                   className="bg-plaeen-green text-black font-bold uppercase  py-6"
                 >
-                  {selectedSession.responses?.[activeUid]?.status === "accepted"
+                  {activeUid &&
+                  selectedSession.responses?.[activeUid]?.status === "accepted"
                     ? "Update Response"
                     : "Accept"}
                 </Button>
@@ -1107,7 +1117,8 @@ export const TeamDetailPage = () => {
                   onClick={() => respondToSession("rejected", responseNote)}
                   className="text-red-400 hover:bg-red-500/10 font-bold uppercase  py-6"
                 >
-                  {selectedSession.responses?.[activeUid]?.status === "rejected"
+                  {activeUid &&
+                  selectedSession.responses?.[activeUid]?.status === "rejected"
                     ? "Withdrawn"
                     : "Decline"}
                 </Button>

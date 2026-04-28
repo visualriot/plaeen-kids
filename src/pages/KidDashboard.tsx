@@ -394,21 +394,14 @@ export const KidDashboard = () => {
   };
 
   const handleTeamInvite = async (notification: any, accept: boolean) => {
-    if (!activeKid) return;
+    if (!user || !activeKid) return;
     const gid =
       notification.data?.groupId ||
       notification.data?.teamId ||
       notification.groupId;
     const teamName =
       notification.data?.teamName || notification.teamName || "New Team";
-
-    // Optimistic UI update - filter all related ones
-    setNotifications((prev) =>
-      prev.filter((n) => {
-        const nGid = n.data?.groupId || n.data?.teamId || n.groupId;
-        return !(n.type === "team_invite" && nGid === gid);
-      }),
-    );
+    const notificationId = notification.id;
 
     try {
       if (gid) {
@@ -452,15 +445,18 @@ export const KidDashboard = () => {
             createdAt: serverTimestamp(),
             expiresAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000),
           });
-          showFeedback("You just joined the team!");
         } else {
           await updateDoc(groupRef, {
             pendingMembers: arrayRemove(activeKid.uid),
           });
-          showFeedback("Invitation declined", "info");
         }
 
-        // AGGRESSIVE CLEANUP: Find all notifications for this specific team invite
+        // Delete the specific notification by ID
+        if (notificationId) {
+          await deleteDoc(doc(db, "notifications", notificationId));
+        }
+
+        // Find and delete any other notifications from this same team
         let qClean;
         if (isParentViewingKid) {
           qClean = query(
@@ -485,13 +481,33 @@ export const KidDashboard = () => {
             dData.data?.teamId ||
             dData.groupId ||
             dData.teamId;
-          if (dGid === gid) {
+          if (dGid === gid && d.id !== notificationId) {
             batch.delete(d.ref);
           }
         });
-        await batch.commit();
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
+
+        // Now remove from UI state AFTER deletion completes to ensure it's gone
+        setNotifications((prev) =>
+          prev.filter((n) => {
+            if (n.type !== "team_invite") return true;
+            const nGid = n.data?.groupId || n.data?.teamId || n.groupId;
+            return nGid !== gid;
+          }),
+        );
+
+        showFeedback(
+          accept ? "You just joined the team!" : "Invitation declined",
+          accept ? "success" : "info",
+        );
       } else {
         await deleteDoc(doc(db, "notifications", notification.id));
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== notification.id),
+        );
+        showFeedback("Invitation declined", "info");
       }
     } catch (err) {
       console.error("Error handling team invite:", err);
@@ -500,16 +516,9 @@ export const KidDashboard = () => {
   };
 
   const handleFriendRequest = async (notif: any, accept: boolean) => {
-    if (!activeKid) return;
+    if (!user || !activeKid) return;
     const fromId = notif.fromId || notif.data?.fromId;
-
-    // Optimistic UI update
-    setNotifications((prev) =>
-      prev.filter((n) => {
-        const nFromId = n.fromId || n.data?.fromId;
-        return !(n.type === "friend_request" && nFromId === fromId);
-      }),
-    );
+    const notificationId = notif.id;
 
     try {
       if (accept) {
@@ -551,7 +560,6 @@ export const KidDashboard = () => {
               fromParentId: activeKid.parentId,
             });
           }
-          showFeedback("Friend request accepted!");
         }
       } else if (fromId) {
         let requestId = notif.requestId || notif.data?.requestId;
@@ -570,31 +578,57 @@ export const KidDashboard = () => {
             status: "rejected",
           });
         }
-        showFeedback("Request declined", "info");
       }
 
-      // AGGRESSIVE CLEANUP: Find all notifications for this friend request
+      // Delete the specific notification by ID
+      if (notificationId) {
+        await deleteDoc(doc(db, "notifications", notificationId));
+      }
+
+      // Also find and delete any other notifications from this same person
       if (fromId) {
-        const qClean = query(
-          collection(db, "notifications"),
-          where("userId", "==", activeKid.uid),
-          where("type", "==", "friend_request"),
-        );
+        const qClean = isParentViewingKid
+          ? query(
+              collection(db, "notifications"),
+              where("userId", "==", activeKid.uid),
+              where("parentId", "==", user.uid),
+              where("type", "==", "friend_request"),
+            )
+          : query(
+              collection(db, "notifications"),
+              where("userId", "==", activeKid.uid),
+              where("type", "==", "friend_request"),
+            );
         const snap = await getDocs(qClean);
         const batch = writeBatch(db);
         snap.docs.forEach((d) => {
           const dData = d.data();
           const dFromId = dData.fromId || dData.data?.fromId;
-          if (dFromId === fromId) {
+          if (dFromId === fromId && d.id !== notificationId) {
             batch.delete(d.ref);
           }
         });
-        await batch.commit();
-      } else {
-        await deleteDoc(doc(db, "notifications", notif.id));
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
       }
+
+      // Now remove from UI state AFTER deletion completes to ensure it's gone
+      setNotifications((prev) =>
+        prev.filter((n) => {
+          if (n.type !== "friend_request") return true;
+          const nFromId = n.fromId || n.data?.fromId;
+          return nFromId !== fromId;
+        }),
+      );
+
+      showFeedback(
+        accept ? "Friend request accepted!" : "Request declined",
+        accept ? "success" : "info",
+      );
     } catch (err) {
       console.error("Error handling friend request:", err);
+      showFeedback("Update failed", "info");
     }
   };
 
@@ -1036,7 +1070,7 @@ export const KidDashboard = () => {
                 {activeKid.displayName.split(" ")[0]}!
               </span>
             </h1>
-            {activeKid.uid && (
+            {activeKid.uid && activeKid.username && (
               <p className="text-white/40 font-bold uppercase  text-xs mt-6">
                 @{activeKid.username.split(" ")[0]}
               </p>
@@ -1367,7 +1401,15 @@ export const KidDashboard = () => {
               </h2>
               <KidStreakWidget
                 streak={
-                  activeKid?.streak || { count: 0, history: {}, lastUpdate: "" }
+                  activeKid?.streak
+                    ? {
+                        ...activeKid.streak,
+                        rewardMinutes:
+                          typeof activeKid.streak.rewardMinutes === "number"
+                            ? activeKid.streak.rewardMinutes
+                            : undefined,
+                      }
+                    : { count: 0, history: {}, lastUpdate: "" }
                 }
               />
             </Card>

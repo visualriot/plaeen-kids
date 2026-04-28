@@ -212,40 +212,34 @@ export const Navbar = () => {
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   className="absolute right-0 mt-4 w-64 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl p-2 z-[70] backdrop-blur-xl"
                 >
-                  <div className="p-4 border-b border-white/5 mb-2">
-                    <p className="text-xs font-bold text-white uppercase ">
-                      Account Settings
-                    </p>
-                  </div>
-
                   <button
                     onClick={handleSwitchProfile}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase "
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium tracking-wider text-white/80 hover:text-white hover:bg-white/5 transition-all"
                   >
                     <RefreshCw size={16} /> Switch Profile
                   </button>
 
                   <Link
                     to="/kid-calendar"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase "
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium tracking-wider text-white/80 hover:text-white hover:bg-white/5 transition-all"
                   >
                     <Calendar size={16} /> Calendar
                   </Link>
 
                   <Link
                     to={role === "kid" ? "/profile" : "/parent/settings"}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase "
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium tracking-wider text-white/80 hover:text-white hover:bg-white/5 transition-all"
                   >
                     <UserIcon size={16} /> Settings
                   </Link>
 
-                  <div className="h-px bg-white/5 my-2 mx-4" />
+                  <div className="h-px bg-white/10 my-2 mx-4" />
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase "
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs !text-white/60 hover:!text-white hover:bg-red-400/5 transition-all"
                   >
-                    <LogOut size={16} /> Sign Out
+                    <LogOut size={16} /> Sign out of Plaeen
                   </button>
                 </motion.div>
               )}
@@ -264,6 +258,7 @@ export const Navbar = () => {
 
       {/* Mobile Navigation */}
       <AnimatePresence>
+        s
         {isMenuOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
