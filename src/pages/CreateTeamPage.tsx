@@ -196,9 +196,16 @@ export const CreateTeamPage = () => {
 
       const groupId = docRef.id;
 
-      const notificationPromises = finalInvites.map((friendId) =>
-        addDoc(collection(db, "notifications"), {
+      // Fetch parentIds for all invited friends and create notifications with parentId
+      const notificationPromises = finalInvites.map(async (friendId) => {
+        const friendPublicDoc = await getDoc(doc(db, "users_public", friendId));
+        const friendParentId = friendPublicDoc.exists()
+          ? friendPublicDoc.data()?.parentId
+          : null;
+
+        return addDoc(collection(db, "notifications"), {
           userId: friendId,
+          parentId: friendParentId || null,
           type: "team_invite",
           title: "Team Invitation",
           message: `${kidData?.displayName || "A friend"} (@${kidData?.username || "unknown"}) invited you to join the team "${teamName}"`,
@@ -210,8 +217,8 @@ export const CreateTeamPage = () => {
           },
           read: false,
           createdAt: new Date().toISOString(),
-        }),
-      );
+        });
+      });
       await Promise.all(notificationPromises);
 
       navigate("/teams");

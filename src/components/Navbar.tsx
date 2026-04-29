@@ -107,7 +107,7 @@ export const Navbar = () => {
     { name: "Hub", path: "/kid-dashboard", icon: LayoutDashboard },
     { name: "Teams", path: "/teams", icon: Users2 },
     { name: "Friends", path: "/friends", icon: Users },
-    { name: "My Games", path: "/my-games", icon: Gamepad2 },
+    { name: "Games", path: "/my-games", icon: Gamepad2 },
   ];
 
   const parentNavLinks = [
@@ -119,7 +119,7 @@ export const Navbar = () => {
   const navLinks = role === "kid" ? kidNavLinks : parentNavLinks;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-plaeen-dark/80 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-plaeen-dark/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         {/* Logo & Main Nav */}
         <div className="flex items-center gap-12">
@@ -127,7 +127,7 @@ export const Navbar = () => {
             <img
               src="/logo/logo.png"
               alt="Plaeen"
-              className="h-10 w-auto group-hover:scale-110 transition-transform"
+              className="h-10 w-auto group-hover:scale-95 transition-transform"
             />
           </Link>
 
@@ -137,10 +137,10 @@ export const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase  transition-all ${
+                className={`px-4 py-2 rounded-xl font-semibold uppercase  transition-all ${
                   location.pathname === link.path
                     ? "text-plaeen-green bg-plaeen-green/10"
-                    : "text-white/40 hover:text-white hover:bg-white/5"
+                    : "text-white/40 hover:text-white "
                 }`}
               >
                 {link.name}
@@ -157,11 +157,11 @@ export const Navbar = () => {
           >
             <button
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className={`p-2 transition-colors relative ${isNotificationsOpen ? "text-plaeen-green" : "text-white/40 hover:text-white"}`}
+              className={`p-2 transition-colors relative ${isNotificationsOpen ? "text-plaeen-green" : "text-white/40 hover:text-white hover:scale-95 transition-all"}`}
             >
-              <Bell size={20} />
+              <Bell size={24} />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
+                <span className="absolute top-2 right-2 h-[10px] w-[10px] rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
               )}
             </button>
 
@@ -178,9 +178,9 @@ export const Navbar = () => {
           <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-3 p-1 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+              className="flex items-center gap-3 p-2 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all"
             >
-              <div className="h-10 w-10 rounded-xl overflow-hidden border-2 border-plaeen-green/30">
+              <div className="h-14 w-14 rounded-xl overflow-hidden border-2 border-plaeen-green/30">
                 <img
                   src={getUserAvatar(activeKid?.photoURL || user?.photoURL)}
                   alt="Profile"
@@ -188,18 +188,19 @@ export const Navbar = () => {
                 />
               </div>
               <div className="hidden sm:block text-left pr-2">
-                <p className="text-[10px] font-bold text-white uppercase   mb-1">
+                <p className=" font-bold text-white uppercase ">
                   {formatName(
                     activeKid?.displayName || user?.displayName || "User",
                   )}
                 </p>
-                <p className="text-[8px] font-bold text-plaeen-green uppercase  ">
+                <p className="text-sm  text-white/60">
                   {role === "kid" ? "Gamer" : "Guardian"}
                 </p>
               </div>
               <ChevronDown
-                size={14}
-                className={`text-white/20 mr-2 transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`}
+                size={20}
+                fill="currentColor"
+                className={`text-white/80 font-bold transition-transform ${isUserMenuOpen ? "rotate-180" : ""}`}
               />
             </button>
 
@@ -211,40 +212,34 @@ export const Navbar = () => {
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   className="absolute right-0 mt-4 w-64 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl p-2 z-[70] backdrop-blur-xl"
                 >
-                  <div className="p-4 border-b border-white/5 mb-2">
-                    <p className="text-xs font-bold text-white uppercase ">
-                      Account Settings
-                    </p>
-                  </div>
-
                   <button
                     onClick={handleSwitchProfile}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-plaeen-green hover:bg-plaeen-green/5 transition-all uppercase "
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium tracking-wider text-white/80 hover:text-white hover:bg-white/5 transition-all"
                   >
                     <RefreshCw size={16} /> Switch Profile
                   </button>
 
                   <Link
                     to="/kid-calendar"
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase "
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium tracking-wider text-white/80 hover:text-white hover:bg-white/5 transition-all"
                   >
                     <Calendar size={16} /> Calendar
                   </Link>
 
                   <Link
                     to={role === "kid" ? "/profile" : "/parent/settings"}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all uppercase "
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium tracking-wider text-white/80 hover:text-white hover:bg-white/5 transition-all"
                   >
                     <UserIcon size={16} /> Settings
                   </Link>
 
-                  <div className="h-px bg-white/5 my-2 mx-4" />
+                  <div className="h-px bg-white/10 my-2 mx-4" />
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/5 transition-all uppercase "
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs !text-white/60 hover:!text-white hover:bg-red-400/5 transition-all"
                   >
-                    <LogOut size={16} /> Sign Out
+                    <LogOut size={16} /> Sign out of Plaeen
                   </button>
                 </motion.div>
               )}
@@ -263,6 +258,7 @@ export const Navbar = () => {
 
       {/* Mobile Navigation */}
       <AnimatePresence>
+        s
         {isMenuOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}

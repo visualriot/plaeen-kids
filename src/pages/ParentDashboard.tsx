@@ -10,6 +10,7 @@ import {
   doc,
   updateDoc,
   arrayUnion,
+  arrayRemove,
   setDoc,
   getDoc,
   Timestamp,
@@ -17,6 +18,7 @@ import {
   increment,
   getDocs,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
@@ -60,6 +62,7 @@ export const ParentDashboard = () => {
   const [newKidUsername, setNewKidUsername] = useState("");
   const [newKidBirthDate, setNewKidBirthDate] = useState("");
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [isCreatingKid, setIsCreatingKid] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeAlert, setActiveAlert] = useState<{
     message: string;
@@ -151,8 +154,9 @@ export const ParentDashboard = () => {
 
   const createKidAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newKidName || !newKidUsername || !newKidBirthDate) return;
+    if (!user || !newKidName || !newKidUsername || !newKidBirthDate || isCreatingKid) return;
     setError(null);
+    setIsCreatingKid(true);
 
     try {
       const validation = validateUsername(newKidUsername);
@@ -161,18 +165,10 @@ export const ParentDashboard = () => {
         return;
       }
 
-      const cleanUsername = newKidUsername
-        .toLowerCase()
-        .trim()
-        .replace(/^@/, "");
+      const cleanUsername = newKidUsername.toLowerCase().trim().replace(/^@/, "");
 
-      // Check for username uniqueness
-      const qUsername = query(
-        collection(db, "users_public"),
-        where("username", "==", cleanUsername),
-      );
+      const qUsername = query(collection(db, "users_public"), where("username", "==", cleanUsername));
       const usernameSnap = await getDocs(qUsername);
-
       if (!usernameSnap.empty) {
         setError("Username already taken. Please choose another one.");
         return;
@@ -198,24 +194,20 @@ export const ParentDashboard = () => {
         createdAt: serverTimestamp(),
       };
 
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          linkedKids: arrayUnion(kidUid),
-        },
-        { merge: true },
-      );
-
-      await setDoc(doc(db, "users", kidUid), kidData);
-
-      await setDoc(doc(db, "users_public", kidUid), {
+      // Batch all 3 writes into one round trip
+      const batch = writeBatch(db);
+      batch.set(doc(db, "users", kidUid), kidData);
+      batch.set(doc(db, "users_public", kidUid), {
         uid: kidUid,
         displayName: kidData.displayName,
         username: cleanUsername,
         photoURL: DEFAULT_USER_AVATAR,
         role: "kid",
         parentId: user.uid,
+        parentEmail: user.email?.toLowerCase() || null,
       });
+      batch.set(doc(db, "users", user.uid), { linkedKids: arrayUnion(kidUid) }, { merge: true });
+      await batch.commit();
 
       setIsAddKidOpen(false);
       setNewKidName("");
@@ -225,6 +217,8 @@ export const ParentDashboard = () => {
     } catch (err) {
       console.error("Error creating kid account:", err);
       setError("Failed to create account. Please try again.");
+    } finally {
+      setIsCreatingKid(false);
     }
   };
 
@@ -325,6 +319,7 @@ export const ParentDashboard = () => {
           photoURL: getUserAvatar(repairKid.photoURL),
           role: "kid",
           parentId: user?.uid,
+          parentEmail: user?.email?.toLowerCase() || null,
         },
         { merge: true },
       );
@@ -339,24 +334,18 @@ export const ParentDashboard = () => {
   };
 
   const handleDeleteKid = async (kidId: string) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this kid account? This cannot be undone.",
-      )
-    )
-      return;
+    if (!window.confirm("Are you sure you want to delete this kid account? This cannot be undone.")) return;
 
     try {
-      // 1. Remove from parent's linkedKids
-      await updateDoc(doc(db, "users", user!.uid), {
-        linkedKids: kids.filter((k) => k.uid !== kidId).map((k) => k.uid),
-      });
+      // Delete both user docs and remove from linkedKids in one atomic batch.
+      // Firestore evaluates security rules against the pre-batch state, so isParentOf(kidId)
+      // still sees the kid's parentId field and the parent's linkedKids during rule evaluation.
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "users", kidId));
+      batch.delete(doc(db, "users_public", kidId));
+      batch.update(doc(db, "users", user!.uid), { linkedKids: arrayRemove(kidId) });
+      await batch.commit();
 
-      // 2. Delete from users and users_public
-      await deleteDoc(doc(db, "users", kidId));
-      await deleteDoc(doc(db, "users_public", kidId));
-
-      // 3. Delete approvals
       if (user) {
         const qApprovals = query(
           collection(db, "approvals"),
@@ -364,8 +353,10 @@ export const ParentDashboard = () => {
           where("parentId", "==", user.uid),
         );
         const snapApprovals = await getDocs(qApprovals);
-        for (const d of snapApprovals.docs) {
-          await deleteDoc(d.ref);
+        if (!snapApprovals.empty) {
+          const approvalBatch = writeBatch(db);
+          snapApprovals.docs.forEach((d) => approvalBatch.delete(d.ref));
+          await approvalBatch.commit();
         }
       }
     } catch (err) {
@@ -952,9 +943,10 @@ export const ParentDashboard = () => {
                 )}
                 <Button
                   type="submit"
+                  disabled={isCreatingKid}
                   className="w-full py-6 font-bold uppercase "
                 >
-                  Create Account
+                  {isCreatingKid ? "Creating..." : "Create Account"}
                 </Button>
               </form>
             </Card>

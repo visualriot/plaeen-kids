@@ -148,7 +148,7 @@ export const OnboardingPage = () => {
       // 2. Create Kid Profiles
       const kidIds: string[] = [];
       for (const kid of kids) {
-        const kidId = crypto.randomUUID();
+        const kidId = `kid_${Math.random().toString(36).substr(2, 9)}`;
         const kidAvatar = getRandomUserAvatar();
         const kidData = {
           uid: kidId,
@@ -179,6 +179,7 @@ export const OnboardingPage = () => {
           photoURL: kidAvatar,
           role: "kid",
           parentId: user.uid,
+          parentEmail: user.email?.toLowerCase() || null,
         });
         kidIds.push(kidId);
       }
