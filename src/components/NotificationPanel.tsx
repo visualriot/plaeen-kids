@@ -263,22 +263,30 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         }
 
         if (requestId && fromId) {
-          await updateDoc(doc(db, "friendRequests", requestId), {
+          const batch = writeBatch(db);
+
+          batch.update(doc(db, "friendRequests", requestId), {
             status: "accepted",
           });
-          await updateDoc(doc(db, "users", userId), {
+
+          batch.update(doc(db, "users", userId), {
             friends: arrayUnion(fromId),
           });
-          await updateDoc(doc(db, "users", fromId), {
+
+          batch.update(doc(db, "users", fromId), {
             friends: arrayUnion(userId),
           });
+
+          await batch.commit();
 
           try {
             const senderPublicDoc = await getDoc(
               doc(db, "users_public", fromId),
             );
+
             if (senderPublicDoc.exists()) {
               const senderData = senderPublicDoc.data();
+
               await addDoc(collection(db, "notifications"), {
                 userId: fromId,
                 parentId: senderData.parentId || null,
@@ -291,7 +299,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               });
             }
           } catch (notificationErr) {
-            console.warn("Friend accepted notification failed:", notificationErr);
+            console.warn(
+              "Friend accepted notification failed:",
+              notificationErr,
+            );
           }
         }
       } else if (fromId) {

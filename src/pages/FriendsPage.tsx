@@ -40,6 +40,7 @@ export const FriendsPage = () => {
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [friendsLoading, setFriendsLoading] = useState(true);
   const [message, setMessage] = useState<{
     text: string;
     type: "success" | "error";
@@ -70,6 +71,8 @@ export const FriendsPage = () => {
 
   useEffect(() => {
     if (!activeUid || !user || profileLoading) return;
+
+    setFriendsLoading(true);
 
     const qIncoming = isParentViewingKid
       ? query(
@@ -152,9 +155,14 @@ export const FriendsPage = () => {
           }
         } catch (err) {
           console.error("Error processing friends snapshot:", err);
+        } finally {
+          setFriendsLoading(false);
         }
       },
-      (error) => handleFirestoreError(error, "get", `users/${activeUid}`),
+      (error) => {
+        setFriendsLoading(false);
+        handleFirestoreError(error, "get", `users/${activeUid}`);
+      },
     );
 
     return () => {
@@ -174,7 +182,23 @@ export const FriendsPage = () => {
 
       // Check if it's an email search
       if (cleanSearch.includes("@") && cleanSearch.includes(".")) {
-        // Search by email, without role filter to avoid potential index errors
+        // First, try to find kids directly by parent email
+        const kidsQuery = query(
+          collection(db, "users_public"),
+          where("parentEmail", "==", cleanSearch),
+          where("role", "==", "kid"),
+        );
+        const kidsSnap = await getDocs(kidsQuery);
+        const results = kidsSnap.docs
+          .map((doc) => doc.data() as UserProfile)
+          .filter((u) => u.uid !== activeUid);
+
+        if (results.length > 0) {
+          setSearchResults(results);
+          return;
+        }
+
+        // Fallback: search by parent email in users_public
         const parentQuery = query(
           collection(db, "users_public"),
           where("email", "==", cleanSearch),
@@ -208,17 +232,17 @@ export const FriendsPage = () => {
         }
 
         const parentUid = parentDoc.id;
-        const kidsQuery = query(
+        const parentKidsQuery = query(
           collection(db, "users_public"),
           where("parentId", "==", parentUid),
           where("role", "==", "kid"),
         );
-        const kidsSnap = await getDocs(kidsQuery);
-        const results = kidsSnap.docs
+        const parentKidsSnap = await getDocs(parentKidsQuery);
+        const parentKidsResults = parentKidsSnap.docs
           .map((doc) => doc.data() as UserProfile)
           .filter((u) => u.uid !== activeUid);
-        setSearchResults(results);
-        if (results.length === 0) {
+        setSearchResults(parentKidsResults);
+        if (parentKidsResults.length === 0) {
           setMessage({
             text: "This guardian has no kids registered.",
             type: "error",
@@ -484,9 +508,16 @@ export const FriendsPage = () => {
           <section>
             <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
               <Check size={24} className="text-plaeen-green" /> Your Friends (
-              {friends.length})
+              {friendsLoading ? "..." : friends.length})
             </h2>
-            {friends.length === 0 ? (
+            {friendsLoading ? (
+              <Card className="text-center py-12 bg-white/5 border-white/10">
+                <div className="flex items-center justify-center gap-3 text-white/40">
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-plaeen-green" />
+                  <p className="text-xs font-bold uppercase">Loading friends...</p>
+                </div>
+              </Card>
+            ) : friends.length === 0 ? (
               <Card className="text-center py-12 bg-white/5 border-dashed border-white/20">
                 <p className="text-white/40">
                   You haven't added any friends yet.

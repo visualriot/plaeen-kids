@@ -79,13 +79,6 @@ service cloud.firestore {
              friendsRemoved().size() == 0;
     }
 
-    function isFriendLinkUpdate() {
-      return incoming().diff(existing()).affectedKeys().hasOnly(['friends']) &&
-             incoming().get('friends', []) is list &&
-             existing().get('friends', []) is list &&
-             (isSingleFriendAddition() || isSingleFriendRemoval() || isFriendNoop());
-    }
-
     function groupMembersAdded() {
       return incoming().get('members', []).toSet().difference(existing().get('members', []).toSet());
     }
@@ -111,24 +104,36 @@ service cloud.firestore {
     }
 
     function isTeamInviteResolutionUpdate() {
-      return incoming().diff(existing()).affectedKeys().hasOnly(['members', 'pendingMembers', 'parentIds']) &&
-             incoming().get('members', []) is list &&
-             existing().get('members', []) is list &&
-             incoming().get('pendingMembers', []) is list &&
-             existing().get('pendingMembers', []) is list &&
-             incoming().get('parentIds', []) is list &&
-             existing().get('parentIds', []) is list &&
-             groupMembersRemoved().size() == 0 &&
-             groupPendingAdded().size() == 0 &&
-             groupParentIdsRemoved().size() == 0 &&
-             groupMembersAdded().size() <= 1 &&
-             groupPendingRemoved().size() == 1 &&
-             groupParentIdsAdded().size() <= 1 &&
-             (
-               groupMembersAdded().size() == 0 ||
-               groupPendingRemoved().hasAll(groupMembersAdded())
-             );
-    }
+     return incoming().diff(existing()).affectedKeys().hasOnly(['members', 'pendingMembers', 'parentIds']) &&
+         incoming().get('members', []) is list &&
+         existing().get('members', []) is list &&
+         incoming().get('pendingMembers', []) is list &&
+         existing().get('pendingMembers', []) is list &&
+         incoming().get('parentIds', []) is list &&
+         existing().get('parentIds', []) is list &&
+         groupMembersRemoved().size() == 0 &&
+         groupPendingAdded().size() == 0 &&
+         groupParentIdsRemoved().size() == 0 &&
+         groupPendingRemoved().size() == 1 &&
+         // Allow the invited user themselves, OR a parent acting on behalf of their linked kid.
+         // Kids don't have their own Firebase Auth accounts, so request.auth.uid is the parent's uid
+         // while the kid's doc id sits in pendingMembers.
+         (
+           groupPendingRemoved().hasAny([request.auth.uid]) ||
+           groupPendingRemoved().hasAny(getMyDoc().get('linkedKids', []))
+         ) &&
+         groupMembersAdded().size() <= 1 &&
+         groupParentIdsAdded().size() <= 1 &&
+         (
+           // reject
+           groupMembersAdded().size() == 0 ||
+           // accept: the member added must be the same pending user being removed
+           (
+             groupMembersAdded().size() == 1 &&
+             groupPendingRemoved().hasAll(groupMembersAdded())
+           )
+         );
+}
 
     function isGroupMember(groupId) {
       return isSignedIn() && (
@@ -191,6 +196,48 @@ service cloud.firestore {
              (!data.keys().hasAny(['teamNotes']) || data.teamNotes is string);
     }
 
+    function isSingleFriendAdditionOfCaller() {
+  return friendsAdded().size() == 1 &&
+         friendsRemoved().size() == 0 &&
+         friendsAdded().hasAny([request.auth.uid]) &&
+         incoming().get('friends', []) is list;
+}
+
+function isSingleFriendRemovalOfCaller() {
+  return friendsAdded().size() == 0 &&
+         friendsRemoved().size() == 1 &&
+         friendsRemoved().hasAny([request.auth.uid]) &&
+         incoming().get('friends', []) is list;
+}
+
+// Allows a parent to add/remove one of their linked kids as a friend on another user's doc.
+// This is needed because kids don't have their own Firebase Auth accounts — the parent's
+// auth.uid is used, so isSingleFriendAdditionOfCaller() alone is not enough cross-account.
+function isSingleFriendAdditionOfLinkedKid() {
+  return friendsAdded().size() == 1 &&
+         friendsRemoved().size() == 0 &&
+         friendsAdded().hasAny(getMyDoc().get('linkedKids', [])) &&
+         incoming().get('friends', []) is list;
+}
+
+function isSingleFriendRemovalOfLinkedKid() {
+  return friendsAdded().size() == 0 &&
+         friendsRemoved().size() == 1 &&
+         friendsRemoved().hasAny(getMyDoc().get('linkedKids', [])) &&
+         incoming().get('friends', []) is list;
+}
+
+function isFriendLinkUpdateForCaller(userId) {
+  return incoming().diff(existing()).affectedKeys().hasOnly(['friends']) &&
+         incoming().get('friends', []) is list &&
+         (
+           isSingleFriendAdditionOfCaller() ||
+           isSingleFriendRemovalOfCaller() ||
+           isSingleFriendAdditionOfLinkedKid() ||
+           isSingleFriendRemovalOfLinkedKid()
+         );
+}
+
     // --- Collection Rules ---
 
     match /users/{userId} {
@@ -207,7 +254,7 @@ service cloud.firestore {
         (existing().get('parentId', '') == request.auth.uid) ||
         (incoming().get('parentId', '') == request.auth.uid) ||
         // Friend relationships work cross-account: only one friend id can be added or removed.
-        isFriendLinkUpdate()
+        isFriendLinkUpdateForCaller(userId)
       );
       allow delete: if isSignedIn() && (isOwner(userId) || isParentOf(userId));
     }
@@ -247,18 +294,17 @@ service cloud.firestore {
         isParentOf(incoming().fromId)
       );
       allow update: if isSignedIn() && (
-        resource.data.fromId == request.auth.uid || 
-        resource.data.toId == request.auth.uid ||
-        resource.data.get('fromParentId', '') == request.auth.uid ||
-        resource.data.get('toParentId', '') == request.auth.uid ||
-        isParentOf(resource.data.fromId) ||
-        isParentOf(resource.data.toId) ||
-        // Cross-account invite handling: allow status-only accept/reject.
-        (
-          incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
-          incoming().status in ['accepted', 'rejected'] &&
-          existing().status == 'pending'
-        )
+        // Sender or receiver can update
+        (resource.data.fromId == request.auth.uid || 
+         resource.data.toId == request.auth.uid ||
+         resource.data.get('fromParentId', '') == request.auth.uid ||
+         resource.data.get('toParentId', '') == request.auth.uid ||
+         isParentOf(resource.data.fromId) ||
+         isParentOf(resource.data.toId)) &&
+        // Only allow status changes from pending to accepted/rejected
+        incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
+        incoming().get('status', '') in ['accepted', 'rejected'] &&
+        existing().get('status', '') == 'pending'
       );
       allow delete: if isSignedIn() && (
         resource.data.fromId == request.auth.uid ||
@@ -273,8 +319,10 @@ service cloud.firestore {
     match /groups/{groupId} {
       allow get: if isSignedIn() && (
         resource.data.members.hasAny([request.auth.uid]) ||
+        resource.data.get('pendingMembers', []).hasAny([request.auth.uid]) ||
         resource.data.get('parentIds', []).hasAny([request.auth.uid]) ||
-        isParentOfAnyMember(resource.data.members)
+        isParentOfAnyMember(resource.data.members) ||
+        isParentOfAnyMember(resource.data.get('pendingMembers', []))
       );
 
       allow list: if isSignedIn() && (

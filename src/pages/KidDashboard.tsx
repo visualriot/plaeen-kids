@@ -534,37 +534,80 @@ export const KidDashboard = () => {
           if (!snap.empty) requestId = snap.docs[0].id;
         }
 
+        // if (requestId && fromId) {
+        //   await updateDoc(doc(db, "friendRequests", requestId), {
+        //     status: "accepted",
+        //   });
+        //   await updateDoc(doc(db, "users", activeKid.uid), {
+        //     friends: arrayUnion(fromId),
+        //   });
+        //   await updateDoc(doc(db, "users", fromId), {
+        //     friends: arrayUnion(activeKid.uid),
+        //   });
+
+        //   try {
+        //     const senderPublicDoc = await getDoc(
+        //       doc(db, "users_public", fromId),
+        //     );
+        //     if (senderPublicDoc.exists()) {
+        //       const senderData = senderPublicDoc.data();
+        //       await addDoc(collection(db, "notifications"), {
+        //         userId: fromId,
+        //         parentId: senderData.parentId || null,
+        //         type: "friend_accepted",
+        //         title: "Friend Request Accepted",
+        //         message: `${activeKid.displayName} accepted your friend request!`,
+        //         createdAt: serverTimestamp(),
+        //         read: false,
+        //         fromId: activeKid.uid,
+        //         fromParentId: activeKid.parentId,
+        //       });
+        //     }
+        //   } catch (notificationErr) {
+        //     console.warn("Friend accepted notification failed:", notificationErr);
+        //   }
+        // }
         if (requestId && fromId) {
-          await updateDoc(doc(db, "friendRequests", requestId), {
+          const batch = writeBatch(db);
+
+          batch.update(doc(db, "friendRequests", requestId), {
             status: "accepted",
           });
-          await updateDoc(doc(db, "users", activeKid.uid), {
+
+          batch.update(doc(db, "users", activeKid.uid), {
             friends: arrayUnion(fromId),
           });
-          await updateDoc(doc(db, "users", fromId), {
+
+          batch.update(doc(db, "users", fromId), {
             friends: arrayUnion(activeKid.uid),
           });
+
+          await batch.commit();
 
           try {
             const senderPublicDoc = await getDoc(
               doc(db, "users_public", fromId),
             );
+
             if (senderPublicDoc.exists()) {
               const senderData = senderPublicDoc.data();
+
               await addDoc(collection(db, "notifications"), {
                 userId: fromId,
                 parentId: senderData.parentId || null,
                 type: "friend_accepted",
                 title: "Friend Request Accepted",
-                message: `${activeKid.displayName} accepted your friend request!`,
+                message: `${activeKid?.displayName || parentProfile?.displayName || "Anonymous"} accepted your friend request!`,
                 createdAt: serverTimestamp(),
                 read: false,
                 fromId: activeKid.uid,
-                fromParentId: activeKid.parentId,
               });
             }
           } catch (notificationErr) {
-            console.warn("Friend accepted notification failed:", notificationErr);
+            console.warn(
+              "Friend accepted notification failed:",
+              notificationErr,
+            );
           }
         }
       } else if (fromId) {
