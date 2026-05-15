@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -20,8 +21,8 @@ import {
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useProfile } from "@/contexts/ProfileContext";
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
 import {
   ChevronLeft,
   Trash2,
@@ -94,7 +95,7 @@ export const TeamSettingsPage = () => {
             // Fetch member profiles
             const membersQuery = query(
               collection(db, "users_public"),
-              where("uid", "in", data.members),
+              where("uid", "in", data.members as string[]),
             );
             const membersSnap = await getDocs(membersQuery);
             setMembers(membersSnap.docs.map((d) => d.data() as UserProfile));
@@ -114,7 +115,7 @@ export const TeamSettingsPage = () => {
         if (friendIds.length > 0) {
           const friendsQuery = query(
             collection(db, "users_public"),
-            where("uid", "in", friendIds),
+            where("uid", "in", friendIds as string[]),
           );
           const friendsSnap = await getDocs(friendsQuery);
           setFriends(friendsSnap.docs.map((d) => d.data() as UserProfile));
@@ -270,13 +271,16 @@ export const TeamSettingsPage = () => {
     );
 
   const hasAdminRights =
-    (team.adminIds || []).includes(activeUid || "") ||
-    (team.parentIds || []).includes(user?.uid || "");
+    (team.adminIds || ([] as string[])).includes((activeUid || "") as string) ||
+    (Array.isArray(team.parentIds)
+      ? (team.parentIds as string[])
+      : ([] as string[])
+    ).includes((user?.uid || "") as string);
   const canLeave = (team.members || []).length > 1;
 
   const sortedMembers = [...members].sort((a, b) => {
-    const aIsAdmin = (team.adminIds || []).includes(a.uid);
-    const bIsAdmin = (team.adminIds || []).includes(b.uid);
+    const aIsAdmin = (team.adminIds || ([] as string[])).includes(a.uid);
+    const bIsAdmin = (team.adminIds || ([] as string[])).includes(b.uid);
     if (aIsAdmin && !bIsAdmin) return -1;
     if (!aIsAdmin && bIsAdmin) return 1;
     return 0;
@@ -293,7 +297,7 @@ export const TeamSettingsPage = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-20">
         <div>
-          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+          <h1 className="text-6xl font-bold text-white uppercase  mb-4">
             Team <span className="text-plaeen-green">Settings</span>
           </h1>
           <p className="text-sm font-bold text-white/40 uppercase ">
@@ -553,7 +557,7 @@ export const TeamSettingsPage = () => {
           >
             <Card className="w-full max-w-md bg-plaeen-dark border-plaeen-green/30 p-10">
               <div className="flex justify-between items-center mb-10">
-                <h2 className="text-4xl font-bold text-white uppercase tracking-tighter">
+                <h2 className="text-4xl font-bold text-white uppercase ">
                   Invite Players
                 </h2>
                 <button
@@ -640,7 +644,7 @@ export const TeamSettingsPage = () => {
                   <LogOut size={32} className="text-amber-500" />
                 )}
               </div>
-              <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">
+              <h2 className="text-2xl font-bold text-white uppercase  mb-4">
                 {confirmModal.type === "delete"
                   ? "Decommission Team?"
                   : "Leave Sector?"}

@@ -12,8 +12,9 @@ import {
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useProfile } from "../contexts/ProfileContext";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-import { Card } from "../components/Card";
-import { Button } from "../components/Button";
+import { Card } from "../components/molecules/Card";
+import { Button } from "../components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import {
   Lock,
   LogOut,
@@ -244,9 +245,12 @@ export const ProfileSelectionPage = () => {
         <div className="flex gap-4">
           <button
             onClick={handleLogout}
-            className="text-white/40 hover:text-white transition-colors flex items-center gap-2 font-bold uppercase  text-xs"
+            className="text-white/40 hover:text-white transition-colors flex items-center gap-2"
           >
-            <LogOut size={16} /> Logout
+            <LogOut size={16} />{" "}
+            <Text variant="caption" as="span">
+              Logout
+            </Text>
           </button>
         </div>
       </div>
@@ -256,9 +260,9 @@ export const ProfileSelectionPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="text-center z-10"
       >
-        <h1 className="font-display text-5xl md:text-7xl font-bold text-white uppercase tracking-tighter mb-16">
+        <Heading level={1} variant="display" color="primary" className="mb-16">
           Who's <span className="text-plaeen-green">playing?</span>
-        </h1>
+        </Heading>
 
         <div className="flex flex-wrap justify-center gap-8 md:gap-12">
           {/* Kids Profiles */}
@@ -306,13 +310,22 @@ export const ProfileSelectionPage = () => {
                 </div>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-xl md:text-2xl font-bold text-white/60 group-hover:text-white uppercase  transition-colors">
+                <Heading
+                  level={3}
+                  variant="section"
+                  className="text-white/60 group-hover:text-white transition-colors"
+                >
                   {formatName(kid.displayName)}
-                </span>
-                <span className="text-xs md:text-sm font-bold text-white/20 group-hover:text-white/30 lowercase  transition-colors">
+                </Heading>
+                <Text
+                  variant="caption"
+                  color="muted"
+                  as="span"
+                  className="group-hover:text-white/30 transition-colors"
+                >
                   @{kid.username}{" "}
                   {kid.birthDate && `• ${calculateAge(kid.birthDate)}Y`}
-                </span>
+                </Text>
               </div>
             </motion.button>
           ))}
@@ -333,9 +346,13 @@ export const ProfileSelectionPage = () => {
                 <Lock size={14} className="text-white/60" />
               </div>
             </div>
-            <span className="text-xl md:text-2xl font-bold text-white/60 group-hover:text-white uppercase  transition-colors">
+            <Heading
+              level={3}
+              variant="section"
+              className="text-white/60 group-hover:text-white transition-colors"
+            >
               Guardian
-            </span>
+            </Heading>
           </motion.button>
         </div>
 
@@ -343,7 +360,7 @@ export const ProfileSelectionPage = () => {
           <Button
             variant="outline"
             className={cn(
-              "uppercase  text-[10px] px-12 py-4 transition-all",
+              "px-12 py-4 transition-all",
               isManageMode
                 ? "bg-plaeen-green text-black border-plaeen-green"
                 : "border-white/10 text-white/40 hover:text-white",
@@ -353,9 +370,13 @@ export const ProfileSelectionPage = () => {
             {isManageMode ? "Done Managing" : "Manage Profiles"}
           </Button>
           {isManageMode && (
-            <p className="text-[10px] font-bold text-plaeen-green uppercase  animate-pulse">
+            <Text
+              variant="caption"
+              as="p"
+              className="text-plaeen-green animate-pulse"
+            >
               Select a profile to edit
-            </p>
+            </Text>
           )}
         </div>
       </motion.div>
@@ -378,20 +399,23 @@ export const ProfileSelectionPage = () => {
               </button>
 
               <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-white uppercase tracking-tighter mb-2">
+                <Heading
+                  level={2}
+                  variant="section"
+                  color="primary"
+                  className="mb-2"
+                >
                   Edit <span className="text-plaeen-green">Profile</span>
-                </h2>
-                <p className="text-white/40 text-[10px] font-bold uppercase ">
+                </Heading>
+                <Text variant="caption" color="muted" as="p">
                   Personalize your gaming identity
-                </p>
+                </Text>
               </div>
 
               <div className="grid md:grid-cols-2 gap-12">
                 {/* Avatar Selection */}
                 <div className="space-y-6">
-                  <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
-                    Choose Avatar
-                  </label>
+                  <Label className="text-plaeen-green">Choose Avatar</Label>
                   <div className="relative group">
                     <div className="h-48 w-48 mx-auto rounded-[2.5rem] overflow-hidden border-4 border-plaeen-green shadow-2xl">
                       <img
@@ -408,7 +432,7 @@ export const ProfileSelectionPage = () => {
                         `/avatar-selection?kidUid=${editingKid.uid}&returnTo=${encodeURIComponent("/select-profile")}`,
                       )
                     }
-                    className="w-full py-4 text-xs font-bold uppercase  border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green/10"
+                    className="w-full py-4 border-plaeen-green/30 text-plaeen-green hover:bg-plaeen-green/10"
                   >
                     Select New Avatar
                   </Button>
@@ -417,21 +441,17 @@ export const ProfileSelectionPage = () => {
                 {/* Info Fields */}
                 <div className="space-y-8">
                   <div className="space-y-4">
-                    <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
-                      Display Name
-                    </label>
+                    <Label className="text-plaeen-green">Display Name</Label>
                     <input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase "
+                      className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all"
                     />
                   </div>
 
                   <div className="space-y-4">
-                    <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
-                      Username
-                    </label>
+                    <Label className="text-plaeen-green">Username</Label>
                     <input
                       type="text"
                       value={editUsername}
@@ -448,7 +468,7 @@ export const ProfileSelectionPage = () => {
                         }
                       }}
                       className={cn(
-                        "w-full rounded-xl border-2 bg-white/5 px-6 py-4 text-white font-bold focus:outline-none transition-all uppercase ",
+                        "w-full rounded-xl border-2 bg-white/5 px-6 py-4 text-white font-bold focus:outline-none transition-all",
                         editError &&
                           editError !== "Name and username are required" &&
                           editError !== "Username already taken" &&
@@ -460,9 +480,13 @@ export const ProfileSelectionPage = () => {
                   </div>
 
                   {editError && (
-                    <p className="text-red-500 text-[10px] font-bold uppercase  text-center">
+                    <Text
+                      variant="caption"
+                      as="p"
+                      className="text-red-500 text-center"
+                    >
                       {editError}
-                    </p>
+                    </Text>
                   )}
 
                   <div className="pt-4">
@@ -512,12 +536,22 @@ export const ProfileSelectionPage = () => {
                       size={48}
                       className="text-plaeen-green mx-auto mb-8"
                     />
-                    <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
+                    <Heading
+                      level={2}
+                      variant="section"
+                      color="primary"
+                      className="mb-4"
+                    >
                       Parental Access
-                    </h2>
-                    <p className="text-white/40 text-xs font-bold uppercase  mb-12">
+                    </Heading>
+                    <Text
+                      variant="caption"
+                      color="muted"
+                      as="p"
+                      className="mb-12"
+                    >
                       Enter your 4-digit PIN
-                    </p>
+                    </Text>
 
                     <form
                       onSubmit={handlePinSubmit}
@@ -592,7 +626,7 @@ export const ProfileSelectionPage = () => {
                           e.stopPropagation();
                           setShowForgotPinView(true);
                         }}
-                        className="relative z-20 text-[10px] font-bold text-white/20 hover:text-plaeen-green transition-all uppercase  py-2 px-4 cursor-pointer"
+                        className="relative z-20 text-white/20 hover:text-plaeen-green transition-all py-2 px-4 cursor-pointer"
                       >
                         Forgot PIN?
                       </button>
@@ -609,15 +643,25 @@ export const ProfileSelectionPage = () => {
                       size={48}
                       className="text-plaeen-green mx-auto mb-8"
                     />
-                    <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
+                    <Heading
+                      level={2}
+                      variant="section"
+                      color="primary"
+                      className="mb-4"
+                    >
                       Reset PIN
-                    </h2>
+                    </Heading>
 
                     {!resetSent ? (
                       <>
-                        <p className="text-white/40 text-xs font-bold uppercase  mb-12">
+                        <Text
+                          variant="caption"
+                          color="muted"
+                          as="p"
+                          className="mb-12"
+                        >
                           Enter your email to receive a reset link
-                        </p>
+                        </Text>
                         <form
                           onSubmit={async (e) => {
                             e.preventDefault();
@@ -637,29 +681,29 @@ export const ProfileSelectionPage = () => {
                           className="space-y-8 text-left"
                         >
                           <div className="space-y-4">
-                            <label className="block text-[10px] font-bold uppercase  text-plaeen-green">
+                            <Label className="text-plaeen-green">
                               Email Address
-                            </label>
+                            </Label>
                             <input
                               type="email"
                               value={resetEmail}
                               onChange={(e) => setResetEmail(e.target.value)}
                               placeholder="ENTER YOUR EMAIL"
-                              className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-5 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase  text-sm"
+                              className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-5 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all text-sm"
                               required
                             />
                           </div>
                           <Button
                             type="submit"
                             disabled={isResetting}
-                            className="w-full py-6 font-bold uppercase  shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+                            className="w-full py-6 font-bold shadow-[0_0_30px_rgba(118,233,0,0.3)]"
                           >
                             {isResetting ? "Processing..." : "Send Reset Link"}
                           </Button>
                           <button
                             type="button"
                             onClick={() => setShowForgotPinView(false)}
-                            className="w-full text-[10px] font-bold text-white/20 hover:text-white transition-all uppercase "
+                            className="w-full text-white/20 hover:text-white transition-all"
                           >
                             Back to Login
                           </button>
@@ -671,18 +715,20 @@ export const ProfileSelectionPage = () => {
                           size={48}
                           className="text-plaeen-green mx-auto"
                         />
-                        <p className="text-white font-bold uppercase  text-sm">
-                          Reset link sent to your email!
-                        </p>
-                        <p className="text-white/40 text-xs font-bold uppercase  ">
+                        <Text as="p">Reset link sent to your email!</Text>
+                        <Text variant="caption" color="muted" as="p">
                           Check your inbox and click the link to configure your
                           new futuristic PIN.
-                        </p>
+                        </Text>
 
                         <div className="p-6 rounded-2xl bg-plaeen-green/5 border border-plaeen-green/20 space-y-4">
-                          <p className="text-[10px] font-bold text-plaeen-green uppercase  text-center">
+                          <Text
+                            variant="caption"
+                            as="p"
+                            className="text-plaeen-green text-center"
+                          >
                             Protocol Override (Dev Mode):
-                          </p>
+                          </Text>
                           <Link
                             to={`/reset-pin?token=${user?.uid}`}
                             className="block w-full py-4 rounded-xl bg-plaeen-green text-black font-bold uppercase  text-[10px] hover:scale-105 transition-transform"
@@ -694,7 +740,7 @@ export const ProfileSelectionPage = () => {
                         <Button
                           onClick={() => setShowForgotPinView(false)}
                           variant="outline"
-                          className="w-full py-6 font-bold uppercase  border-white/10 text-white/40 hover:text-white"
+                          className="w-full py-6 font-bold border-white/10 text-white/40 hover:text-white"
                         >
                           Return to Access
                         </Button>

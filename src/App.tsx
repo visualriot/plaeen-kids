@@ -8,7 +8,8 @@ import {
 } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "./firebase";
-import { Navbar } from "./components/Navbar";
+import { Navbar } from "@/components/molecules";
+import { Heading, Text, Label } from "@/components/atoms";
 import { LandingPage } from "./pages/LandingPage";
 import { AuthPage } from "./pages/AuthPage";
 import { TeamsPage } from "./pages/TeamsPage";
@@ -35,6 +36,7 @@ import { ProposeSessionPage } from "./pages/ProposeSessionPage";
 import { UserAvatarSelectionPage } from "./pages/UserAvatarSelectionPage";
 import { TeamAvatarSelectionPage } from "./pages/TeamAvatarSelectionPage";
 import { CreateTeamPage } from "./pages/CreateTeamPage";
+import { ShowcasePage } from "./pages/ShowcasePage";
 import { ProfileProvider, useProfile } from "./contexts/ProfileContext";
 
 import { ParentSettingsPage } from "./pages/ParentSettingsPage";
@@ -144,13 +146,14 @@ function AppContent() {
     );
   }
 
-  // Hide main navbar on auth, onboarding, and profile selection pages
+  // Hide main navbar on auth, onboarding, profile selection, and showcase pages
   const isAuthPage = location.pathname === "/auth";
   const isOnboardingPage = location.pathname === "/onboarding";
   const isProfileSelectionPage = location.pathname === "/select-profile";
   const isAvatarSelectionPage =
     location.pathname === "/avatar-selection" ||
     location.pathname === "/team-avatar-selection";
+  const isShowcasePage = location.pathname === "/showcase";
 
   const showNavbar =
     user &&
@@ -158,7 +161,8 @@ function AppContent() {
     !isAuthPage &&
     !isOnboardingPage &&
     !isProfileSelectionPage &&
-    !isAvatarSelectionPage;
+    !isAvatarSelectionPage &&
+    !isShowcasePage;
 
   return (
     <div className="min-h-screen bg-plaeen-dark text-white font-sans selection:bg-plaeen-green selection:text-black">
@@ -166,6 +170,7 @@ function AppContent() {
       <main className="relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/showcase" element={<ShowcasePage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route
             path="/onboarding"

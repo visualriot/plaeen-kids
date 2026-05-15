@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { auth } from "../firebase";
+import { auth } from "@/firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
   Gamepad2,
@@ -20,17 +20,18 @@ import {
   Compass,
   RefreshCw,
 } from "lucide-react";
-import { Button } from "./Button";
-import { useProfile } from "../contexts/ProfileContext";
+import { Button } from "@/components/atoms";
+import { useProfile } from "@/contexts/ProfileContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatName, getUserAvatar } from "../lib/utils";
+import { formatName, getUserAvatar } from "@/lib/utils";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
-import { NotificationPanel } from "./NotificationPanel";
+import { db } from "@/firebase";
+import { NotificationPanel } from "@/components/organisms";
 
 export const Navbar = () => {
   const [user] = useAuthState(auth);
-  const { role, activeKid, isParentViewingKid, logoutProfile } = useProfile();
+  const { role, activeKid, parentProfile, isParentViewingKid, logoutProfile } =
+    useProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -41,6 +42,13 @@ export const Navbar = () => {
   const location = useLocation();
 
   const activeUid = activeKid?.uid || (role === "parent" ? user?.uid : null);
+
+  const avatarUrl = activeKid
+    ? activeKid.photoURL
+    : parentProfile?.photoURL || user?.photoURL;
+  const displayName = activeKid
+    ? activeKid.displayName
+    : parentProfile?.displayName || user?.displayName || "User";
 
   useEffect(() => {
     setUnreadCount(0);
@@ -137,10 +145,10 @@ export const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 rounded-xl font-semibold uppercase  transition-all ${
+                className={`px-4 py-2 rounded-radius-md font-semibold text-sm uppercase tracking-widest transition-all ${
                   location.pathname === link.path
-                    ? "text-plaeen-green bg-plaeen-green/10"
-                    : "text-white/40 hover:text-white "
+                    ? "text-plaeen-green "
+                    : "text-neutral-300 hover:text-white"
                 }`}
               >
                 {link.name}
@@ -161,7 +169,7 @@ export const Navbar = () => {
             >
               <Bell size={24} />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 h-[10px] w-[10px] rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
+                <span className="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
               )}
             </button>
 
@@ -182,16 +190,14 @@ export const Navbar = () => {
             >
               <div className="h-14 w-14 rounded-xl overflow-hidden border-2 border-plaeen-green/30">
                 <img
-                  src={getUserAvatar(activeKid?.photoURL || user?.photoURL)}
+                  src={getUserAvatar(avatarUrl)}
                   alt="Profile"
                   className="h-full w-full object-cover"
                 />
               </div>
               <div className="hidden sm:block text-left pr-2">
                 <p className=" font-bold text-white uppercase ">
-                  {formatName(
-                    activeKid?.displayName || user?.displayName || "User",
-                  )}
+                  {formatName(displayName)}
                 </p>
                 <p className="text-sm  text-white/60">
                   {role === "kid" ? "Gamer" : "Guardian"}

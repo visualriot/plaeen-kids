@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Check, Loader2 } from "lucide-react";
-import { Button } from "@/components/Button";
+import { Heading, Text, Label, Button } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -70,20 +70,25 @@ export const UserAvatarSelectionPage = () => {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-20">
-      <button
+      <Button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase  text-xs mb-12"
+        variant="back"
+        className="group gap-1"
       >
-        <ChevronLeft size={16} /> Back
-      </button>
+        <ChevronLeft size={16} />
+        <span className="group-hover:translate-x-1  transition-all ease-in-out duration-200">
+          Back
+        </span>
+      </Button>
 
-      <div className="mb-12">
-        <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+      <div className="mb-12 space-y-5">
+        <Heading level={1} variant="display">
           Select <span className="text-plaeen-green">Avatar</span>
-        </h1>
-        <p className="text-sm font-bold text-white/40 uppercase ">
+        </Heading>
+
+        <Text variant="subtitle">
           Choose your identity for the Plaeen network
-        </p>
+        </Text>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Heading, Text, Label, Button } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Info,
-  Check,
   RotateCcw,
   Zap,
   CalendarCheck2,
@@ -118,7 +117,7 @@ export const KidCalendarPage = () => {
           const all = results.flat();
           // Filter out sessions rejected by the active kid
           const filtered = all.filter((s: any) => {
-            const resp = s.responses?.[activeKid.uid];
+            const resp = activeKid ? s.responses?.[activeKid.uid] : undefined;
             return !resp || resp.status !== "rejected";
           });
           setTeamSessions(filtered);
@@ -268,12 +267,15 @@ export const KidCalendarPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
         <div>
-          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30_rgba(118,233,0,0.3)]">
+          <Heading
+            level={1}
+            className="drop-shadow-[0_0_30_rgba(118,233,0,0.3)]"
+          >
             Your <span className="text-plaeen-green">Calendar</span>
-          </h1>
-          <p className="text-white/40 font-bold uppercase  text-xs mt-2">
+          </Heading>
+          <Text variant="caption" className="mt-2">
             Manage your availability and team sessions
-          </p>
+          </Text>
         </div>
 
         <div className="flex items-center gap-6 bg-white/5 border border-white/10 p-4 rounded-3xl">
@@ -327,7 +329,7 @@ export const KidCalendarPage = () => {
               >
                 <button
                   onClick={() => toggleDay(day)}
-                  className="text-left text-[8px] md:text-[10px] font-bold text-white/40 hover:text-white transition-colors uppercase tracking-tight md: group flex items-center gap-1"
+                  className="text-left text-[8px] md:text-[10px] font-bold text-white/40 hover:text-white transition-colors uppercase  md: group flex items-center gap-1"
                 >
                   <span className="w-12 md:w-16">{format(day, "EEE d")}</span>
                   <RotateCcw

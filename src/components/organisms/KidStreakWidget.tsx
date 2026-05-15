@@ -1,5 +1,5 @@
 import React from "react";
-import { Card } from "./Card";
+import { Card } from "../molecules/Card";
 import { Check, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,18 @@ interface StreakData {
   rewardClaimedToday?: boolean; // Track if bonus was added for today
 }
 
+/**
+ * @component KidStreakWidget
+ * @atomic organism
+ * @figma KidStreakWidget (Components / Organisms / KidStreakWidget)
+ *
+ * @tokens
+ *   shadow-glow-md, radius-full, radius-lg,
+ *   color-accent, color-primary
+ *
+ * @states default (active/inactive streak)
+ * @transitions all 500ms ease
+ */
 interface KidStreakWidgetProps {
   streak: StreakData;
   className?: string;
@@ -62,22 +74,23 @@ export const KidStreakWidget = ({
 
       {/* Right Side: Progress Dots */}
       <div className="flex-1 w-full flex flex-col gap-6">
-        <div className="rounded-2xl">
+        <div className="rounded-radius-lg">
           <div className="flex justify-between w-full mb-6">
             {dots.map((dot, i) => (
               <div
                 key={i}
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center transition-all duration-500 border-2",
+                  "h-8 w-8 rounded-radius-full flex items-center justify-center transition-all duration-500 border-2",
                   dot.isFilled
-                    ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green shadow-[0_0_15px_rgba(118,233,0,0.3)]"
+                    ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
                     : "bg-white/5 border-white/30 text-white/30",
                 )}
+                style={dot.isFilled ? { boxShadow: "var(--shadow-glow-md)" } : undefined}
               >
                 {dot.isFilled ? (
                   <Check size={16} strokeWidth={4} />
                 ) : (
-                  <div className="h-1.5 w-1.5 rounded-full bg-white/20" />
+                  <div className="h-1.5 w-1.5 rounded-radius-full bg-white/20" />
                 )}
               </div>
             ))}

@@ -57,6 +57,10 @@ export interface KidProfile {
   restrictedMode?: boolean;
   wishlist?: string[];
   teamAliases?: Record<string, string>;
+  availability?: {
+    recurring?: Record<string, boolean>;
+    once?: Record<string, boolean>;
+  };
 }
 
 export interface UserProfile {
@@ -96,6 +100,7 @@ export interface Team {
   pendingMembers?: string[];
   ownerId: string;
   imageURL?: string;
+  parentIds?: string;
   teamAvailability?: Record<string, string>;
 }
 

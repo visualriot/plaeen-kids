@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Heading, Text, Label } from "@/components/atoms";
 import { db, auth } from "../firebase";
 import {
   collection,
@@ -37,8 +38,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useProfile } from "../contexts/ProfileContext";
-import { Button } from "../components/Button";
-import { Card } from "../components/Card";
+import { Button } from "../components/atoms/Button";
+import { Card } from "../components/molecules/Card";
 import { cn, formatName, safeToDate } from "../lib/utils";
 import { handleFirestoreError } from "../lib/firestoreUtils";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
@@ -475,20 +476,12 @@ export const NotificationsPage = () => {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
-            Inbox <span className="text-plaeen-green">Center</span>
-          </h1>
-          <p className="text-white/40 font-bold uppercase  text-xs mt-2">
-            Manage your alerts and invitations
-          </p>
+          <h1>Notifications</h1>
+          <p className="note">Manage your alerts and invitations</p>
         </div>
 
         {notifications.some((n) => !n.read) && (
-          <Button
-            variant="outline"
-            onClick={markAllAsRead}
-            className="border-white/10 text-white/40 hover:text-white hover:border-white/20 text-[10px] font-bold uppercase "
-          >
+          <Button variant="outline" onClick={markAllAsRead}>
             Mark all as read
           </Button>
         )}

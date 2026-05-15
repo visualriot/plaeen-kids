@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { db } from "@/firebase";
 import {
   doc,
@@ -333,7 +334,9 @@ export const OvertimeDecisionPage = () => {
           <div className="w-20 h-20 bg-plaeen-green/20 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 size={40} className="text-plaeen-green" />
           </div>
-          <h1 className="font-display tracking-wider text-3xl font-bold text-white">Decision Applied</h1>
+          <h1 className="font-display tracking-wider text-3xl font-bold text-white">
+            Decision Applied
+          </h1>
           <p className="text-white/40">Redirecting you back to management...</p>
         </motion.div>
       </div>
@@ -356,7 +359,7 @@ export const OvertimeDecisionPage = () => {
             <span className="text-[10px] font-bold uppercase ">Back</span>
           </button>
           <div className="text-right">
-            <h1 className="font-display text-2xl md:text-4xl font-bold text-white uppercase tracking-tight">
+            <h1 className="text-2xl md:text-4xl font-bold text-white uppercase ">
               Overtime Decision
             </h1>
             <p className="text-plaeen-green text-[10px] font-bold uppercase ">
@@ -469,7 +472,9 @@ export const OvertimeDecisionPage = () => {
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-red-500">
                   <Shield size={18} />
-                  <h3 className="text-white text-sm font-bold uppercase">Ban the Day</h3>
+                  <h3 className="text-white text-sm font-bold uppercase">
+                    Ban the Day
+                  </h3>
                 </div>
 
                 <div className="space-y-3">

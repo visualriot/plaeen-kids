@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -48,7 +49,10 @@ import {
   cn,
   formatName,
   getUserAvatar,
-  DEFAULT_USER_AVATAR,
+  getRandomUserAvatar,
+  validateBirthDate,
+  getTodayDateString,
+  BIRTH_DATE_MIN,
 } from "@/lib/utils";
 import type { KidProfile, ApprovalRequest } from "@/lib/types";
 
@@ -154,20 +158,40 @@ export const ParentDashboard = () => {
 
   const createKidAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newKidName || !newKidUsername || !newKidBirthDate || isCreatingKid) return;
+    if (
+      !user ||
+      !newKidName ||
+      !newKidUsername ||
+      !newKidBirthDate ||
+      isCreatingKid
+    )
+      return;
     setError(null);
     setIsCreatingKid(true);
 
     try {
+      const birthDateError = validateBirthDate(newKidBirthDate);
+      if (birthDateError) {
+        setError(birthDateError);
+        setIsCreatingKid(false);
+        return;
+      }
+
       const validation = validateUsername(newKidUsername);
       if (!validation.isValid) {
         setError(validation.error || "Invalid username.");
         return;
       }
 
-      const cleanUsername = newKidUsername.toLowerCase().trim().replace(/^@/, "");
+      const cleanUsername = newKidUsername
+        .toLowerCase()
+        .trim()
+        .replace(/^@/, "");
 
-      const qUsername = query(collection(db, "users_public"), where("username", "==", cleanUsername));
+      const qUsername = query(
+        collection(db, "users_public"),
+        where("username", "==", cleanUsername),
+      );
       const usernameSnap = await getDocs(qUsername);
       if (!usernameSnap.empty) {
         setError("Username already taken. Please choose another one.");
@@ -175,12 +199,14 @@ export const ParentDashboard = () => {
       }
 
       const kidUid = `kid_${Math.random().toString(36).substr(2, 9)}`;
+      const kidAvatar = getRandomUserAvatar();
       const kidData = {
         uid: kidUid,
         displayName: newKidName,
         username: cleanUsername,
         birthDate: newKidBirthDate,
         role: "kid",
+        photoURL: kidAvatar,
         parentId: user.uid,
         screenTime: {
           dailyAllowance: 60,
@@ -201,12 +227,16 @@ export const ParentDashboard = () => {
         uid: kidUid,
         displayName: kidData.displayName,
         username: cleanUsername,
-        photoURL: DEFAULT_USER_AVATAR,
+        photoURL: kidAvatar,
         role: "kid",
         parentId: user.uid,
         parentEmail: user.email?.toLowerCase() || null,
       });
-      batch.set(doc(db, "users", user.uid), { linkedKids: arrayUnion(kidUid) }, { merge: true });
+      batch.set(
+        doc(db, "users", user.uid),
+        { linkedKids: arrayUnion(kidUid) },
+        { merge: true },
+      );
       await batch.commit();
 
       setIsAddKidOpen(false);
@@ -334,7 +364,12 @@ export const ParentDashboard = () => {
   };
 
   const handleDeleteKid = async (kidId: string) => {
-    if (!window.confirm("Are you sure you want to delete this kid account? This cannot be undone.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this kid account? This cannot be undone.",
+      )
+    )
+      return;
 
     try {
       // Delete both user docs and remove from linkedKids in one atomic batch.
@@ -343,7 +378,9 @@ export const ParentDashboard = () => {
       const batch = writeBatch(db);
       batch.delete(doc(db, "users", kidId));
       batch.delete(doc(db, "users_public", kidId));
-      batch.update(doc(db, "users", user!.uid), { linkedKids: arrayRemove(kidId) });
+      batch.update(doc(db, "users", user!.uid), {
+        linkedKids: arrayRemove(kidId),
+      });
       await batch.commit();
 
       if (user) {
@@ -371,7 +408,7 @@ export const ParentDashboard = () => {
           <h1 className="font-display font-bold tracking-wider text-6xl text-white drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             Guardian <span className="text-plaeen-green">Hub</span>
           </h1>
-          <p className="note mt-2">Parental Oversight & Management</p>
+          <p className="note">Parental Oversight & Management</p>
         </div>
         <div className="flex gap-4">
           <Link to="/parent/settings">
@@ -406,7 +443,7 @@ export const ParentDashboard = () => {
                   <p className="text-[10px] font-bold text-white/60 uppercase  mb-1">
                     {activeAlert.childName} Needs Attention
                   </p>
-                  <p className="text-lg font-bold text-white tracking-tight">
+                  <p className="text-lg font-bold text-white ">
                     {activeAlert.message}
                   </p>
                 </div>
@@ -443,7 +480,7 @@ export const ParentDashboard = () => {
                         <h3 className="text-2xl font-bold text-white uppercase">{formatName(kid.displayName)}</h3>
                         {kid.screenTime?.isSessionActive && (
                           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-[8px] font-bold text-plaeen-green uppercase  animate-pulse">
-                            <span className="h-1.5 w-1.5 rounded-full bg-plaeen-green"></span>
+                            <span className="h-2 w-2 rounded-full bg-plaeen-green"></span>
                             Live
                           </span>
                         )}
@@ -585,7 +622,7 @@ export const ParentDashboard = () => {
                       <p className="text-[8px] font-bold text-plaeen-green uppercase  mb-1">
                         {req.childName}
                       </p>
-                      <p className="text-xs font-bold text-white uppercase tracking-tight">
+                      <p className="text-xs font-bold text-white uppercase ">
                         {req.type === "activity"
                           ? `Activity: ${req.title}`
                           : req.type === "friend"
@@ -695,7 +732,7 @@ export const ParentDashboard = () => {
           >
             <Card className="w-full max-w-md bg-plaeen-dark border-plaeen-purple/30 p-10">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
+                <h2 className="text-3xl font-bold text-white uppercase ">
                   {selectedApproval.type === "overtime"
                     ? "Overtime Decision"
                     : "Approve Activity"}
@@ -714,7 +751,7 @@ export const ParentDashboard = () => {
                     <p className="text-[10px] font-bold text-red-500 uppercase  mb-2">
                       {selectedApproval.childName} went overtime
                     </p>
-                    <p className="text-4xl font-bold text-white tracking-tighter mb-1">
+                    <p className="text-4xl font-bold text-white  mb-1">
                       {selectedApproval.data.overtimeMinutes}m
                     </p>
                     <p className="text-[10px] text-white/40 font-bold uppercase ">
@@ -798,7 +835,7 @@ export const ParentDashboard = () => {
                     <p className="text-[10px] font-bold text-plaeen-green uppercase  mb-2">
                       {selectedApproval.childName} says:
                     </p>
-                    <p className="text-xl font-bold text-white uppercase tracking-tight italic">
+                    <p className="text-xl font-bold text-white uppercase  italic">
                       "{selectedApproval.title}"
                     </p>
                   </div>
@@ -866,7 +903,7 @@ export const ParentDashboard = () => {
           >
             <Card className="w-full max-w-md bg-plaeen-dark border-plaeen-green/30 p-10">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
+                <h2 className="text-3xl font-bold text-white uppercase ">
                   Register Kid
                 </h2>
                 <button
@@ -932,6 +969,8 @@ export const ParentDashboard = () => {
                     type="date"
                     value={newKidBirthDate}
                     onChange={(e) => setNewKidBirthDate(e.target.value)}
+                    min={BIRTH_DATE_MIN}
+                    max={getTodayDateString()}
                     className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:border-plaeen-green focus:outline-none transition-all uppercase  text-sm"
                     required
                   />
@@ -966,7 +1005,7 @@ export const ParentDashboard = () => {
             <Card className="w-full max-w-md bg-plaeen-dark border-amber-500/30 p-10">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
+                  <h2 className="text-3xl font-bold text-white uppercase ">
                     Set Username
                   </h2>
                   <p className="text-amber-500 text-[10px] font-bold uppercase  mt-1">

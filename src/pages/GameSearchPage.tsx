@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
-import { GameDetailsModal } from "@/components/GameDetailsModal";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Dropdown } from "@/components/atoms/Dropdown";
+import { GameDetailsModal } from "@/components/organisms/GameDetailsModal";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -83,10 +85,10 @@ const GENRES = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "relevance", label: "By Relevance" },
-  { value: "year-desc", label: "By Release Year (Newest)" },
-  { value: "year-asc", label: "By Release Year (Oldest)" },
-  { value: "recommendation", label: "By Recommendation" },
+  { value: "relevance", label: "Relevance" },
+  { value: "year-desc", label: "Newest first" },
+  { value: "year-asc", label: "Oldest first" },
+  { value: "recommendation", label: "Rating" },
 ];
 
 // Platform logo mapping - returns SVG file paths
@@ -620,37 +622,6 @@ export const GameSearchPage = () => {
         if (pageNum === 1) {
           setGames([]);
         }
-
-        // Fallback to Gemini if backend API fails
-        // try {
-        //   const prompt = `Act as a game database API. Search for games matching "${normalizedQuery}".
-        // Return a JSON array of exactly 6 game objects with: id (string), name, description (short), platforms (array), genres (array), image (picsum.photos/seed/{name}/600/400), rating (0-100), releaseDate, isChildFriendly (boolean).
-        // Filter results based on: ${role === "kid" && kidData?.restrictedMode ? "ONLY child-friendly games" : "all games"}.`;
-
-        //   const geminiResponse = await ai.models.generateContent({
-        //     model: "gemini-3-flash-preview",
-        //     contents: prompt,
-        //   });
-
-        //   const text = geminiResponse.text || "";
-        //   const cleanedText = text.replace(/```json|```/g, "").trim();
-        //   const fallbackGames = JSON.parse(cleanedText);
-        //   if (requestId !== latestRequestRef.current) return;
-
-        //   if (pageNum === 1) {
-        //     setGames(fallbackGames);
-        //   } else {
-        //     setGames((prev) => [...prev, ...fallbackGames]);
-        //   }
-        // } catch (geminiErr) {
-        //   console.error("Gemini fallback error:", geminiErr);
-        //   if (requestId !== latestRequestRef.current) return;
-
-        //   // Don't fall back to explore for search - just show empty results
-        //   if (pageNum === 1) {
-        //     setGames([]);
-        //   }
-        // }
       } finally {
         if (requestId === latestRequestRef.current) {
           setLoading(false);
@@ -806,11 +777,11 @@ export const GameSearchPage = () => {
       )}
 
       <div className="mb-16 flex flex-col md:flex-row items-center justify-between gap-6">
-        <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">{pageTitle}</h1>
+        <Heading level={1}>{pageTitle}</Heading>
         <Button
           variant="outline"
           onClick={() => navigate(-1)}
-          className="border-white/20 text-white hover:bg-white/10 font-bold uppercase  px-8"
+          className="border-white/20 text-white hover:bg-white/10 px-8"
         >
           Go Back
         </Button>
@@ -826,12 +797,12 @@ export const GameSearchPage = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
           <div className="absolute inset-0 flex flex-col justify-center p-12 md:p-20">
-            <div className="text-plaeen-green text-xs font-bold uppercase  mb-4">
+            <Text variant="caption" color="accent" className="mb-4">
               Our Recommendation
-            </div>
-            <h2 className="text-6xl md:text-8xl font-bold text-white uppercase tracking-tighter mb-8 max-w-2xl">
+            </Text>
+            <Heading level={2} className="text-6xl md:text-8xl mb-8 max-w-2xl">
               {recommendation.name}
-            </h2>
+            </Heading>
             <div className="flex flex-wrap gap-4">
               <Button
                 variant="primary"
@@ -903,178 +874,32 @@ export const GameSearchPage = () => {
           {/* Left Side - Filters and Toggle */}
           <div className="flex flex-wrap items-center gap-4">
             {/* Genre - Filter Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "genre" ? null : "genre")
-                }
-                className={cn(
-                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase  flex items-center gap-2 transition-all whitespace-nowrap",
-                  selectedGenres.length > 0
-                    ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
-                    : openDropdown === "genre"
-                      ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
-                      : "bg-white/5 border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/50",
-                )}
-              >
-                Genre
-                {selectedGenres.length > 0 && ` (${selectedGenres.length})`}
-                <ChevronDown size={12} />
-              </button>
-              {openDropdown === "genre" && (
-                <div className="absolute top-full mt-1 left-0 bg-plaeen-dark border border-plaeen-green/30 rounded-lg shadow-lg z-50 max-h-80 flex flex-col overflow-hidden">
-                  <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-thumb-rounded-full scrollbar-track-transparent flex-1">
-                    {GENRES.map((genre) => (
-                      <button
-                        key={genre.id}
-                        onClick={() => {
-                          setSelectedGenres((prev) =>
-                            prev.includes(genre.id)
-                              ? prev.filter((g) => g !== genre.id)
-                              : [...prev, genre.id],
-                          );
-                        }}
-                        className={cn(
-                          "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all whitespace-nowrap flex items-center gap-3",
-                          selectedGenres.includes(genre.id)
-                            ? "bg-plaeen-green/20 text-plaeen-green"
-                            : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
-                            selectedGenres.includes(genre.id)
-                              ? "bg-plaeen-green border-plaeen-green shadow-[0_0_6px_rgba(118,233,0,0.4)]"
-                              : "border-white/30",
-                          )}
-                        >
-                          {selectedGenres.includes(genre.id) && (
-                            <Check size={10} className="text-black" />
-                          )}
-                        </div>
-                        {genre.name}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-0 border-t border-white/10">
-                    <button
-                      onClick={resetGenreFilters}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      onClick={() => setOpenDropdown(null)}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Dropdown
+              label="Genre"
+              options={GENRES}
+              selectedIds={selectedGenres}
+              onSelectionChange={setSelectedGenres}
+              variant="filter"
+              isMultiple={true}
+              showResetButton={true}
+              showApplyButton={true}
+              onReset={resetGenreFilters}
+              onApply={() => {}}
+            />
 
             {/* Platform - Filter Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() =>
-                  setOpenDropdown(
-                    openDropdown === "platform" ? null : "platform",
-                  )
-                }
-                className={cn(
-                  "px-4 py-2 rounded-lg border text-[10px] font-bold uppercase  flex items-center gap-2 transition-all whitespace-nowrap",
-                  selectedPlatforms.length > 0 || multiplatformOnly
-                    ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
-                    : openDropdown === "platform"
-                      ? "bg-plaeen-green/20 border-plaeen-green text-plaeen-green"
-                      : "bg-white/5 border-white/10 text-white/40 hover:text-plaeen-green hover:border-plaeen-green/50",
-                )}
-              >
-                Platform
-                {(selectedPlatforms.length > 0 || multiplatformOnly) &&
-                  ` (${selectedPlatforms.length + (multiplatformOnly ? 1 : 0)})`}
-                <ChevronDown size={12} />
-              </button>
-              {openDropdown === "platform" && (
-                <div className="absolute top-full mt-1 left-0 bg-plaeen-dark border border-plaeen-green/30 rounded-lg shadow-lg z-50 max-h-80 flex flex-col overflow-hidden">
-                  <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-thumb-rounded-full scrollbar-track-transparent flex-1">
-                    <button
-                      onClick={() => {
-                        setMultiplatformOnly(!multiplatformOnly);
-                      }}
-                      className={cn(
-                        "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all border-b border-white/10 whitespace-nowrap flex items-center gap-3",
-                        multiplatformOnly
-                          ? "bg-plaeen-green/20 text-plaeen-green"
-                          : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
-                          multiplatformOnly
-                            ? "bg-plaeen-green border-plaeen-green shadow-[0_0_6px_rgba(118,233,0,0.4)]"
-                            : "border-white/30",
-                        )}
-                      >
-                        {multiplatformOnly && (
-                          <Check size={10} className="text-black" />
-                        )}
-                      </div>
-                      Multiplatform
-                    </button>
-                    {PLATFORMS.map((platform) => (
-                      <button
-                        key={platform.id}
-                        onClick={() => {
-                          setSelectedPlatforms((prev) =>
-                            prev.includes(platform.id)
-                              ? prev.filter((p) => p !== platform.id)
-                              : [...prev, platform.id],
-                          );
-                        }}
-                        className={cn(
-                          "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all whitespace-nowrap flex items-center gap-3",
-                          selectedPlatforms.includes(platform.id)
-                            ? "bg-plaeen-green/20 text-plaeen-green"
-                            : "text-white/60 hover:text-plaeen-green hover:bg-white/5",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "h-4 w-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200",
-                            selectedPlatforms.includes(platform.id)
-                              ? "bg-plaeen-green border-plaeen-green shadow-[0_0_6px_rgba(118,233,0,0.4)]"
-                              : "border-white/30",
-                          )}
-                        >
-                          {selectedPlatforms.includes(platform.id) && (
-                            <Check size={10} className="text-black" />
-                          )}
-                        </div>
-                        {platform.name}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-0 border-t border-white/10">
-                    <button
-                      onClick={resetPlatformFilters}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-white/40 hover:text-white/60 transition-colors border-r border-white/10"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      onClick={() => setOpenDropdown(null)}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold uppercase  text-plaeen-green hover:bg-plaeen-green/10 transition-colors"
-                    >
-                      Apply Filters
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Dropdown
+              label="Platform"
+              options={PLATFORMS}
+              selectedIds={selectedPlatforms}
+              onSelectionChange={setSelectedPlatforms}
+              variant="filter"
+              isMultiple={true}
+              showResetButton={true}
+              showApplyButton={true}
+              onReset={resetPlatformFilters}
+              onApply={() => {}}
+            />
 
             {/* Multiplayer - Toggle Switch */}
             <div className="flex items-center gap-3">
@@ -1105,39 +930,21 @@ export const GameSearchPage = () => {
           {/* Right Side - Sort Only */}
           <div className="flex items-center gap-6">
             {/* Sort Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() =>
-                  setOpenDropdown(openDropdown === "sort" ? null : "sort")
-                }
-                className="flex items-center gap-2 text-[10px] font-bold uppercase  text-white/50 hover:text-white/70 transition-colors"
-              >
-                Sort By:{" "}
-                <span className="text-plaeen-green">{getSortLabel()}</span>
-                <ChevronDown size={12} />
-              </button>
-              {openDropdown === "sort" && (
-                <div className="absolute top-full mt-2 right-0 bg-plaeen-dark border border-white/20 rounded-lg overflow-hidden shadow-lg z-50">
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        setSortBy(opt.value as any);
-                        setOpenDropdown(null);
-                      }}
-                      className={cn(
-                        "w-full px-4 py-2 text-[10px] font-bold uppercase  text-left transition-all whitespace-nowrap",
-                        sortBy === opt.value
-                          ? "bg-plaeen-green/20 text-plaeen-green"
-                          : "text-white/60 hover:text-white hover:bg-white/5",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <Dropdown
+              label="Sort By:"
+              options={SORT_OPTIONS.map((opt) => ({
+                id: opt.value,
+                name: opt.label,
+              }))}
+              selectedIds={[sortBy]}
+              onSelectionChange={(selected) => setSortBy(selected[0] as any)}
+              variant="sort"
+              width="w-26"
+              isMultiple={false}
+              showResetButton={false}
+              showApplyButton={false}
+              defaultValueId="relevance"
+            />
           </div>
         </div>
 
@@ -1188,27 +995,36 @@ export const GameSearchPage = () => {
               </div>
 
               <div className="p-6">
-                <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-4 group-hover:text-plaeen-green transition-colors">
+                <Heading
+                  level={3}
+                  className="mb-4 group-hover:text-plaeen-green transition-colors"
+                >
                   {game.name}
-                </h3>
+                </Heading>
 
                 <div className="space-y-2 mb-6">
-                  <div className="flex justify-between text-[10px] font-bold uppercase ">
-                    <span className="text-white/20">Release date</span>
-                    <span className="text-white/60">
+                  <div className="flex justify-between">
+                    <Text variant="caption" color="muted">
+                      Release date
+                    </Text>
+                    <Text variant="caption">
                       {game.releaseDate !== "TBA"
                         ? format(new Date(game.releaseDate), "d MMMM yyyy")
                         : "TBA"}
-                    </span>
+                    </Text>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase ">
-                    <span className="text-white/20">Genre</span>
-                    <span className="text-white/60 truncate max-w-[150px]">
+                  <div className="flex justify-between">
+                    <Text variant="caption" color="muted">
+                      Genre
+                    </Text>
+                    <Text variant="caption" className="truncate max-w-[150px]">
                       {game.genres.join(", ")}
-                    </span>
+                    </Text>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase ">
-                    <span className="text-white/20">Platforms</span>
+                  <div className="flex justify-between">
+                    <Text variant="caption" color="muted">
+                      Platforms
+                    </Text>
                     <div className="flex gap-2">
                       {game.platforms.slice(0, 3).map((p) => (
                         <PlatformIcon
@@ -1308,9 +1124,9 @@ export const GameSearchPage = () => {
             <div className="p-12">
               <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-12">
                 <div>
-                  <h2 className="text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+                  <Heading level={2} className="text-6xl mb-4">
                     {selectedGame.name}
-                  </h2>
+                  </Heading>
                   <div className="flex flex-wrap gap-3">
                     {selectedGame.genres.map((g) => (
                       <span
@@ -1332,37 +1148,33 @@ export const GameSearchPage = () => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-5xl font-bold text-plaeen-green mb-1">
+                  <Heading level={3} color="accent" className="text-5xl mb-1">
                     {selectedGame.rating}%
-                  </div>
-                  <div className="text-[10px] font-bold text-white/20 uppercase ">
+                  </Heading>
+                  <Text variant="caption" color="muted">
                     Metascore
-                  </div>
+                  </Text>
                 </div>
               </div>
 
               <div className="grid md:grid-cols-3 gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-[10px] font-bold uppercase  text-plaeen-green mb-6">
+                  <Text variant="caption" color="accent" className="mb-6 block">
                     About the game
-                  </h3>
+                  </Text>
                   {loadingDetails ? (
                     <div className="flex items-center gap-4 text-plaeen-green animate-pulse">
                       <Sparkles size={20} />
-                      <span className="font-bold uppercase ">
-                        Fetching full intel...
-                      </span>
+                      <Text>Fetching full intel...</Text>
                     </div>
                   ) : (
-                    <p className="text-lg text-white/60  font-medium">
-                      {selectedGame.description}
-                    </p>
+                    <Text className="text-lg">{selectedGame.description}</Text>
                   )}
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-bold uppercase  text-plaeen-green mb-6">
+                  <Text variant="caption" color="accent" className="mb-6 block">
                     Platforms
-                  </h3>
+                  </Text>
                   <div className="grid grid-cols-2 gap-4">
                     {selectedGame.platforms.map((p) => (
                       <div
@@ -1433,7 +1245,7 @@ export const GameSearchPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
           <Card className="w-full max-w-2xl bg-plaeen-dark border-plaeen-green/30 p-8 shadow-[0_0_50px_rgba(118,233,0,0.1)]">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-4xl font-bold text-white uppercase tracking-tighter">
+              <h2 className="text-4xl font-bold text-white uppercase ">
                 Select Team
               </h2>
               <button

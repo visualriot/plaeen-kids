@@ -1,40 +1,88 @@
 import { cn } from "@/lib/utils";
-import React from "react";
+import { CSSProperties, HTMLAttributes } from "react";
 
-type HeadingElement = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
-type HeadingVariant = "display" | "section-eyebrow" | "section-title" | "subtitle" | "muted";
+/**
+ * @component Heading
+ * @atomic atom
+ * @figma Display, Section Title, Widget Title, Card Heading
+ *
+ * @tokens
+ *   font-size-display, font-size-heading-lg, font-size-heading-md, font-size-heading-sm,
+ *   line-height-display, line-height-heading,
+ *   tracking-display, tracking-section-title, tracking-widget-title
+ *
+ * @variants
+ *   - display: 48px Abolition Bold, uppercase, letter-spacing 2.4px (page titles)
+ *   - section: 16px Geist Bold (section titles)
+ *   - widget: 14px Geist Bold, uppercase (widget/card titles)
+ *   - card: 24px Geist Bold, uppercase (card headings)
+ *
+ * @colors primary, secondary, muted, disabled, accent, accent-secondary
+ */
 
-interface HeadingProps extends React.HTMLAttributes<HTMLHeadingElement> {
-  as?: HeadingElement;
-  variant?: HeadingVariant;
+interface HeadingProps extends HTMLAttributes<HTMLHeadingElement> {
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  variant?: "display" | "section" | "widget" | "card";
+  color?:
+    | "primary"
+    | "secondary"
+    | "muted"
+    | "disabled"
+    | "accent"
+    | "accent-secondary";
 }
 
-const elementDefaults = {
-  h1: "font-display text-4xl font-bold tracking-wider md:text-6xl",
-  h2: "text-xs font-bold text-plaeen-green",
-  h3: "text-2xl font-bold text-white uppercase",
-  h4: "text-xl md:text-2xl",
-  h5: "text-neutral-400",
-  h6: "text-sm font-bold text-white uppercase",
-} satisfies Record<HeadingElement, string>;
-
-const variants = {
-  display: elementDefaults.h1,
-  "section-eyebrow": "text-xs font-bold text-plaeen-green uppercase",
-  "section-title": "text-2xl font-bold text-white uppercase",
-  subtitle: "text-xl md:text-2xl",
-  muted: "text-neutral-400",
-} satisfies Record<HeadingVariant, string>;
-
 export const Heading = ({
-  as: Component = "h2",
-  variant,
+  level,
+  variant = "display",
+  color = "primary",
   className,
+  style,
   ...props
 }: HeadingProps) => {
+  const Component = `h${level}` as const;
+
+  const variantStyles: Record<string, CSSProperties> = {
+    display: {
+      fontFamily: "var(--font-brand)",
+      fontSize: "var(--font-size-display)",
+      lineHeight: "var(--line-height-display)",
+      letterSpacing: "var(--tracking-display)",
+      fontWeight: 700,
+      textTransform: "uppercase",
+    },
+    section: {
+      fontSize: "var(--font-size-heading-md)",
+      lineHeight: "var(--line-height-heading)",
+      fontWeight: 700,
+    },
+    widget: {
+      fontSize: "var(--font-size-heading-sm)",
+      lineHeight: "var(--line-height-heading)",
+      fontWeight: 700,
+      textTransform: "uppercase",
+    },
+    card: {
+      fontSize: "var(--font-size-heading-lg)",
+      lineHeight: "var(--line-height-heading)",
+      fontWeight: 700,
+      textTransform: "uppercase",
+    },
+  };
+
+  const colorClasses = {
+    primary: "text-primary",
+    secondary: "text-secondary",
+    muted: "text-muted",
+    disabled: "text-disabled",
+    accent: "text-accent",
+    "accent-secondary": "text-accent-secondary",
+  };
+
   return (
     <Component
-      className={cn(variant ? variants[variant] : elementDefaults[Component], className)}
+      className={cn(colorClasses[color], className)}
+      style={{ ...variantStyles[variant], ...style }}
       {...props}
     />
   );

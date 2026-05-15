@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -16,9 +17,9 @@ import {
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useNavigate } from "react-router-dom";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
-import { GameDetailsModal } from "@/components/GameDetailsModal";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { GameDetailsModal } from "@/components/organisms/GameDetailsModal";
 import {
   Heart,
   Trash2,
@@ -347,7 +348,7 @@ export const MyGamesPage = () => {
       </div>
 
       <div className="p-6">
-        <h3 className="text-xl font-bold text-white group-hover:text-plaeen-green transition-colors uppercase tracking-tight mb-6">
+        <h3 className="text-xl font-bold text-white group-hover:text-plaeen-green transition-colors uppercase  mb-6">
           {game.name}
         </h3>
 
@@ -387,13 +388,15 @@ export const MyGamesPage = () => {
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
-        <div>
-          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+        <div className="space-y-5">
+          <Heading
+            level={1}
+            variant="display"
+            className="drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+          >
             My <span className="text-plaeen-green">Games</span>
-          </h1>
-          <p className="text-white/40 font-bold uppercase  text-xs mt-2">
-            Manage your library & wishlist
-          </p>
+          </Heading>
+          <Text variant="subtitle">Manage your library & wishlist</Text>
         </div>
         <Button
           onClick={() => navigate("/search")}
@@ -440,7 +443,7 @@ export const MyGamesPage = () => {
             {gamesWishlistOnly.length === 0 && approvedGames.length === 0 && (
               <Card className="text-center py-24 bg-white/5 border-dashed border-white/10 rounded-[2.5rem]">
                 <Gamepad2 size={64} className="mx-auto text-white/10 mb-8" />
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
+                <h2 className="text-3xl font-bold text-white uppercase  mb-4">
                   Your wishlist is empty
                 </h2>
                 <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase  text-[10px] ">
@@ -473,7 +476,7 @@ export const MyGamesPage = () => {
             {gamesBeingPlayed.length === 0 && (
               <Card className="text-center py-24 bg-white/5 border-dashed border-white/10 rounded-[2.5rem]">
                 <Zap size={64} className="mx-auto text-white/10 mb-8" />
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
+                <h2 className="text-3xl font-bold text-white uppercase  mb-4">
                   No games being played yet
                 </h2>
                 <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase  text-[10px] ">
@@ -517,7 +520,7 @@ export const MyGamesPage = () => {
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-white/60 group-hover:text-red-400 transition-colors uppercase tracking-tight mb-2">
+                    <h3 className="text-xl font-bold text-white/60 group-hover:text-red-400 transition-colors uppercase  mb-2">
                       {game.data.gameName}
                     </h3>
                     <p className="text-[8px] text-red-400 uppercase font-bold mb-4">
@@ -530,7 +533,7 @@ export const MyGamesPage = () => {
             {rejectedGames.length === 0 && (
               <Card className="text-center py-24 bg-white/5 border-dashed border-white/10 rounded-[2.5rem]">
                 <XCircle size={64} className="mx-auto text-white/10 mb-8" />
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-4">
+                <h2 className="text-3xl font-bold text-white uppercase  mb-4">
                   No rejected games
                 </h2>
                 <p className="text-white/40 mb-12 max-w-md mx-auto font-bold uppercase  text-[10px] ">
@@ -582,7 +585,7 @@ export const MyGamesPage = () => {
               className="bg-plaeen-dark border border-white/10 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden"
             >
               <div className="p-8">
-                <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
+                <h2 className="text-2xl font-bold text-white uppercase  mb-2">
                   Propose Game
                 </h2>
                 <p className="text-white/40 text-sm mb-6">
@@ -644,7 +647,7 @@ export const MyGamesPage = () => {
               className="bg-plaeen-dark border border-white/10 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden"
             >
               <div className="p-8">
-                <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
+                <h2 className="text-2xl font-bold text-white uppercase  mb-2">
                   Recommend Game
                 </h2>
                 <p className="text-white/40 text-sm mb-6">

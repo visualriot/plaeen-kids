@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -49,7 +49,10 @@ import { format } from "date-fns";
 import { useProfile } from "@/contexts/ProfileContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { handleFirestoreError } from "@/lib/firestoreUtils";
-import { KidStreakWidget } from "@/components/KidStreakWidget";
+import { KidStreakWidget } from "@/components/organisms/KidStreakWidget";
+import { Heading } from "@/components/atoms/Heading";
+import { Text } from "@/components/atoms/Text";
+import { Label } from "@/components/atoms/Label";
 
 import { cn, calculateAge, formatName } from "@/lib/utils";
 
@@ -1113,17 +1116,20 @@ export const KidDashboard = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+            <Heading
+              level={1}
+              variant="display"
+              className="drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]"
+            >
               Welcome,{" "}
               <span className="text-plaeen-green">
-                {/* {activeKid.displayName.split(" ")[0]}! */}
                 {activeKid.displayName.split(" ")[0]}!
               </span>
-            </h1>
+            </Heading>
             {activeKid.uid && activeKid.username && (
-              <p className="text-white/40 font-bold uppercase  text-xs mt-6">
+              <Text variant="subtitle" color="muted" className="mt-6">
                 @{activeKid.username.split(" ")[0]}
-              </p>
+              </Text>
             )}
           </motion.div>
 
@@ -1176,6 +1182,7 @@ export const KidDashboard = () => {
                   restrictedDays.includes(format(new Date(), "EEE")) ||
                   (activeKid.screenTime?.usedToday || 0) >= dailyAllowanceTotal
                 }
+                size="md"
                 variant={
                   restrictedDays.includes(format(new Date(), "EEE")) ||
                   (activeKid.screenTime?.usedToday || 0) >= dailyAllowanceTotal
@@ -1233,10 +1240,14 @@ export const KidDashboard = () => {
           <div className="space-y-12">
             <Card className="bg-white/5 border-white/10 p-8 relative overflow-hidden group">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-sm font-bold text-white uppercase  flex items-center gap-2">
+                <Heading
+                  level={2}
+                  variant="widget"
+                  className="flex items-center gap-2"
+                >
                   <Clock size={18} className="text-plaeen-green text-nowrap" />{" "}
                   Screen Time
-                </h2>
+                </Heading>
               </div>
               <div className="flex bg-white/5 rounded-lg px-1 py-3 items-center justify-center mb-8 w-66 gap-4 mx-auto">
                 {(["daily", "weekly", "monthly"] as const).map((v) => (
@@ -1302,7 +1313,7 @@ export const KidDashboard = () => {
                     >
                       <span
                         className={cn(
-                          "font-bold tracking-tighter  transition-colors",
+                          "font-bold   transition-colors",
                           isSessionActive ? "text-4xl" : "text-5xl",
                           isOvertime
                             ? "text-red-500"
@@ -1338,18 +1349,20 @@ export const KidDashboard = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <p className="text-[8px] font-bold text-white/40 uppercase  mb-1">
+                  <Text variant="caption" color="muted" as="p" className="mb-1">
                     Used Today
-                  </p>
-                  <p className="text-xl font-bold text-white">{used}m</p>
+                  </Text>
+                  <Text variant="body" color="primary" as="p">
+                    {used}m
+                  </Text>
                 </div>
                 <div className="bg-white/5 rounded-2xl p-4 text-center">
-                  <p className="text-[8px] font-bold text-white/40 uppercase  mb-1">
+                  <Text variant="caption" color="muted" as="p" className="mb-1">
                     Allowance
-                  </p>
-                  <p className="text-xl font-bold text-plaeen-green">
+                  </Text>
+                  <Text variant="body" color="accent" as="p">
                     {allowance}m
-                  </p>
+                  </Text>
                 </div>
               </div>
 
@@ -1409,15 +1422,20 @@ export const KidDashboard = () => {
                             )}
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold uppercase   mb-1">
+                            <Text
+                              variant="caption"
+                              color="primary"
+                              as="p"
+                              className="mb-1"
+                            >
                               {adj.minutes}m {adj.type} applied today
-                            </p>
-                            <p className="text-[8px] font-bold uppercase  opacity-60">
+                            </Text>
+                            <Text variant="caption" color="muted" as="p">
                               {adj.reason}
-                            </p>
+                            </Text>
                           </div>
                         </div>
-                        <div className="text-sm font-black tracking-tighter">
+                        <div className="text-sm font-black ">
                           {adj.type === "penalty" ? "-" : "+"}
                           {adj.minutes}m
                         </div>
@@ -1434,21 +1452,25 @@ export const KidDashboard = () => {
                 <div className="mt-6 p-4 rounded-2xl bg-plaeen-purple/10 border border-plaeen-purple/20 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Star size={16} className="text-plaeen-purple" />
-                    <span className="text-[10px] font-bold text-white uppercase ">
+                    <Text variant="caption" color="primary" as="span">
                       Bonus Time
-                    </span>
+                    </Text>
                   </div>
-                  <span className="text-sm font-bold text-plaeen-purple">
+                  <Text variant="small" color="accent-secondary" as="span">
                     +{activeKid.screenTime.accumulatedTime}m
-                  </span>
+                  </Text>
                 </div>
               )}
             </Card>
 
             <Card className="bg-plaeen-purple/10 border-plaeen-purple/20 p-8">
-              <h2 className="text-sm font-bold text-white uppercase  mb-6 flex items-center gap-2">
+              <Heading
+                level={2}
+                variant="widget"
+                className="mb-6 flex items-center gap-2"
+              >
                 <Trophy size={18} className="text-plaeen-purple" /> Streaks
-              </h2>
+              </Heading>
               <KidStreakWidget
                 streak={
                   activeKid?.streak
@@ -1483,13 +1505,18 @@ export const KidDashboard = () => {
                       <Zap size={32} />
                     </div>
                     <div>
-                      <h3 className="text-white text-xl font-black uppercase tracking-tighter mb-1">
+                      <Heading level={3} variant="section" className="mb-1">
                         REWARD ACTIVATED!
-                      </h3>
-                      <p className="text-[10px] font-bold uppercase  opacity-70">
+                      </Heading>
+                      <Text
+                        variant="caption"
+                        color="primary"
+                        as="p"
+                        className="opacity-70"
+                      >
                         You gained +{activeKid?.streak?.rewardMinutes} mins
                         daily allowance for your hard work!
-                      </p>
+                      </Text>
                     </div>
                   </div>
                   <Button
@@ -1505,9 +1532,14 @@ export const KidDashboard = () => {
             </AnimatePresence>
 
             <section className="space-y-6">
-              <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
+              <Heading
+                level={2}
+                variant="section"
+                color="accent"
+                className="flex items-center gap-3"
+              >
                 <Calendar size={16} /> Upcoming Sessions
-              </h2>
+              </Heading>
               <div className="grid md:grid-cols-2 gap-6">
                 {sessions.length > 0 ? (
                   sessions.map((session) => (
@@ -1540,28 +1572,32 @@ export const KidDashboard = () => {
                           />
                         )}
                         <div>
-                          <h3 className="text-sm font-bold text-white uppercase tracking-tight group-hover:text-plaeen-green transition-colors">
+                          <Heading
+                            level={3}
+                            variant="widget"
+                            className="group-hover:text-plaeen-green transition-colors"
+                          >
                             {session.gameName}
-                          </h3>
+                          </Heading>
                           <div className="flex items-center gap-2 mt-1">
                             <Clock size={12} className="text-white/40" />
-                            <span className="text-[10px] font-bold text-white/40 uppercase">
+                            <Text variant="caption" color="muted" as="span">
                               {format(
                                 session.startTime.toDate(),
                                 "EEE d, HH:mm",
                               )}
-                            </span>
+                            </Text>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
                             <Users size={12} className="text-white/40" />
-                            <span className="text-[10px] font-bold text-white/40 uppercase">
+                            <Text variant="caption" color="muted" as="span">
                               {
                                 Object.values(session.responses || {}).filter(
                                   (r: any) => r.status === "accepted",
                                 ).length
                               }{" "}
                               Accepted
-                            </span>
+                            </Text>
                           </div>
                         </div>
                       </div>
@@ -1569,7 +1605,9 @@ export const KidDashboard = () => {
                   ))
                 ) : (
                   <Card className="md:col-span-2 bg-white/5 border-dashed border-white/10 p-12 text-center">
-                    <p className="ghost-text">No sessions planned yet</p>
+                    <Text variant="body" color="muted" as="p">
+                      No sessions planned yet
+                    </Text>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1585,9 +1623,14 @@ export const KidDashboard = () => {
             {((activeKid.screenTime?.scheduledDeductions?.length || 0) > 0 ||
               (activeKid.screenTime?.bannedDates?.length || 0) > 0) && (
               <section className="space-y-6">
-                <h2 className="text-[10px] font-bold uppercase  text-red-500 flex items-center gap-3">
+                <Heading
+                  level={2}
+                  variant="widget"
+                  color="primary"
+                  className="flex items-center gap-3"
+                >
                   <Shield size={16} /> Active Penalties
-                </h2>
+                </Heading>
                 <div className="grid md:grid-cols-2 gap-4">
                   {activeKid.screenTime?.scheduledDeductions?.map(
                     (deduction, idx) => (
@@ -1599,16 +1642,16 @@ export const KidDashboard = () => {
                           <Clock size={20} className="text-red-500" />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-white uppercase tracking-tight">
+                          <Text variant="small" color="primary" as="p">
                             -{deduction.minutes} Minutes
-                          </p>
-                          <p className="text-[10px] text-white/40 font-bold uppercase ">
+                          </Text>
+                          <Text variant="caption" color="muted" as="p">
                             Scheduled for{" "}
                             {format(
                               new Date(deduction.date + "T12:00:00"),
                               "MMM d",
                             )}
-                          </p>
+                          </Text>
                         </div>
                       </Card>
                     ),
@@ -1622,12 +1665,12 @@ export const KidDashboard = () => {
                         <Lock size={20} className="text-red-500" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white uppercase tracking-tight">
+                        <Text variant="small" color="primary" as="p">
                           Access Restricted
-                        </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase ">
+                        </Text>
+                        <Text variant="caption" color="muted" as="p">
                           On {format(new Date(date + "T12:00:00"), "MMM d")}
-                        </p>
+                        </Text>
                       </div>
                     </Card>
                   ))}
@@ -1636,9 +1679,14 @@ export const KidDashboard = () => {
             )}
 
             <section className="space-y-6">
-              <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
+              <Heading
+                level={2}
+                variant="section"
+                color="accent"
+                className="flex items-center gap-3"
+              >
                 <Activity size={16} /> Recent Activity
-              </h2>
+              </Heading>
               <Card className="bg-white/5 border-white/10 p-8">
                 <div className="space-y-6">
                   <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/5">
@@ -1647,17 +1695,17 @@ export const KidDashboard = () => {
                         <Gamepad2 size={20} className="text-plaeen-green" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white uppercase tracking-tight">
+                        <Text variant="small" color="primary" as="p">
                           Minecraft Session
-                        </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase ">
+                        </Text>
+                        <Text variant="caption" color="muted" as="p">
                           Today • 45 Minutes
-                        </p>
+                        </Text>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-plaeen-green uppercase ">
+                    <Text variant="caption" color="accent" as="span">
                       Completed
-                    </span>
+                    </Text>
                   </div>
                 </div>
               </Card>
@@ -1677,9 +1725,9 @@ export const KidDashboard = () => {
           >
             <div className="w-full max-w-md border border-plaeen-purple-medium p-10 rounded-2xl shadow-2xl">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
+                <Heading level={2} variant="section">
                   Log Activity
-                </h2>
+                </Heading>
                 <button
                   onClick={() => setIsChoreModalOpen(false)}
                   className="text-white/40 hover:text-white"
@@ -1687,9 +1735,9 @@ export const KidDashboard = () => {
                   <X size={24} />
                 </button>
               </div>
-              <p className="text-white/40 text-xs font-bold uppercase  mb-8 ">
+              <Text variant="small" color="muted" as="p" className="mb-8">
                 Tell your parents what you've done to earn extra screen time!
-              </p>
+              </Text>
 
               {choreSuccess ? (
                 <motion.div
@@ -1700,19 +1748,19 @@ export const KidDashboard = () => {
                   <div className="h-20 w-20 rounded-full bg-plaeen-green/20 flex items-center justify-center mx-auto mb-6">
                     <Check size={40} className="text-plaeen-green" />
                   </div>
-                  <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-2">
+                  <Heading level={3} variant="section" className="mb-2">
                     Activity Sent!
-                  </h3>
-                  <p className="text-[10px] text-white/40 font-bold uppercase ">
+                  </Heading>
+                  <Text variant="caption" color="muted" as="p">
                     Waiting for parent approval
-                  </p>
+                  </Text>
                 </motion.div>
               ) : (
                 <form onSubmit={handleAddChore} className="space-y-6">
                   <div>
-                    <label className="text-[10px] font-bold uppercase  text-plaeen-purple mb-2 block">
+                    <Label variant="button" as="label" className="mb-2 block">
                       What did you do?
-                    </label>
+                    </Label>
                     <input
                       type="text"
                       value={choreTitle}
@@ -1755,14 +1803,14 @@ export const KidDashboard = () => {
                   <Bell size={24} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white uppercase tracking-tight">
+                  <Text variant="small" color="primary" as="p">
                     Time is Up!
-                  </p>
-                  <p className="text-[10px] text-white/80 font-bold uppercase ">
+                  </Text>
+                  <Text variant="caption" color="primary" as="p">
                     {remainingMinutes < 5
                       ? `Finish in ${5 - remainingMinutes}m to avoid penalty`
                       : "Penalty applied! End session now"}
-                  </p>
+                  </Text>
                 </div>
               </div>
               <Button

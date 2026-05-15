@@ -1,7 +1,7 @@
 import React from "react";
 import { Shield, Info } from "lucide-react";
-import { Card } from "./Card";
-import { Button } from "./Button";
+import { Card } from "../molecules/Card";
+import { Button } from "../atoms/Button";
 import { cn } from "@/lib/utils";
 
 interface ProfileIdentityProps {
@@ -22,6 +22,18 @@ interface ProfileIdentityProps {
   hasUsername: boolean;
 }
 
+/**
+ * @component ProfileIdentity
+ * @atomic organism
+ * @figma ProfileIdentity (Components / Organisms / ProfileIdentity)
+ *
+ * @tokens
+ *   radius-md, radius-full,
+ *   color-primary, color-accent, color-muted
+ *
+ * @states default, error, saving
+ * @transitions all 300ms ease
+ */
 export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
   displayName,
   setDisplayName,
@@ -53,7 +65,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
+            className="w-full bg-white/5 border border-white/10 rounded-radius-md px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
           />
         </div>
         <div>
@@ -77,7 +89,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             }}
             placeholder="SET_USERNAME"
             className={cn(
-              "w-full bg-white/5 border rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none transition-all uppercase ",
+              "w-full bg-white/5 border rounded-radius-md px-4 py-3 text-sm font-bold text-white focus:outline-none transition-all uppercase ",
               usernameError
                 ? "border-red-500 focus:border-red-500"
                 : "border-white/10 focus:border-plaeen-green",
@@ -103,14 +115,14 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
+            className="w-full bg-white/5 border border-white/10 rounded-radius-md px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
           />
         </div>
 
         <div className="pt-4 border-t border-white/5">
-          <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center justify-between p-4 rounded-radius-md bg-white/5 border border-white/10">
             <div>
-              <p className="text-[10px] font-bold text-white uppercase tracking-tight">
+              <p className="text-[10px] font-bold text-white uppercase ">
                 Restricted Mode (Child Friendly)
               </p>
               <p className="text-[8px] text-white/40 mt-1 uppercase  font-bold">
@@ -119,12 +131,12 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             </div>
             <button
               onClick={() => setRestrictedMode(!restrictedMode)}
-              className={`h-6 w-11 rounded-full p-1 transition-colors duration-300 ${
+              className={`h-6 w-11 rounded-radius-full p-1 transition-colors duration-300 ${
                 restrictedMode ? "bg-plaeen-green" : "bg-white/10"
               }`}
             >
               <div
-                className={`h-4 w-4 rounded-full bg-white transition-transform duration-300 ${
+                className={`h-4 w-4 rounded-radius-full bg-white transition-transform duration-300 ${
                   restrictedMode ? "translate-x-5" : "translate-x-0"
                 }`}
               />

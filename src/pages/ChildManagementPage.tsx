@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -37,7 +38,14 @@ import {
   RefreshCw,
   Lock,
 } from "lucide-react";
-import { cn, formatName, getUserAvatar } from "@/lib/utils";
+import {
+  cn,
+  formatName,
+  getUserAvatar,
+  validateBirthDate,
+  getTodayDateString,
+  BIRTH_DATE_MIN,
+} from "@/lib/utils";
 import { format, isSameWeek, isSameMonth, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { validateUsername } from "@/lib/validation";
@@ -308,6 +316,13 @@ export const ChildManagementPage = () => {
     setIsSaving(true);
     setError(null);
     try {
+      const birthDateError = validateBirthDate(birthDate);
+      if (birthDateError) {
+        setError(birthDateError);
+        setIsSaving(false);
+        return;
+      }
+
       const validation = validateUsername(username);
       if (!validation.isValid) {
         setError(validation.error || "Invalid username.");
@@ -422,7 +437,9 @@ export const ChildManagementPage = () => {
             />
           </div>
           <div className="space-y-3">
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">{formatName(kid.displayName)}</h1>
+            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">
+              {formatName(kid.displayName)}
+            </h1>
             <p className="text-sm  text-white/50">@{kid.username}</p>
           </div>
         </div>
@@ -446,7 +463,7 @@ export const ChildManagementPage = () => {
                       <Clock size={24} className="text-red-500" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white uppercase tracking-tight">
+                      <p className="text-xs font-bold text-white uppercase ">
                         Overtime Detected: {req.data.overtimeMinutes} Minutes
                       </p>
                       <p className="text-[10px] text-white/40 font-bold uppercase  mt-1">
@@ -702,6 +719,8 @@ export const ChildManagementPage = () => {
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
+                min={BIRTH_DATE_MIN}
+                max={getTodayDateString()}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:border-plaeen-green focus:outline-none transition-all uppercase "
               />
             </div>
@@ -807,7 +826,7 @@ export const ChildManagementPage = () => {
                         <div>
                           <p
                             className={cn(
-                              "text-xs font-bold uppercase tracking-tight",
+                              "text-xs font-bold uppercase ",
                               adj.type === "penalty"
                                 ? "text-red-500"
                                 : "text-plaeen-green",
@@ -857,7 +876,7 @@ export const ChildManagementPage = () => {
                         <Zap size={20} className="text-red-500" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white uppercase tracking-tight">
+                        <p className="text-xs font-bold text-white uppercase ">
                           -{deduction.minutes}m Deduction
                         </p>
                         <p className="text-[8px] text-white/40 font-bold uppercase ">
@@ -887,7 +906,7 @@ export const ChildManagementPage = () => {
                       <Lock size={20} className="text-red-500" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white uppercase tracking-tight">
+                      <p className="text-xs font-bold text-white uppercase ">
                         Full Day Ban
                       </p>
                       <p className="text-[8px] text-white/40 font-bold uppercase ">
@@ -932,7 +951,7 @@ export const ChildManagementPage = () => {
                         <p className="text-[10px] font-bold text-red-500 uppercase  mb-1">
                           Overtime Detected
                         </p>
-                        <h3 className="uppercase text-xl font-bold text-white tracking-tight">
+                        <h3 className="text-xl font-bold text-white ">
                           {req.data.overtimeMinutes} Minutes Over
                         </h3>
                       </div>
@@ -1073,7 +1092,7 @@ export const ChildManagementPage = () => {
                       />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white uppercase tracking-tight">
+                      <p className="text-xs font-bold text-white uppercase ">
                         Game ID: {gameId}
                       </p>
                       <p className="text-[8px] text-white/20 font-bold uppercase ">

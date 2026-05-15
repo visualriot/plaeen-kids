@@ -1,7 +1,7 @@
 import React from "react";
 import { X, Star, Gamepad2, Tag, Plus, Share2, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "./Button";
+import { Button } from "../atoms/Button";
 import { useNavigate } from "react-router-dom";
 
 interface TeamWithSession {
@@ -11,6 +11,17 @@ interface TeamWithSession {
   imageURL?: string;
 }
 
+/**
+ * @component GameDetailsModal
+ * @atomic organism
+ * @figma GameDetailsModal (Components / Organisms / GameDetailsModal)
+ *
+ * @tokens
+ *   shadow-2xl, radius-xl, radius-full, radius-sm
+ *
+ * @states default, hover
+ * @transitions all 200ms ease
+ */
 interface GameDetailsModalProps {
   game: any;
   isOpen: boolean;
@@ -62,8 +73,9 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-plaeen-dark border border-white/10 rounded-3xl w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl relative my-auto"
+            className="bg-plaeen-dark border border-white/10 rounded-radius-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto relative my-auto"
             style={{
+              boxShadow: "var(--shadow-2xl)",
               scrollbarWidth: "thin",
               scrollbarColor: "#3a3a3a #1a1a1a",
             }}
@@ -83,7 +95,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                   {/* Close Button - Fixed positioning */}
                   <button
                     onClick={onClose}
-                    className="absolute top-8 right-8 z-99 bg-gray-800/10 hover:bg-gray-800/40 rounded-full p-3 transition-all border border-gray-800/20 hover:text-white/50 text-gray-800"
+                    className="absolute top-8 right-8 z-99 bg-gray-800/10 hover:bg-gray-800/40 rounded-radius-full p-3 transition-all border border-gray-800/20 hover:text-white/50 text-gray-800"
                   >
                     <X size={16} className="" />
                   </button>
@@ -140,7 +152,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                         <button
                           key={idx}
                           onClick={() => handlePlatformClick(platform)}
-                          className="bg-white/8 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-white/15 transition-all border border-white/10"
+                          className="bg-white/8 text-white px-3 py-1 rounded-radius-sm text-xs font-semibold hover:bg-white/15 transition-all border border-white/10"
                         >
                           {platform}
                         </button>
@@ -160,7 +172,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                         <button
                           key={idx}
                           onClick={() => handleGenreClick(genre)}
-                          className="bg-white/8 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-white/15 transition-all border border-white/10"
+                          className="bg-white/8 text-white px-3 py-1 rounded-radius-sm text-xs font-semibold hover:bg-white/15 transition-all border border-white/10"
                         >
                           {genre}
                         </button>
@@ -207,7 +219,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                               `/teams/${team.id}/games/${game.id}?sessionId=${team.sessionId}`,
                             )
                           }
-                          className="bg-white/8 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-white/15 transition-all border border-white/10 flex items-center gap-1"
+                          className="bg-white/8 text-white px-3 py-1 rounded-radius-sm text-xs font-semibold hover:bg-white/15 transition-all border border-white/10 flex items-center gap-1"
                         >
                           <Play size={12} fill="white" /> {team.name}
                         </button>

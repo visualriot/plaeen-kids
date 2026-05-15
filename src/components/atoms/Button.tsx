@@ -1,6 +1,22 @@
 import { cn } from "@/lib/utils";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
+/**
+ * @component Button
+ * @atomic atom
+ * @figma Button (Components / Atoms / Button)
+ *
+ * @tokens
+ *   type-button, type-caption, type-card-heading,
+ *   color-accent, color-interactive-hover, color-inverse, color-primary,
+ *   color-secondary, color-muted, color-floating, color-error-base,
+ *   spacing-3, spacing-4, spacing-8, spacing-12
+ *
+ * @variants primary, primarydisabled, secondary, outline, ghost, remove, tertiary, glass, back
+ * @sizes sm, md, lg
+ * @states default, hover, active, focus, disabled
+ * @transitions all 200ms ease
+ */
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   type?: "button" | "submit" | "reset";
   variant?:
@@ -11,48 +27,49 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     | "ghost"
     | "remove"
     | "tertiary"
-    | "glass";
+    | "glass"
+    | "back";
   size?: "sm" | "md" | "lg";
 }
 
-const variants = {
-  primary:
-    "bg-plaeen-green text-black font-bold neon-glow hover:bg-plaeen-green/90 hover:scale-95",
-  primarydisabled:
-    "bg-plaeen-green/50 text-black/50 font-bold cursor-not-allowed",
-  secondary:
-    "bg-plaeen-purple-medium/90 text-white purple-glow hover:bg-plaeen-purple-medium/80 hover:scale-95",
-  outline:
-    "border border-plaeen-green text-plaeen-green hover:bg-plaeen-green/10 hover:text-plaeen-green hover:scale-95",
-  tertiary:
-    "text-white/50 transition-all ease-in-out hover:text-plaeen-green/70 hover:scale-95",
-  ghost:
-    "border-2 border-white/20 text-white/60 font-medium hover:bg-white/10 hover:text-white/90 hover:scale-95",
-  remove:
-    "border border-red-500/80 text-red-500/80 fill-red-500 hover:bg-red-500/10 hover:scale-95",
-  glass:
-    "border border-white/20 text-white backdrop-blur-sm transition-all ease-in-out hover:bg-white/20 hover:scale-95",
-} satisfies Record<NonNullable<ButtonProps["variant"]>, string>;
-
-const sizes = {
-  sm: "px-3 py-4 text-sm",
-  md: "px-8 py-4 text-base",
-  lg: "px-12 py-8 text-xl font-bold uppercase",
-} satisfies Record<NonNullable<ButtonProps["size"]>, string>;
-
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant = "primary", size = "md", type = "button", ...props },
+    { className, variant = "primary", size, type = "button", ...props },
     ref,
   ) => {
+    const variants = {
+      primary:
+        "bg-accent text-inverse! font-bold hover:bg-interactive-hover neon-glow hover:scale-95",
+      primarydisabled:
+        "bg-accent/50 text-inverse/50 font-bold cursor-not-allowed",
+      secondary:
+        "bg-floating/90 text-primary hover:bg-floating hover:scale-95 purple-glow",
+      outline:
+        "border border-accent text-accent hover:bg-accent/10 hover:scale-95",
+      tertiary: "!px-0 !py-0 text-muted hover:text-accent/70 hover:scale-95",
+      ghost:
+        "border-2 border-primary/20 text-primary/60 hover:bg-primary/10 hover:text-primary/90 hover:scale-95 font-semibold",
+      remove:
+        "border border-error-base/80 text-error-base/80 hover:bg-error-base/10 hover:scale-95",
+      glass:
+        "text-primary border border-primary/20 backdrop-blur-sm hover:bg-primary/10 hover:scale-95",
+      back: "type-button text-primary/40! hover:text-accent!",
+    };
+
+    const sizes = {
+      sm: "px-3 py-4",
+      md: "px-8 py-4",
+      lg: "px-12 py-8",
+    };
+
     return (
       <button
         ref={ref}
         type={type}
         className={cn(
-          "inline-flex items-center justify-center rounded-lg text-[10px] transition-all duration-200 active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
           variants[variant],
-          sizes[size],
+          size && sizes[size],
           className,
         )}
         {...props}

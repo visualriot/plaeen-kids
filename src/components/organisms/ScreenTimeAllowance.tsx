@@ -1,7 +1,7 @@
 import React from "react";
 import { Clock } from "lucide-react";
-import { Card } from "./Card";
-import { Button } from "./Button";
+import { Card } from "../molecules/Card";
+import { Button } from "../atoms/Button";
 
 interface ScreenTimeAllowanceProps {
   allowanceType: "daily" | "weekly" | "monthly";
@@ -16,6 +16,18 @@ interface ScreenTimeAllowanceProps {
   isSaving: boolean;
 }
 
+/**
+ * @component ScreenTimeAllowance
+ * @atomic organism
+ * @figma ScreenTimeAllowance (Components / Organisms / ScreenTimeAllowance)
+ *
+ * @tokens
+ *   radius-md, radius-lg, radius-sm,
+ *   color-primary, color-accent, color-muted
+ *
+ * @states default, saving
+ * @transitions all 300ms ease
+ */
 export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
   allowanceType,
   setAllowanceType,
@@ -43,7 +55,7 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
               <select
                 value={allowanceType}
                 onChange={(e) => setAllowanceType(e.target.value as any)}
-                className="appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-2 pr-10 text-[10px] font-bold uppercase  text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
+                className="appearance-none bg-white/5 border border-white/10 rounded-radius-md px-4 py-2 pr-10 text-[10px] font-bold uppercase  text-plaeen-green focus:outline-none focus:border-plaeen-green/50 cursor-pointer transition-all backdrop-blur-xl"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2376e900'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
                   backgroundRepeat: "no-repeat",
@@ -71,13 +83,13 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
               step={15}
               value={dailyAllowance}
               onChange={(e) => setDailyAllowance(parseInt(e.target.value))}
-              className="flex-1 accent-plaeen-green h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer"
+              className="flex-1 accent-plaeen-green h-1.5 bg-white/5 rounded-radius-sm appearance-none cursor-pointer"
             />
             <input
               type="number"
               value={dailyAllowance}
               onChange={(e) => setDailyAllowance(parseInt(e.target.value) || 0)}
-              className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xl font-bold text-white text-center focus:outline-none focus:border-plaeen-green/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-20 bg-white/5 border border-white/10 rounded-radius-md px-3 py-2 text-xl font-bold text-white text-center focus:outline-none focus:border-plaeen-green/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <span className="text-[10px] font-bold text-white/40 uppercase ">
               min/day
@@ -85,13 +97,13 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-6">
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <div className="bg-white/5 rounded-radius-lg p-4 border border-white/5">
               <p className="text-[8px] font-bold text-white/20 uppercase  mb-1">
                 Weekly Total
               </p>
               <p className="text-lg font-bold text-white">{weeklyAllowance}m</p>
             </div>
-            <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+            <div className="bg-white/5 rounded-radius-lg p-4 border border-white/5">
               <p className="text-[8px] font-bold text-white/20 uppercase  mb-1">
                 Monthly Total
               </p>
@@ -117,7 +129,7 @@ export const ScreenTimeAllowance: React.FC<ScreenTimeAllowanceProps> = ({
                       : [...prev, day],
                   );
                 }}
-                className={`px-3 py-2 rounded-lg text-[10px] font-bold uppercase  transition-all border-2 ${
+                className={`px-3 py-2 rounded-radius-sm text-[10px] font-bold uppercase  transition-all border-2 ${
                   (restrictedDays || []).includes(day)
                     ? "bg-red-500/20 border-red-500 text-red-500"
                     : "bg-white/5 border-white/5 text-white/40 hover:border-white/20"

@@ -4,6 +4,7 @@ import { ChevronLeft, Check, Loader2 } from "lucide-react";
 import { db } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import type { AvatarCategory } from "@/lib/types";
+import { Heading, Text, Label } from "@/components/atoms";
 
 export const TeamAvatarSelectionPage = () => {
   const navigate = useNavigate();
@@ -14,56 +15,26 @@ export const TeamAvatarSelectionPage = () => {
 
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const categories: AvatarCategory[] = [
-    {
-      name: "Adventure",
-      avatars: Array.from(
-        { length: 11 },
-        (_, i) =>
-          `/avatars/teams/avatar_team_${String(i + 1).padStart(2, "0")}.webp`,
-      ),
-    },
-    {
-      name: "Retro",
-      avatars: Array.from(
-        { length: 11 },
-        (_, i) =>
-          `/avatars/teams/avatar_team_${String(i + 12).padStart(2, "0")}.webp`,
-      ),
-    },
-    {
-      name: "Build",
-      avatars: Array.from(
-        { length: 11 },
-        (_, i) =>
-          `/avatars/teams/avatar_team_${String(i + 23).padStart(2, "0")}.webp`,
-      ),
-    },
-    {
-      name: "Fantasy",
-      avatars: Array.from(
-        { length: 11 },
-        (_, i) =>
-          `/avatars/teams/avatar_team_${String(i + 34).padStart(2, "0")}.webp`,
-      ),
-    },
-    {
-      name: "Space",
-      avatars: Array.from(
-        { length: 11 },
-        (_, i) =>
-          `/avatars/teams/avatar_team_${String(i + 45).padStart(2, "0")}.webp`,
-      ),
-    },
-    {
-      name: "Sport",
-      avatars: Array.from(
-        { length: 11 },
-        (_, i) =>
-          `/avatars/teams/avatar_team_${String(i + 56).padStart(2, "0")}.webp`,
-      ),
-    },
+  const AVATAR_CATEGORY_NAMES = [
+    "Adventure",
+    "Retro",
+    "Build",
+    "Fantasy",
+    "Space",
+    "Sport",
   ];
+  const AVATARS_PER_CATEGORY = 11;
+
+  const categories: AvatarCategory[] = AVATAR_CATEGORY_NAMES.map(
+    (name, index) => ({
+      id: String(index),
+      name,
+      avatars: Array.from({ length: AVATARS_PER_CATEGORY }, (_, i) => {
+        const avatarNumber = index * AVATARS_PER_CATEGORY + i + 1;
+        return `/avatars/teams/avatar_team_${String(avatarNumber).padStart(2, "0")}.webp`;
+      }),
+    }),
+  );
 
   const handleSelect = async (avatar: string) => {
     if (!teamId) {
@@ -92,26 +63,34 @@ export const TeamAvatarSelectionPage = () => {
     <div className="mx-auto max-w-6xl px-6 py-20">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors font-bold uppercase  text-xs mb-12"
+        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green transition-colors mb-12"
       >
-        <ChevronLeft size={16} /> Back
+        <ChevronLeft size={16} />{" "}
+        <Text variant="caption" as="span">
+          Back
+        </Text>
       </button>
 
       <div className="mb-12">
-        <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+        <Heading level={1} variant="display" color="primary" className="mb-4">
           Team <span className="text-plaeen-green">Avatar</span>
-        </h1>
-        <p className="text-sm font-bold text-white/40 uppercase ">
+        </Heading>
+        <Text variant="caption" color="muted" as="p">
           Choose an icon for your squad
-        </p>
+        </Text>
       </div>
 
       <div className="space-y-16">
         {categories.map((category) => (
           <section key={category.name}>
-            <h2 className="text-plaeen-green font-bold uppercase  text-xs mb-8">
+            <Heading
+              level={2}
+              variant="section"
+              color="accent"
+              className="mb-8"
+            >
               {category.name}
-            </h2>
+            </Heading>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-4">
               {category.avatars.map((avatar, index) => (
                 <button
