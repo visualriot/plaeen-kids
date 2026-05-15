@@ -405,7 +405,7 @@ export const ParentDashboard = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16">
         <div>
-          <h1 className="text-6xl text-white drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+          <h1 className="font-display font-bold tracking-wider text-6xl text-white drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             Guardian <span className="text-plaeen-green">Hub</span>
           </h1>
           <p className="note">Parental Oversight & Management</p>
@@ -456,7 +456,7 @@ export const ParentDashboard = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         {/* Kids List */}
         <div className="lg:col-span-2 space-y-8">
-          <h2 className="flex items-center gap-3">
+          <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
             <Shield size={16} /> Linked Accounts
           </h2>
 
@@ -477,7 +477,7 @@ export const ParentDashboard = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <h3>{formatName(kid.displayName)}</h3>
+                        <h3 className="text-2xl font-bold text-white uppercase">{formatName(kid.displayName)}</h3>
                         {kid.screenTime?.isSessionActive && (
                           <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-plaeen-green/10 border border-plaeen-green/20 text-[8px] font-bold text-plaeen-green uppercase  animate-pulse">
                             <span className="h-2 w-2 rounded-full bg-plaeen-green"></span>
@@ -592,7 +592,7 @@ export const ParentDashboard = () => {
           {/* Action Required */}
           <section className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-3">
+              <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
                 <Bell
                   size={16}
                   className={

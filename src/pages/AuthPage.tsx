@@ -139,7 +139,10 @@ export const AuthPage = () => {
           await signInWithRedirect(auth, provider);
         } catch (redirectErr) {
           const redirectError = redirectErr as any;
-          console.error("Game Center Redirect Error Code:", redirectError?.code);
+          console.error(
+            "Game Center Redirect Error Code:",
+            redirectError?.code,
+          );
           setError("Failed to start Game Center sign in. Please try again.");
         }
         return;

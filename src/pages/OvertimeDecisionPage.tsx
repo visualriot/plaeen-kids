@@ -334,7 +334,9 @@ export const OvertimeDecisionPage = () => {
           <div className="w-20 h-20 bg-plaeen-green/20 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 size={40} className="text-plaeen-green" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Decision Applied</h1>
+          <h1 className="font-display tracking-wider text-3xl font-bold text-white">
+            Decision Applied
+          </h1>
           <p className="text-white/40">Redirecting you back to management...</p>
         </motion.div>
       </div>
@@ -393,7 +395,7 @@ export const OvertimeDecisionPage = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-plaeen-green">
                     <Zap size={18} />
-                    <h3 className="text-sm font-bold uppercase ">
+                    <h3 className="text-white text-sm font-bold uppercase">
                       Forgive Overtime
                     </h3>
                   </div>
@@ -418,7 +420,7 @@ export const OvertimeDecisionPage = () => {
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-blue-400">
                   <Clock size={18} />
-                  <h3 className="text-sm font-bold uppercase ">
+                  <h3 className="text-white text-sm font-bold uppercase">
                     Extract Minutes
                   </h3>
                 </div>
@@ -470,7 +472,9 @@ export const OvertimeDecisionPage = () => {
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-red-500">
                   <Shield size={18} />
-                  <h3 className="text-sm font-bold uppercase ">Ban the Day</h3>
+                  <h3 className="text-white text-sm font-bold uppercase">
+                    Ban the Day
+                  </h3>
                 </div>
 
                 <div className="space-y-3">
