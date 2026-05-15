@@ -304,7 +304,7 @@ export const ParentActivityPage = () => {
       </button>
 
       <div className="mb-12">
-        <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+        <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
           Activity <span className="text-plaeen-green">Log</span>
         </h1>
         <p className="text-white/40 font-bold uppercase  text-xs mt-2">

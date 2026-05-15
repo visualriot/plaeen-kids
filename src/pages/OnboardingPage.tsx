@@ -280,7 +280,7 @@ export const OnboardingPage = () => {
               <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-plaeen-green text-black mb-8 shadow-[0_0_30px_rgba(118,233,0,0.3)]">
                 <UserPlus size={40} />
               </div>
-              <h1 className="text-5xl font-bold text-white uppercase tracking-tighter mb-4">
+              <h1 className="font-display text-5xl font-bold text-white uppercase tracking-tighter mb-4">
                 Add Your <span className="text-plaeen-green">Kids</span>
               </h1>
               <p className="text-white/40 font-bold  text-xs">
@@ -544,7 +544,7 @@ export const OnboardingPage = () => {
               <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-plaeen-green text-black mb-8 shadow-[0_0_30px_rgba(118,233,0,0.3)]">
                 <Lock size={40} />
               </div>
-              <h1 className="text-5xl font-bold text-white uppercase tracking-tighter mb-4">
+              <h1 className="font-display text-5xl font-bold text-white uppercase tracking-tighter mb-4">
                 Secure <span className="text-plaeen-green">Access</span>
               </h1>
               <p className="text-white/40 font-bold uppercase  text-xs">

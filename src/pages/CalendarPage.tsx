@@ -109,7 +109,7 @@ export const CalendarPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1>
+          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">
             Your Calendar <span className="text-white/20 text-4xl ml-2">?</span>
           </h1>
           <p className="mt-2 text-white/40 font-bold  uppercase">

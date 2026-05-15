@@ -256,7 +256,7 @@ export const ProfileSelectionPage = () => {
         animate={{ opacity: 1, y: 0 }}
         className="text-center z-10"
       >
-        <h1 className="text-5xl md:text-7xl font-bold text-white uppercase tracking-tighter mb-16">
+        <h1 className="font-display text-5xl md:text-7xl font-bold text-white uppercase tracking-tighter mb-16">
           Who's <span className="text-plaeen-green">playing?</span>
         </h1>
 

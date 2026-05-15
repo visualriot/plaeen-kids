@@ -78,7 +78,7 @@ export const UserAvatarSelectionPage = () => {
       </button>
 
       <div className="mb-12">
-        <h1 className="text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+        <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter mb-4">
           Select <span className="text-plaeen-green">Avatar</span>
         </h1>
         <p className="text-sm font-bold text-white/40 uppercase ">

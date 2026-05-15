@@ -242,7 +242,7 @@ export const ParentSettingsPage = () => {
       </button>
 
       <div className="mb-12">
-        <h1 className="text-5xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+        <h1 className="font-display text-5xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
           <span className="text-plaeen-green">Settings</span>
         </h1>
         <p className="text-white/40 font-bold uppercase  text-xs mt-2">

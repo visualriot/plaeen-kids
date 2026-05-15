@@ -475,7 +475,7 @@ export const NotificationsPage = () => {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             Inbox <span className="text-plaeen-green">Center</span>
           </h1>
           <p className="text-white/40 font-bold uppercase  text-xs mt-2">

@@ -162,7 +162,7 @@ export const ProposeSessionPage = () => {
             <ChevronLeft size={24} />
           </button>
           <div>
-            <h1 className="text-4xl md:text-6xl font-bold text-white uppercase tracking-tighter">
+            <h1 className="font-display text-4xl md:text-6xl font-bold text-white uppercase tracking-tighter">
               Propose <span className="text-plaeen-green">Session</span>
             </h1>
             <p className="text-white/40 font-bold uppercase  text-[10px] mt-2">

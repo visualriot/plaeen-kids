@@ -806,7 +806,7 @@ export const GameSearchPage = () => {
       )}
 
       <div className="mb-16 flex flex-col md:flex-row items-center justify-between gap-6">
-        <h1>{pageTitle}</h1>
+        <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">{pageTitle}</h1>
         <Button
           variant="outline"
           onClick={() => navigate(-1)}
@@ -1483,7 +1483,7 @@ export const GameSearchPage = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-white group-hover:text-plaeen-green transition-colors uppercase">
+                        <h3 className="text-2xl font-bold text-white group-hover:text-plaeen-green transition-colors uppercase">
                           {team.name || "Unnamed Team"}
                         </h3>
                         <p className="text-white/40 text-sm mt-1">

@@ -1,0 +1,65 @@
+/*
+  Design tokens for the Plaeen Kids UI.
+
+  Keep this file intentionally small. Tailwind already gives us a complete
+  spacing scale, radius scale, typography scale, shadows, breakpoints, and
+  state variants. Add tokens here only when they express Plaeen brand or a
+  reusable semantic UI decision that Tailwind cannot name for us.
+*/
+@font-face {
+  font-family: "Abolition";
+  src: url("/fonts/abolition/AbolitionTest-Round.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Abolition";
+  src: url("/fonts/abolition/AbolitionTest-RoundOblique.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* Raw brand palette. Use these when the UI specifically means Plaeen. */
+  --plaeen-green: #76e900;
+  --plaeen-purple: #2d1b4d;
+  --plaeen-purple-medium: #462d71;
+  --plaeen-dark: #0a0514;
+
+  /* Semantic surfaces shared by both CSS and Tailwind utilities. */
+  --surface-glass: rgb(255 255 255 / 0.05);
+  --surface-glass-border: rgb(255 255 255 / 0.1);
+  --glow-green-soft: 0 0 20px rgb(118 233 0 / 0.3);
+  --glow-green-strong: 0 0 40px rgb(118 233 0 / 0.5);
+  --glow-purple-soft: 0 0 10px rgb(27 77 45 / 0.1);
+  --glow-red-soft: 0 0 10px rgb(255 0 0 / 0.1);
+}
+
+@theme {
+  /* Fonts are brand decisions; sizes/weights should stay Tailwind utilities. */
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Abolition", "Geist", ui-sans-serif, system-ui, sans-serif;
+
+  /* Backward-compatible brand utility names used across the app today. */
+  --color-plaeen-green: var(--plaeen-green);
+  --color-plaeen-purple: var(--plaeen-purple);
+  --color-plaeen-purple-medium: var(--plaeen-purple-medium);
+  --color-plaeen-dark: var(--plaeen-dark);
+  --color-plaeen-glass: var(--surface-glass);
+  --color-plaeen-glass-border: var(--surface-glass-border);
+
+  /* New semantic aliases for future components. */
+  --color-brand-accent: var(--plaeen-green);
+  --color-brand-base: var(--plaeen-purple);
+  --color-surface-app: var(--plaeen-dark);
+  --color-surface-glass: var(--surface-glass);
+  --color-border-glass: var(--surface-glass-border);
+
+  --shadow-neon: var(--glow-green-soft);
+  --shadow-neon-strong: var(--glow-green-strong);
+}

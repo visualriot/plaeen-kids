@@ -251,7 +251,7 @@ export const CreateTeamPage = () => {
           >
             <ChevronLeft size={14} /> Back to Teams
           </button>
-          <h1 className="text-white">
+          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider text-white">
             Create <span className="text-plaeen-green">Team</span>
           </h1>
           {role === "kid" && (

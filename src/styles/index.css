@@ -1,0 +1,140 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
+@import "tailwindcss";
+@import "./tokens.css";
+
+@layer base {
+  html {
+    min-height: 100%;
+    background-color: var(--plaeen-dark);
+  }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    @apply bg-plaeen-dark font-sans text-white antialiased;
+    background-image:
+      radial-gradient(circle at 50% -20%, var(--plaeen-purple) 0%, var(--plaeen-dark) 100%),
+      radial-gradient(circle at 0% 0%, rgb(118 233 0 / 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgb(118 233 0 / 0.05) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  p {
+    @apply text-neutral-300;
+  }
+
+  label {
+    @apply block text-[11px] font-semibold text-white/50 uppercase;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply border border-plaeen-glass-border bg-plaeen-glass backdrop-blur-xl;
+  }
+
+  .ghost-text {
+    @apply text-sm font-semibold text-neutral-500 uppercase;
+  }
+
+  .note {
+    @apply mt-2 font-sans text-base font-normal text-neutral-400;
+  }
+
+  .link {
+    @apply text-sm font-medium text-neutral-600 transition-colors hover:text-plaeen-green/80;
+  }
+}
+
+@layer utilities {
+  .neon-glow {
+    box-shadow: var(--glow-green-soft);
+  }
+
+  .neon-glow-strong {
+    box-shadow: var(--glow-green-strong);
+  }
+
+  .purple-glow {
+    box-shadow: var(--glow-purple-soft);
+  }
+
+  .red-glow {
+    box-shadow: var(--glow-red-soft);
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .custom-scrollbar,
+  .scrollbar-thin,
+  .game-details-modal {
+    scrollbar-color: rgb(118 233 0 / 0.25) rgb(255 255 255 / 0.03);
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar,
+  .game-details-modal::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar,
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track,
+  .scrollbar-thin::-webkit-scrollbar-track,
+  .game-details-modal::-webkit-scrollbar-track {
+    background: rgb(255 255 255 / 0.03);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb,
+  .scrollbar-thin::-webkit-scrollbar-thumb,
+  .game-details-modal::-webkit-scrollbar-thumb {
+    background: rgb(118 233 0 / 0.2);
+    border-radius: 999px;
+  }
+
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb,
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb,
+  .game-details-modal::-webkit-scrollbar-thumb:hover {
+    background: rgb(118 233 0 / 0.4);
+  }
+
+  .animate-blink-glow {
+    animation: blink-glow 2s infinite;
+  }
+}
+
+@keyframes blink-glow {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgb(118 233 0 / 0.2);
+  }
+
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 30px rgb(118 233 0 / 0.6);
+  }
+}
