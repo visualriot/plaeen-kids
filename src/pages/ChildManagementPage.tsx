@@ -422,7 +422,7 @@ export const ChildManagementPage = () => {
             />
           </div>
           <div className="space-y-3">
-            <h1>{formatName(kid.displayName)}</h1>
+            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">{formatName(kid.displayName)}</h1>
             <p className="text-sm  text-white/50">@{kid.username}</p>
           </div>
         </div>
@@ -430,7 +430,7 @@ export const ChildManagementPage = () => {
 
       {pendingApprovals.filter((a) => a.type === "overtime").length > 0 && (
         <div className="mb-12 space-y-4">
-          <h2 className="text-red-500 flex items-center gap-3">
+          <h2 className="text-xs font-bold text-red-500 flex items-center gap-3">
             <Bell size={16} /> Pending Overtime Decisions
           </h2>
           <div className="grid gap-4">
@@ -475,7 +475,7 @@ export const ChildManagementPage = () => {
       <div className="grid lg:grid-cols-3 gap-12">
         {/* Left Column: Screen Time Settings */}
         <div className="space-y-8">
-          <h2 className="flex items-center gap-3">
+          <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
             <Clock size={16} /> Screen Time Control
           </h2>
           <Card className="bg-white/5 border-white/10 p-8 space-y-10">
@@ -640,7 +640,7 @@ export const ChildManagementPage = () => {
             </div>
           </Card>
 
-          <h2 className="flex items-center gap-3">
+          <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
             <Shield size={16} /> Profile Identity
           </h2>
           <Card className="bg-white/5 border-white/10 p-8 space-y-6">
@@ -840,7 +840,7 @@ export const ChildManagementPage = () => {
 
           {/* Active Penalties */}
           <section className="space-y-6">
-            <h2 className="text-red-500 flex items-center gap-3">
+            <h2 className="text-xs font-bold text-red-500 flex items-center gap-3">
               <Shield size={16} /> Active Penalties
             </h2>
 
@@ -932,7 +932,7 @@ export const ChildManagementPage = () => {
                         <p className="text-[10px] font-bold text-red-500 uppercase  mb-1">
                           Overtime Detected
                         </p>
-                        <h3 className="text-xl font-bold text-white tracking-tight">
+                        <h3 className="uppercase text-xl font-bold text-white tracking-tight">
                           {req.data.overtimeMinutes} Minutes Over
                         </h3>
                       </div>
@@ -960,7 +960,7 @@ export const ChildManagementPage = () => {
 
           {/* Session History */}
           <section className="space-y-6">
-            <h2 className=" text-white/40 flex items-center gap-3">
+            <h2 className="text-xs font-bold text-white/40 flex items-center gap-3">
               <History size={16} /> Recent Sessions
             </h2>
             <Card className="bg-white/5 border-white/10 overflow-hidden">
@@ -1040,7 +1040,7 @@ export const ChildManagementPage = () => {
           {/* Allowed Games */}
           <div className="space-y-8">
             <div className="flex justify-between items-center">
-              <h2 className="flex items-center gap-3">
+              <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
                 <Gamepad2 size={16} /> Approved Games
               </h2>
               <div className="relative">

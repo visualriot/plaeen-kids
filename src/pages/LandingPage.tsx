@@ -87,11 +87,11 @@ export const LandingPage = () => {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-plaeen-purple-medium/70 border border-plaeen-green/20 text-plaeen-green text-[12px] font-bold uppercase  mb-8 animate-pulse">
             <Sparkles size={14} /> The Safest Way to Game Together
           </div>
-          <h1>
+          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">
             Unleash the power of{" "}
             <span className="text-plaeen-green">plaeen</span> together.
           </h1>
-          <h5 className="mx-auto mt-8 max-w-2xl ">
+          <h5 className="text-neutral-400 mx-auto mt-8 max-w-2xl">
             Give your kids a safe gaming platform where they only play with
             friends. Manage screen time with ease while kids earn rewards for
             healthy gaming habits.
@@ -146,7 +146,7 @@ export const LandingPage = () => {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-plaeen-green text-black shadow-[0_0_20px_rgba(118,233,0,0.3)] group-hover:scale-110 transition-transform">
               <Sparkles size={32} />
             </div>
-            <h3>Gamified Screen Time</h3>
+            <h3 className="text-2xl font-bold text-white uppercase">Gamified Screen Time</h3>
             <p>
               No more drama. Kids earn rewards and strikes for finishing on
               time, turning screen time management into a game they want to win.
@@ -157,7 +157,7 @@ export const LandingPage = () => {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-plaeen-green text-black shadow-[0_0_20px_rgba(118,233,0,0.3)] group-hover:scale-110 transition-transform">
               <ShieldCheck size={32} />
             </div>
-            <h3>Safety & Control</h3>
+            <h3 className="text-2xl font-bold text-white uppercase">Safety & Control</h3>
             <p>
               Parents have complete overview and control. Your kids only play
               with confirmed friends, in an environment restricted to safe age
@@ -169,7 +169,7 @@ export const LandingPage = () => {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-plaeen-green text-black shadow-[0_0_20px_rgba(118,233,0,0.3)] group-hover:scale-110 transition-transform">
               <Users size={32} />
             </div>
-            <h3>Smart Scheduling</h3>
+            <h3 className="text-2xl font-bold text-white uppercase">Smart Scheduling</h3>
             <p>
               Planning sessions with friends is effortless. Instant syncing
               between family calendars ensures kids stay connected without the
@@ -229,7 +229,7 @@ export const LandingPage = () => {
       {/* Footer CTA */}
       <section className="mx-auto max-w-7xl px-6 py-40 text-center relative">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(118,233,0,0.05)_0%,transparent_70%)]" />
-        <h2 className="text-5xl  mb-6">
+        <h2 className="font-bold text-plaeen-green text-5xl mb-6">
           <span className="text-white">Ready to </span>end the screen time
           battle?
         </h2>

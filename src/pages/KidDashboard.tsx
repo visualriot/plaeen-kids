@@ -1113,7 +1113,7 @@ export const KidDashboard = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
               Welcome,{" "}
               <span className="text-plaeen-green">
                 {/* {activeKid.displayName.split(" ")[0]}! */}
@@ -1483,7 +1483,7 @@ export const KidDashboard = () => {
                       <Zap size={32} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black uppercase tracking-tighter  mb-1">
+                      <h3 className="text-white text-xl font-black uppercase tracking-tighter mb-1">
                         REWARD ACTIVATED!
                       </h3>
                       <p className="text-[10px] font-bold uppercase  opacity-70">
@@ -1505,7 +1505,7 @@ export const KidDashboard = () => {
             </AnimatePresence>
 
             <section className="space-y-6">
-              <h2 className="flex items-center gap-3">
+              <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
                 <Calendar size={16} /> Upcoming Sessions
               </h2>
               <div className="grid md:grid-cols-2 gap-6">
@@ -1636,7 +1636,7 @@ export const KidDashboard = () => {
             )}
 
             <section className="space-y-6">
-              <h2 className="flex items-center gap-3">
+              <h2 className="text-xs font-bold text-plaeen-green flex items-center gap-3">
                 <Activity size={16} /> Recent Activity
               </h2>
               <Card className="bg-white/5 border-white/10 p-8">

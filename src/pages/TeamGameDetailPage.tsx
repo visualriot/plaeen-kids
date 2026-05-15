@@ -211,7 +211,7 @@ export const TeamGameDetailPage = () => {
                 </span>
               ))}
             </div>
-            <h1 className="text-8xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+            <h1 className="font-display text-8xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
               {game.name}
             </h1>
           </div>

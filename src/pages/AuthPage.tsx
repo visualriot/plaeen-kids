@@ -173,7 +173,7 @@ export const AuthPage = () => {
       {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(118,233,0,0.05)_0%,transparent_50%)]" /> */}
 
       <Card className="w-full max-w-md p-10 space-y-4">
-        <h2 className="text-4xl  mb-6 tracking-wide">
+        <h2 className="font-bold text-plaeen-green text-4xl mb-6 tracking-wide">
           {isSignUp ? (
             <>
               <span className="text-white">Sign Up for</span> Plaeen

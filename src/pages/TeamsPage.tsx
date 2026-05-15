@@ -207,7 +207,7 @@ export const TeamsPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-20 text-center">
       <div className="flex flex-col items-center justify-center gap-6 mb-20">
         <div className="flex items-end justify-baseline gap-4">
-          <h1>
+          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider">
             Who are you <span className="text-plaeen-green">playing</span> with?
           </h1>
           <Button

@@ -268,7 +268,7 @@ export const KidCalendarPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
         <div>
-          <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30_rgba(118,233,0,0.3)]">
+          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30_rgba(118,233,0,0.3)]">
             Your <span className="text-plaeen-green">Calendar</span>
           </h1>
           <p className="text-white/40 font-bold uppercase  text-xs mt-2">

@@ -97,7 +97,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 {/* Title & Rating Row */}
                 <div className="flex items-start justify-between gap-6">
                   <div className="flex-1">
-                    <h1 className="text-5xl font-bold text-white mb-2">
+                    <h1 className="font-display tracking-wider text-5xl font-bold text-white mb-2">
                       {game.name}
                     </h1>
                     {game.releaseDate && (
@@ -243,7 +243,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                   {/* Title & Rating Row */}
                   <div className="flex items-start justify-between gap-6">
                     <div className="flex-1">
-                      <h1 className="text-5xl font-bold text-white mb-2">
+                      <h1 className="font-display tracking-wider text-5xl font-bold text-white mb-2">
                         {game.name}
                       </h1>
                       {game.releaseDate && (

@@ -293,7 +293,7 @@ export const TeamSettingsPage = () => {
 
       <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-20">
         <div>
-          <h1 className="text-6xl font-bold text-white uppercase tracking-tighter mb-4">
+          <h1 className="font-display text-6xl font-bold text-white uppercase tracking-tighter mb-4">
             Team <span className="text-plaeen-green">Settings</span>
           </h1>
           <p className="text-sm font-bold text-white/40 uppercase ">

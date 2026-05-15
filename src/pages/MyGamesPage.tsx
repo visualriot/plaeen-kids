@@ -388,7 +388,7 @@ export const MyGamesPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
         <div>
-          <h1 className="drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+          <h1 className="font-display text-4xl md:text-6xl font-bold tracking-wider drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
             My <span className="text-plaeen-green">Games</span>
           </h1>
           <p className="text-white/40 font-bold uppercase  text-xs mt-2">
