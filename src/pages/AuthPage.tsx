@@ -5,12 +5,14 @@ import { auth, db } from "@/firebase";
 import {
   GoogleAuthProvider,
   OAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
@@ -21,6 +23,7 @@ export const AuthPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const redirectHandledRef = useRef(false);
   const navigate = useNavigate();
 
   const isSignUp = mode === "signup";
@@ -65,25 +68,55 @@ export const AuthPage = () => {
     }
   };
 
+  const finishProviderSignIn = async (user: any) => {
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (!userDoc.exists()) {
+      await createUserProfile(user);
+    }
+    await handleNavigateAfterAuth(user);
+  };
+
+  useEffect(() => {
+    if (redirectHandledRef.current) {
+      return;
+    }
+
+    redirectHandledRef.current = true;
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) {
+          await finishProviderSignIn(result.user);
+        }
+      })
+      .catch((err) => {
+        console.error("Redirect Sign In Error Code:", err?.code);
+        setError("Failed to complete sign in. Please try again.");
+      });
+  }, []);
+
   const handleGoogleSignIn = async () => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (!userDoc.exists()) {
-        await createUserProfile(user);
-      }
-      await handleNavigateAfterAuth(user);
+      await finishProviderSignIn(result.user);
     } catch (err) {
       const error = err as any;
+      if (error?.code === "auth/popup-blocked") {
+        try {
+          const provider = new GoogleAuthProvider();
+          await signInWithRedirect(auth, provider);
+        } catch (redirectErr) {
+          const redirectError = redirectErr as any;
+          console.error("Google Redirect Error Code:", redirectError?.code);
+          setError("Failed to start Google sign in. Please try again.");
+        }
+        return;
+      }
+
       const errorMessage =
         error?.code === "auth/cancelled-popup-request"
           ? "Sign in was cancelled"
-          : error?.code === "auth/popup-blocked"
-            ? "Pop-up was blocked. Please allow pop-ups and try again"
-            : "Failed to sign in with Google";
+          : "Failed to sign in with Google";
       setError(errorMessage);
       console.error("Google Sign In Error Code:", error?.code);
     }
@@ -95,21 +128,27 @@ export const AuthPage = () => {
       provider.addScope("email");
       provider.addScope("name");
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (!userDoc.exists()) {
-        await createUserProfile(user);
-      }
-      await handleNavigateAfterAuth(user);
+      await finishProviderSignIn(result.user);
     } catch (err) {
       const error = err as any;
+      if (error?.code === "auth/popup-blocked") {
+        try {
+          const provider = new OAuthProvider("apple.com");
+          provider.addScope("email");
+          provider.addScope("name");
+          await signInWithRedirect(auth, provider);
+        } catch (redirectErr) {
+          const redirectError = redirectErr as any;
+          console.error("Game Center Redirect Error Code:", redirectError?.code);
+          setError("Failed to start Game Center sign in. Please try again.");
+        }
+        return;
+      }
+
       const errorMessage =
         error?.code === "auth/cancelled-popup-request"
           ? "Sign in was cancelled"
-          : error?.code === "auth/popup-blocked"
-            ? "Pop-up was blocked. Please allow pop-ups and try again"
-            : "Failed to sign in with Game Center";
+          : "Failed to sign in with Game Center";
       setError(errorMessage);
       console.error("Game Center Sign In Error Code:", error?.code);
     }
