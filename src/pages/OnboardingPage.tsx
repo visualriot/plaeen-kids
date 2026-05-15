@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -12,8 +13,8 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
 import { validateUsername } from "@/lib/validation";
 import {
   UserPlus,
@@ -28,7 +29,13 @@ import {
   Gamepad2,
   Sparkles,
 } from "lucide-react";
-import { cn, getRandomUserAvatar } from "@/lib/utils";
+import {
+  cn,
+  getRandomUserAvatar,
+  validateBirthDate,
+  getTodayDateString,
+  BIRTH_DATE_MIN,
+} from "@/lib/utils";
 
 interface KidForm {
   name: string;
@@ -64,6 +71,12 @@ export const OnboardingPage = () => {
   const handleAddKid = async () => {
     if (!currentKid.name || !currentKid.username || !currentKid.birthDate) {
       setError("Please fill in all required fields");
+      return;
+    }
+
+    const birthDateError = validateBirthDate(currentKid.birthDate);
+    if (birthDateError) {
+      setError(birthDateError);
       return;
     }
 
@@ -280,7 +293,7 @@ export const OnboardingPage = () => {
               <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-plaeen-green text-black mb-8 shadow-[0_0_30px_rgba(118,233,0,0.3)]">
                 <UserPlus size={40} />
               </div>
-              <h1 className="text-5xl font-bold text-white uppercase tracking-tighter mb-4">
+              <h1 className="text-5xl font-bold text-white uppercase  mb-4">
                 Add Your <span className="text-plaeen-green">Kids</span>
               </h1>
               <p className="text-white/40 font-bold  text-xs">
@@ -348,6 +361,8 @@ export const OnboardingPage = () => {
                           birthDate: e.target.value,
                         })
                       }
+                      min={BIRTH_DATE_MIN}
+                      max={getTodayDateString()}
                       className="w-full rounded-xl border-2 border-white/5 bg-white/5 px-6 py-4 text-white font-bold focus:border-plaeen-green focus:outline-none transition-all uppercase "
                     />
                   </div>
@@ -544,7 +559,7 @@ export const OnboardingPage = () => {
               <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-plaeen-green text-black mb-8 shadow-[0_0_30px_rgba(118,233,0,0.3)]">
                 <Lock size={40} />
               </div>
-              <h1 className="text-5xl font-bold text-white uppercase tracking-tighter mb-4">
+              <h1 className="text-5xl font-bold text-white uppercase  mb-4">
                 Secure <span className="text-plaeen-green">Access</span>
               </h1>
               <p className="text-white/40 font-bold uppercase  text-xs">

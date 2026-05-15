@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
 import { auth, db } from "@/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -24,6 +23,7 @@ import {
   eachDayOfInterval,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Heading, Text, Label, Button } from "@/components/atoms";
 
 type AvailabilityType = "available" | "unavailable" | "once";
 
@@ -109,12 +109,12 @@ export const CalendarPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-12">
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1>
+          <Heading level={1}>
             Your Calendar <span className="text-white/20 text-4xl ml-2">?</span>
-          </h1>
-          <p className="mt-2 text-white/40 font-bold  uppercase">
+          </Heading>
+          <Text variant="caption" className="mt-2">
             Set your gaming availability
-          </p>
+          </Text>
         </div>
         <Button
           variant="outline"
@@ -137,7 +137,7 @@ export const CalendarPage = () => {
             >
               <ChevronLeft size={32} />
             </button>
-            <span className="text-3xl font-bold text-white tracking-tight">
+            <span className="text-3xl font-bold text-white ">
               {format(days[0], "dd")}-{format(days[6], "dd.MM")}
             </span>
             <button
@@ -153,7 +153,7 @@ export const CalendarPage = () => {
               <ChevronLeft size={32} />
             </button>
             <div
-              className="flex items-center gap-3 text-3xl font-bold text-white tracking-tight cursor-pointer group"
+              className="flex items-center gap-3 text-3xl font-bold text-white  cursor-pointer group"
               onClick={() => setIsPickerOpen(!isPickerOpen)}
             >
               {format(currentDate, "MMMM yyyy")}

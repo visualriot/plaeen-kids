@@ -1,5 +1,6 @@
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -418,7 +419,7 @@ export const TeamDetailPage = () => {
         <div className="absolute inset-0 p-12 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-8xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+              <h1 className="text-8xl font-bold text-white uppercase  drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
                 {kidData?.teamAliases?.[team.id] ||
                   parentProfile?.teamAliases?.[team.id] ||
                   team.name}
@@ -551,7 +552,7 @@ export const TeamDetailPage = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-plaeen-dark via-transparent to-transparent" />
                     <div className="absolute bottom-4 left-4">
-                      <h3 className="text-lg font-bold text-white uppercase tracking-tight group-hover:text-plaeen-green transition-colors">
+                      <h3 className="text-lg font-bold text-white uppercase  group-hover:text-plaeen-green transition-colors">
                         {game.name}
                       </h3>
                     </div>
@@ -699,7 +700,7 @@ export const TeamDetailPage = () => {
                     key={dayKey}
                     className="grid grid-cols-[80px_repeat(24,1fr)] gap-0.5 mb-0.5 items-center md:gap-3 md:mb-3"
                   >
-                    <div className="text-[8px] md:text-[10px] font-bold text-white/40 uppercase tracking-tight md:">
+                    <div className="text-[8px] md:text-[10px] font-bold text-white/40 uppercase  md:">
                       {format(day, "EEE d")}
                     </div>
                     {hours.map((hour) => {
@@ -880,7 +881,7 @@ export const TeamDetailPage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
           <Card className="w-full max-w-md bg-plaeen-dark border-plaeen-green/30 p-10">
             <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-white uppercase tracking-tighter">
+              <h2 className="text-3xl font-bold text-white uppercase ">
                 Add Player
               </h2>
               <button
@@ -931,7 +932,7 @@ export const TeamDetailPage = () => {
                     {selectedSession.proposedByName}
                   </span>
                 </p>
-                <h2 className="text-5xl font-bold text-white uppercase tracking-tighter mb-2">
+                <h2 className="text-5xl font-bold text-white uppercase  mb-2">
                   {selectedSession.gameName}
                 </h2>
                 <div className="flex items-center gap-4 text-white/40 font-bold uppercase  text-[10px]">
@@ -988,7 +989,7 @@ export const TeamDetailPage = () => {
                             className="h-8 w-8 rounded-full"
                           />
                           <div className="flex flex-col">
-                            <span className="font-bold text-white uppercase text-[10px] tracking-tight">
+                            <span className="font-bold text-white uppercase text-[10px] ">
                               {member.displayName}
                             </span>
                             {response?.guardianApprovalPending && (

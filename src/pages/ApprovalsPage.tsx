@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -100,7 +101,7 @@ export const ApprovalsPage = () => {
         // Update notification to kid about punishment
         await addDoc(collection(db, "notifications"), {
           userId: request.childId,
-          parentId: user.uid,
+          parentId: user?.uid,
           type: "penalty",
           title: "Overtime Penalty",
           message: `A penalty of ${penalty} minutes has been deducted from your screen time for overtime.`,
@@ -113,7 +114,7 @@ export const ApprovalsPage = () => {
       if (request.type !== "overtime") {
         await addDoc(collection(db, "notifications"), {
           userId: request.childId,
-          parentId: user.uid,
+          parentId: user?.uid,
           type: "approval_status",
           title: `Request ${status}`,
           message: `Your request for ${request.type === "game" ? request.data.gameName : request.type} has been ${status}.`,
@@ -125,7 +126,7 @@ export const ApprovalsPage = () => {
       } else if (status === "approved") {
         await addDoc(collection(db, "notifications"), {
           userId: request.childId,
-          parentId: user.uid,
+          parentId: user?.uid,
           type: "approval_status",
           title: "Overtime Forgiven",
           message:
@@ -157,12 +158,10 @@ export const ApprovalsPage = () => {
       </button>
 
       <div className="mb-12">
-        <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+        <h1 className="text-6xl font-bold text-white uppercase  drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
           Approval <span className="text-plaeen-green">Queue</span>
         </h1>
-        <p className="text-white/40 font-bold uppercase  text-xs mt-2">
-          Review and Authorize Requests
-        </p>
+        <p className="note">Review and Authorize Requests</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-12">
@@ -199,7 +198,7 @@ export const ApprovalsPage = () => {
                           • {format(safeToDate(req.createdAt), "MMM d, HH:mm")}
                         </span>
                       </div>
-                      <h3 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
+                      <h3 className="text-2xl font-bold text-white uppercase  mb-2">
                         {req.type === "friend"
                           ? `Friend Request: ${req.data.friendName}`
                           : req.type === "game"
@@ -344,7 +343,7 @@ export const ApprovalsPage = () => {
                     {req.status}
                   </span>
                 </div>
-                <p className="text-xs font-bold text-white uppercase tracking-tight">
+                <p className="text-xs font-bold text-white uppercase ">
                   {req.type === "game"
                     ? req.data.gameName
                     : req.type === "friend"

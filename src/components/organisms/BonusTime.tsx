@@ -1,7 +1,7 @@
 import React from "react";
 import { Zap, RefreshCw } from "lucide-react";
-import { Card } from "./Card";
-import { Button } from "./Button";
+import { Card } from "../molecules/Card";
+import { Button } from "../atoms/Button";
 
 interface BonusTimeProps {
   accumulatedTime: number;

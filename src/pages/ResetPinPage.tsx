@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { Heading, Text, Label } from "@/components/atoms";
 import { db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { Card } from "../components/Card";
-import { Button } from "../components/Button";
+import { Card } from "../components/molecules/Card";
+import { Button } from "../components/atoms/Button";
 import { Shield, Check, ArrowRight, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -108,7 +109,7 @@ export const ResetPinPage = () => {
                 <Check size={40} className="text-black" />
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-2">
+                <h2 className="text-3xl font-bold text-white uppercase  mb-2">
                   PIN <span className="text-plaeen-green">Updated</span>
                 </h2>
                 <p className="text-white/40 text-[10px] font-bold uppercase ">
@@ -134,7 +135,7 @@ export const ResetPinPage = () => {
                 opacity={0.5}
               />
               <div>
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-2">
+                <h2 className="text-3xl font-bold text-white uppercase  mb-2">
                   Protocol <span className="text-red-500">Error</span>
                 </h2>
                 <p className="text-white/40 text-[10px] font-bold uppercase ">
@@ -156,7 +157,7 @@ export const ResetPinPage = () => {
             <div className="space-y-10">
               <div className="text-center">
                 <Lock size={48} className="text-plaeen-green mx-auto mb-6" />
-                <h2 className="text-3xl font-bold text-white uppercase tracking-tighter mb-2">
+                <h2 className="text-3xl font-bold text-white uppercase  mb-2">
                   New <span className="text-plaeen-green">PIN</span>
                 </h2>
                 <p className="text-white/40 text-[10px] font-bold uppercase ">

@@ -1,5 +1,6 @@
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -211,7 +212,7 @@ export const TeamGameDetailPage = () => {
                 </span>
               ))}
             </div>
-            <h1 className="text-8xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+            <h1 className="text-8xl font-bold text-white uppercase  drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
               {game.name}
             </h1>
           </div>

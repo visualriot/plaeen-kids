@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Toggle } from "@/components/atoms/Toggle";
+import { Dropdown } from "@/components/atoms/Dropdown";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
   query,
   where,
   onSnapshot,
-  orderBy,
-  limit,
   doc,
   updateDoc,
   writeBatch,
+  deleteDoc,
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import {
@@ -29,6 +31,7 @@ import {
   X,
   ChevronRight,
   ChevronDown,
+  MoreVertical,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, isAfter, isToday } from "date-fns";
@@ -48,18 +51,17 @@ export const ParentActivityPage = () => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set(),
   );
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const navigate = useNavigate();
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch more notifications for better summary stats
     const q = query(
       collection(db, "notifications"),
       where("userId", "==", user.uid),
-      orderBy("createdAt", "desc"),
-      limit(200),
     );
 
     const unsubscribe = onSnapshot(
@@ -93,16 +95,32 @@ export const ParentActivityPage = () => {
   }, [user]);
 
   const markAsRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    );
     try {
       await updateDoc(doc(db, "notifications", id), { read: true });
     } catch (err) {
       console.error("Error marking as read:", err);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: false } : n)),
+      );
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "notifications", id));
+    } catch (err) {
+      console.error("Error deleting notification:", err);
     }
   };
 
   const markAllAsRead = async () => {
     const unread = notifications.filter((n) => !n.read);
     if (unread.length === 0) return;
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
     const batch = writeBatch(db);
     unread.forEach((n) => {
@@ -113,6 +131,12 @@ export const ParentActivityPage = () => {
       await batch.commit();
     } catch (err) {
       console.error("Error marking all as read:", err);
+      setNotifications((prev) =>
+        prev.map((n) => {
+          const wasUnread = unread.find((u) => u.id === n.id);
+          return wasUnread ? { ...n, read: false } : n;
+        }),
+      );
     }
   };
 
@@ -151,19 +175,16 @@ export const ParentActivityPage = () => {
     if (filteredAndSortedNotifications.length === 0) return groups;
 
     if (sortBy === "date") {
-      const today = filteredAndSortedNotifications.filter(
-        (n) => n.createdAt && isToday(safeToDate(n.createdAt)),
+      const today = filteredAndSortedNotifications.filter((n) =>
+        isToday(safeToDate(n.createdAt)),
       );
       const thisWeek = filteredAndSortedNotifications.filter(
         (n) =>
-          n.createdAt &&
           !isToday(safeToDate(n.createdAt)) &&
           isAfter(safeToDate(n.createdAt), subDays(new Date(), 7)),
       );
       const older = filteredAndSortedNotifications.filter(
-        (n) =>
-          n.createdAt &&
-          !isAfter(safeToDate(n.createdAt), subDays(new Date(), 7)),
+        (n) => !isAfter(safeToDate(n.createdAt), subDays(new Date(), 7)),
       );
 
       if (sortOrder === "desc") {
@@ -200,18 +221,18 @@ export const ParentActivityPage = () => {
   }, [filteredAndSortedNotifications, sortBy, sortOrder]);
 
   const summaryStats = useMemo(() => {
-    const thirtyDaysAgo = subDays(new Date(), 30);
+    const sevenDaysAgo = subDays(new Date(), 7);
 
     return kids.map((kid) => {
       const kidNotifications = notifications.filter(
         (n) => n.childId === kid.uid,
       );
 
-      const warningsLast30Days = kidNotifications.filter(
+      const warningsLast7Days = kidNotifications.filter(
         (n) =>
           n.type === "time_warning" &&
           n.createdAt &&
-          isAfter(safeToDate(n.createdAt), thirtyDaysAgo),
+          isAfter(safeToDate(n.createdAt), sevenDaysAgo),
       ).length;
 
       // Calculate sessions today (started and finished)
@@ -231,7 +252,7 @@ export const ParentActivityPage = () => {
 
       return {
         ...kid,
-        warningsLast30Days,
+        warningsLast7Days,
         sessionsToday: finishedSessionsToday.length,
         totalMinutesPlayedToday,
       };
@@ -257,6 +278,36 @@ export const ParentActivityPage = () => {
       }
       return next;
     });
+  };
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = () => setOpenMenuId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openMenuId]);
+
+  const handleMenuToggle = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    id: string,
+  ) => {
+    e.stopPropagation();
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setOpenMenuId(id);
+  };
+
+  const handleNotificationClick = (notif: Notification) => {
+    if (notif.type === "time_warning" && !notif.read) {
+      const targetId = notif.approvalId || notif.id;
+      navigate(`/parent/overtime-decision/${targetId}`);
+    } else if (!notif.read) {
+      markAsRead(notif.id);
+    }
   };
 
   const clearFilters = () => {
@@ -296,26 +347,51 @@ export const ParentActivityPage = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
-      <button
+      {openMenuId && (
+        <div
+          style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
+          className="w-36 bg-plaeen-dark border border-white/10 rounded-lg shadow-xl z-[9999]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              markAsRead(openMenuId);
+              setOpenMenuId(null);
+            }}
+            className="w-full text-left px-4 py-2 text-sm font-bold text-white/60 hover:text-white hover:bg-white/15 transition-colors border-b border-white/5 rounded-t-lg"
+          >
+            Mark as Read
+          </button>
+          <button
+            onClick={() => {
+              deleteNotification(openMenuId);
+              setOpenMenuId(null);
+            }}
+            className="w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:text-red-400 hover:bg-red-500/15 transition-colors rounded-b-lg"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+      <Button
         onClick={() => navigate("/parent-dashboard")}
-        className="flex items-center gap-2 text-white/40 hover:text-plaeen-green font-bold uppercase  text-[10px] mb-8 transition-colors"
+        variant="back"
+        className="flex items-center gap-2 mb-8 hover:gap-3"
       >
         <ArrowLeft size={14} /> Back to Guardian Hub
-      </button>
+      </Button>
 
       <div className="mb-12">
-        <h1 className="text-6xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
-          Activity <span className="text-plaeen-green">Log</span>
+        <h1>
+          <span className="text-plaeen-green">Activity</span> Log
         </h1>
-        <p className="text-white/40 font-bold uppercase  text-xs mt-2">
-          Real-time Monitoring & History
-        </p>
+        <p className="note">Real-time Monitoring & History</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2 space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-[10px] font-bold uppercase  text-plaeen-green flex items-center gap-3">
+            <h2 className="flex items-center gap-3">
               <Bell size={16} />{" "}
               {filterByType === "time_warning"
                 ? "Warning History"
@@ -325,95 +401,66 @@ export const ParentActivityPage = () => {
             </h2>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={markAllAsRead}
-                disabled={notifications.filter((n) => !n.read).length === 0}
-                className="px-3 py-2 rounded-lg text-[9px] font-bold uppercase  bg-white/5 border border-white/10 text-white/40 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-              >
-                Mark All Read
-              </button>
-
-              <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10">
-                <button
-                  onClick={() => toggleSort("date")}
-                  title="Sort by Date"
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${sortBy === "date" ? "bg-plaeen-green text-black" : "text-white/40 hover:text-white"}`}
-                >
-                  <Clock size={12} />
-                  <span className="text-[9px] font-bold uppercase ">Date</span>
-                  {sortBy === "date" && (
-                    <span className="text-[8px]">
-                      {sortOrder === "asc" ? "↑" : "↓"}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={() => toggleSort("kid")}
-                  title="Sort by Kid"
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all ${sortBy === "kid" ? "bg-plaeen-green text-black" : "text-white/40 hover:text-white"}`}
-                >
-                  <User size={12} />
-                  <span className="text-[9px] font-bold uppercase ">Kid</span>
-                  {sortBy === "kid" && (
-                    <span className="text-[8px]">
-                      {sortOrder === "asc" ? "↑" : "↓"}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              <div className="relative group">
-                <select
-                  value={currentFilterValue}
-                  onChange={(e) => handleFilterChange(e.target.value)}
-                  className="appearance-none bg-white/5 border border-white/10 text-white text-[9px] font-bold uppercase  pl-8 pr-10 py-2 rounded-lg focus:outline-none focus:border-plaeen-green transition-all cursor-pointer hover:bg-white/10"
-                >
-                  <option value="all" className="bg-[#0A0514] text-white">
-                    All Activity
-                  </option>
-                  <option value="unread" className="bg-[#0A0514] text-white">
-                    Unread Only
-                  </option>
-                  <option value="warnings" className="bg-[#0A0514] text-white">
-                    All Warnings
-                  </option>
-                  <optgroup
-                    label="Filter by Kid"
-                    className="bg-[#0A0514] text-white/40 text-[8px] uppercase"
-                  >
-                    {kids.map((kid) => (
-                      <option
-                        key={kid.uid}
-                        value={`kid:${kid.uid}`}
-                        className="bg-[#0A0514] text-white"
-                      >
-                        {kid.displayName}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-                <Filter
-                  size={10}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 group-hover:text-plaeen-green transition-colors"
-                />
-                <ChevronDown
-                  size={10}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none group-hover:text-plaeen-green transition-colors"
-                />
-              </div>
-
-              {(filterByKid || filterByType || showUnreadOnly) && (
-                <button
-                  onClick={clearFilters}
-                  className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
-                  title="Clear Filters"
-                >
-                  <X size={12} />
-                </button>
-              )}
+              <Dropdown
+                label="Sort By:"
+                options={[
+                  { id: "date", name: "Date" },
+                  { id: "kid", name: "Kid" },
+                ]}
+                selectedIds={[sortBy]}
+                onSelectionChange={(selected) => {
+                  if (selected.length > 0) {
+                    toggleSort(selected[0] as "date" | "kid");
+                  }
+                }}
+                variant="sort"
+                isMultiple={false}
+                showResetButton={false}
+                showApplyButton={false}
+                icon={<ArrowUpDown size={10} />}
+                defaultValueId="date"
+                width="w-12"
+                className="mr-8"
+              />
+              <Dropdown
+                label="Filter"
+                options={[
+                  { id: "all", name: "All Activity" },
+                  { id: "unread", name: "Unread Only" },
+                  { id: "warnings", name: "All Warnings" },
+                  ...kids.map((kid) => ({
+                    id: `kid:${kid.uid}`,
+                    name: kid.displayName,
+                  })),
+                ]}
+                selectedIds={[currentFilterValue]}
+                onSelectionChange={(selected) => {
+                  if (selected.length > 0) {
+                    handleFilterChange(selected[0]);
+                  }
+                }}
+                variant="filter"
+                isMultiple={false}
+                showResetButton={false}
+                showApplyButton={false}
+                icon={<Filter size={10} />}
+                defaultValueId="all"
+              />
             </div>
           </div>
+          <div className="flex flex-col items-end w-full justify-end">
+            <Button
+              onClick={markAllAsRead}
+              // disabled={notifications.filter((n) => !n.read).length === 0}
+              variant="ghost"
+              size="sm"
+              className={`py-2 ${notifications.filter((n) => !n.read).length === 0 ? "hidden" : ""}`}
+            >
+              Mark All Read
+            </Button>
+          </div>
 
+          {/* Grouped Notifications */}
           <div className="space-y-12">
             {groupedNotifications.map((group) => (
               <div key={group.title} className="space-y-6">
@@ -421,14 +468,14 @@ export const ParentActivityPage = () => {
                   onClick={() => toggleGroup(group.title)}
                   className="w-full flex items-center gap-4 group"
                 >
-                  <span className="text-[10px] font-bold text-white/20 uppercase  whitespace-nowrap group-hover:text-plaeen-green transition-colors">
-                    {group.title}
+                  <span className="text-sm font-bold text-white/50 uppercase  whitespace-nowrap group-hover:text-plaeen-green transition-colors">
+                    {group.title} ({group.items.length})
                   </span>
-                  <div className="h-px w-full bg-white/5 group-hover:bg-plaeen-green/20 transition-colors" />
+                  <div className="h-px w-full bg-white/15 group-hover:bg-plaeen-green/20 transition-colors" />
                   <ChevronDown
-                    size={14}
+                    size={18}
                     className={cn(
-                      "text-white/10 group-hover:text-plaeen-green transition-all",
+                      "text-white/30 group-hover:text-plaeen-green transition-all",
                       collapsedGroups.has(group.title)
                         ? "-rotate-90"
                         : "rotate-0",
@@ -441,8 +488,8 @@ export const ParentActivityPage = () => {
                     {group.items.map((notif) => (
                       <div
                         key={notif.id}
-                        onClick={() => !notif.read && markAsRead(notif.id)}
                         className="cursor-pointer"
+                        onClick={() => handleNotificationClick(notif)}
                       >
                         <Card
                           className={`bg-white/5 border-white/10 p-6 transition-all hover:bg-white/[0.07] ${!notif.read ? "border-l-4 border-l-plaeen-green" : "opacity-60"}`}
@@ -450,7 +497,7 @@ export const ParentActivityPage = () => {
                           <div className="flex justify-between items-start gap-6">
                             <div className="flex gap-4">
                               <div
-                                className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+                                className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                                   notif.type === "session_start"
                                     ? "bg-plaeen-green/10 text-plaeen-green"
                                     : notif.type === "session_end"
@@ -466,13 +513,15 @@ export const ParentActivityPage = () => {
                                   <AlertTriangle size={24} />
                                 )}
                               </div>
-                              <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                  <span className="text-[10px] font-bold text-plaeen-green uppercase ">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-bold text-plaeen-green uppercase ">
                                     {notif.childName}
                                   </span>
-                                  <span className="text-[8px] text-white/20 uppercase ">
-                                    •{" "}
+                                  <span className="text-xs text-neutral-400">
+                                    •
+                                  </span>
+                                  <span className="text-xs text-neutral-400">
                                     {notif.createdAt
                                       ? format(
                                           safeToDate(notif.createdAt),
@@ -481,10 +530,8 @@ export const ParentActivityPage = () => {
                                       : "Just now"}
                                   </span>
                                 </div>
-                                <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-1">
-                                  {notif.title}
-                                </h3>
-                                <p className="text-sm text-white/40">
+                                <h4>{notif.title}</h4>
+                                <p className="text-sm text-neutral-200 font-light italic">
                                   {notif.message}
                                 </p>
 
@@ -525,9 +572,17 @@ export const ParentActivityPage = () => {
                                   })()}
                               </div>
                             </div>
-                            {!notif.read && (
-                              <div className="h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
-                            )}
+                            <div className="flex items-center gap-3">
+                              {!notif.read && (
+                                <div className="h-2 w-2 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)] flex-shrink-0" />
+                              )}
+                              <button
+                                onClick={(e) => handleMenuToggle(e, notif.id)}
+                                className="p-2 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white flex-shrink-0"
+                              >
+                                <MoreVertical size={16} />
+                              </button>
+                            </div>
                           </div>
                         </Card>
                       </div>
@@ -538,16 +593,16 @@ export const ParentActivityPage = () => {
             ))}
 
             {groupedNotifications.length === 0 && (
-              <Card className="bg-white/5 border-dashed border-white/10 p-12 text-center">
-                <p className="text-white/20 font-bold uppercase ">
-                  No activity matches your filters
-                </p>
-                <button
+              <Card className="bg-white/5 border-dashed border-white/10 p-12 space-y-4 text-center">
+                <p className="ghost-text">No activity matches your filters</p>
+                <Button
                   onClick={clearFilters}
-                  className="mt-4 text-plaeen-green text-[10px] font-bold uppercase  hover:underline"
+                  variant="tertiary"
+                  size="sm"
+                  className={`${!filterByKid && !filterByType && !showUnreadOnly ? "hidden" : ""}`}
                 >
                   Clear all filters
-                </button>
+                </Button>
               </Card>
             )}
           </div>
@@ -560,30 +615,30 @@ export const ParentActivityPage = () => {
 
           <div className="space-y-6">
             <Card className="bg-white/5 border-white/10 p-8">
-              <p className="text-[10px] font-bold text-white/20 uppercase  mb-6">
-                Total Sessions Today
-              </p>
+              <h6>Total Sessions Today</h6>
               <div className="space-y-4">
                 {summaryStats.map((kid) => (
                   <div
                     key={kid.uid}
-                    className="flex justify-between items-end border-b border-white/5 pb-4 last:border-0 last:pb-0"
+                    className="flex justify-between items-center border-b border-white/5 pb-4 last:border-0 last:pb-0"
                   >
-                    <div>
-                      <p className="text-xs font-bold text-white uppercase ">
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-white capitalize ">
                         {kid.displayName}
                       </p>
-                      <p className="text-[10px] text-white/40 uppercase ">
-                        {kid.sessionsToday} Sessions
+                      <p className="text-xs text-white/50 ">
+                        {kid.sessionsToday >= 2
+                          ? `${kid.sessionsToday} Sessions`
+                          : kid.sessionsToday === 1
+                            ? "1 Session"
+                            : "No sessions today"}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-plaeen-green">
-                        {kid.totalMinutesPlayedToday}m
+                        {kid.totalMinutesPlayedToday} min
                       </p>
-                      <p className="text-[8px] text-white/20 uppercase ">
-                        Played Today
-                      </p>
+                      {/* <p className="text-xs text-white/50">Played Today</p> */}
                     </div>
                   </div>
                 ))}
@@ -596,42 +651,50 @@ export const ParentActivityPage = () => {
             </Card>
 
             <Card className="bg-white/5 border-white/10 p-8">
-              <p className="text-[10px] font-bold text-white/20 uppercase  mb-6">
-                Warnings Triggered (30d)
-              </p>
-              <div className="space-y-4">
-                {summaryStats.map((kid) => (
-                  <button
-                    key={kid.uid}
-                    onClick={() => {
-                      setFilterByKid(kid.uid);
-                      setFilterByType("time_warning");
-                      setShowUnreadOnly(false);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className="w-full flex justify-between items-center group hover:bg-white/5 p-2 -m-2 rounded-xl transition-all"
-                  >
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-white uppercase  group-hover:text-plaeen-green transition-colors">
-                        {kid.displayName}
-                      </p>
-                      <p className="text-[8px] text-white/20 uppercase ">
-                        Click to view history
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold ${kid.warningsLast30Days > 5 ? "bg-red-500 text-white" : kid.warningsLast30Days > 0 ? "bg-yellow-500 text-black" : "bg-white/5 text-white/20"}`}
-                      >
-                        {kid.warningsLast30Days}
-                      </div>
-                      <ChevronRight
-                        size={14}
-                        className="text-white/20 group-hover:text-plaeen-green transition-colors"
-                      />
-                    </div>
-                  </button>
-                ))}
+              <h6>Warnings Triggered (7d)</h6>
+              <div className="space-y-4 w-full">
+                {summaryStats.filter((kid) => kid.warningsLast7Days > 0)
+                  .length === 0 ? (
+                  <p className="text-xs text-white/30 italic text-center py-4">
+                    No warnings triggered
+                  </p>
+                ) : (
+                  summaryStats.map(
+                    (kid) =>
+                      kid.warningsLast7Days > 0 && (
+                        <button
+                          key={kid.uid}
+                          onClick={() => {
+                            setFilterByKid(kid.uid);
+                            setFilterByType("time_warning");
+                            setShowUnreadOnly(false);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="w-full px-4 py-2 flex justify-between items-center group hover:bg-white/5 rounded-xl transition-all"
+                        >
+                          <div className="text-left space-y-1">
+                            <p className="text-sm capitalize font-bold text-white  group-hover:text-plaeen-green transition-colors">
+                              {kid.displayName}
+                            </p>
+                            <p className="text-xs text-white/40 ">
+                              Click to view history
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold ${kid.warningsLast7Days > 5 ? "bg-red-500 text-white" : kid.warningsLast7Days > 0 ? "bg-yellow-500 text-black" : "bg-white/5 text-white/20"}`}
+                            >
+                              {kid.warningsLast7Days}
+                            </div>
+                            <ChevronRight
+                              size={14}
+                              className="text-white/20 group-hover:text-plaeen-green transition-colors"
+                            />
+                          </div>
+                        </button>
+                      ),
+                  )
+                )}
               </div>
             </Card>
           </div>

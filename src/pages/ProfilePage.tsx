@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
 import {
   User,
   Monitor,
@@ -106,7 +107,7 @@ export const ProfilePage = () => {
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
       <div className="mb-12">
-        <h1 className="text-5xl font-bold text-white uppercase tracking-tight mb-2">
+        <h1 className="text-5xl font-bold text-white uppercase  mb-2">
           <span className="text-plaeen-green">Settings</span>
         </h1>
         <p className="text-white/40 font-bold uppercase  text-xs">
@@ -178,7 +179,7 @@ export const ProfilePage = () => {
 
         {/* Systems */}
         <Card className="p-8 bg-plaeen-purple/20 border-white/10">
-          <h2 className="text-xl font-bold text-white uppercase tracking-tight mb-6 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-white uppercase  mb-6 flex items-center gap-2">
             <Monitor size={20} className="text-plaeen-green" /> Gaming Systems
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

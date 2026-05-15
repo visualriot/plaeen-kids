@@ -1,5 +1,6 @@
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -207,9 +208,9 @@ export const TeamsPage = () => {
     <div className="mx-auto max-w-7xl px-6 py-20 text-center">
       <div className="flex flex-col items-center justify-center gap-6 mb-20">
         <div className="flex items-end justify-baseline gap-4">
-          <h1>
+          <Heading level={1} variant="display">
             Who are you <span className="text-plaeen-green">playing</span> with?
-          </h1>
+          </Heading>
           <Button
             onClick={() => setIsEditMode(!isEditMode)}
             variant="tertiary"
@@ -383,7 +384,7 @@ export const TeamsPage = () => {
                     <LogOut size={32} className="text-amber-500" />
                   )}
                 </div>
-                <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">
+                <h2 className="text-2xl font-bold text-white uppercase  mb-4">
                   {isDeleting ? "Delete Team?" : "Leave Team?"}
                 </h2>
                 <p className="text-white/40 text-sm mb-8 font-bold uppercase  ">

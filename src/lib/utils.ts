@@ -33,11 +33,16 @@ export const getRandomTeamAvatars = (count: number = 6) => {
 };
 
 /**
- * Gets a consistent default avatar path for a user based on their UID if no photoURL exists.
+ * Gets a consistent avatar path for a user.
+ * For guardians with Google photos: returns the photo URL
+ * For others without a custom photo: returns the default avatar
  */
 export const getUserAvatar = (photoURL: string | null | undefined) => {
-  if (photoURL && !photoURL.includes("dicebear.com")) {
-    return photoURL;
+  if (photoURL) {
+    // If it's a valid photo URL (not a placeholder), use it
+    if (!photoURL.includes("dicebear.com")) {
+      return photoURL;
+    }
   }
   return DEFAULT_USER_AVATAR;
 };
@@ -52,12 +57,33 @@ export const getTeamAvatar = (imageURL: string | null | undefined) => {
   return DEFAULT_TEAM_AVATAR;
 };
 
+export const BIRTH_DATE_MIN = "1950-01-01";
+
+export const validateBirthDate = (value: string): string | null => {
+  if (!value) return "Date of birth is required";
+  const date = new Date(value + "T00:00:00");
+  if (isNaN(date.getTime())) return "Invalid date";
+  if (date < new Date("1950-01-01T00:00:00")) return "Date of birth cannot be before 1950";
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  if (date > today) return "Date of birth cannot be in the future";
+  return null;
+};
+
+export const getTodayDateString = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 export function formatName(name: string): string {
   if (!name) return name;
+  // Get first name only (before space if there's one)
+  const firstName = name.split(" ")[0];
   // If the name is already all uppercase, leave it alone
-  if (name === name.toUpperCase() && name.length > 1) return name;
+  if (firstName === firstName.toUpperCase() && firstName.length > 1)
+    return firstName;
   // Otherwise, capitalize the first letter and keep the rest as is
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1);
 }
 export function safeToDate(timestamp: any): Date {
   if (!timestamp) return new Date();

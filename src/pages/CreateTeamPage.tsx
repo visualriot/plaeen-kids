@@ -1,4 +1,5 @@
-import { Button } from "@/components/Button";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -247,16 +248,22 @@ export const CreateTeamPage = () => {
         <div className="text-left mb-12">
           <button
             onClick={() => navigate("/teams")}
-            className="flex items-center gap-2 text-white/40 hover:text-white transition-colors font-bold uppercase  text-[10px] mb-6"
+            className="flex items-center gap-2 text-white/40 hover:text-white transition-colors mb-6"
           >
-            <ChevronLeft size={14} /> Back to Teams
+            <ChevronLeft size={14} />{" "}
+            <Text variant="caption" as="span">
+              Back to Teams
+            </Text>
           </button>
-          <h1 className="text-white">
+          <Heading level={1} variant="display" color="primary">
             Create <span className="text-plaeen-green">Team</span>
-          </h1>
+          </Heading>
           {role === "kid" && (
-            <div className="flex items-center gap-2 mt-4 text-plaeen-green font-bold uppercase  text-[10px]">
-              <Shield size={14} /> Private & Kid-Safe
+            <div className="flex items-center gap-2 mt-4 text-plaeen-green">
+              <Shield size={14} />{" "}
+              <Text variant="caption" as="span">
+                Private & Kid-Safe
+              </Text>
             </div>
           )}
         </div>
@@ -264,7 +271,7 @@ export const CreateTeamPage = () => {
         <div className="space-y-20 text-left">
           {/* Section 1: Name */}
           <section>
-            <label>What is the name of your team?</label>
+            <Label>What is the name of your team?</Label>
             <input
               type="text"
               value={teamName}
@@ -281,20 +288,20 @@ export const CreateTeamPage = () => {
               )}
             />
             {nameError && (
-              <p className="mt-3 text-xs font-bold text-red-500 uppercase ">
+              <Text variant="caption" as="p" className="mt-3 !text-red-500">
                 {nameError}
-              </p>
+              </Text>
             )}
           </section>
 
           {/* Section 2: Friends */}
           <section>
-            <label>Add friends to play with</label>
+            <Label>Add friends to play with</Label>
             {friends.length === 0 ? (
               <div className="p-12 rounded-3xl bg-white/5 border-2 border-dashed border-white/5 text-center">
-                <p className="text-xs font-bold text-white/20 uppercase ">
+                <Text variant="caption" color="muted" as="p">
                   No friends found yet
-                </p>
+                </Text>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -314,12 +321,17 @@ export const CreateTeamPage = () => {
                       className="h-14 w-14 rounded-full border-2 border-inherit"
                     />
                     <div className="flex flex-col text-left truncate">
-                      <span className="text-base font-black uppercase truncate">
+                      <Heading level={3} variant="section" className="truncate">
                         {friend.displayName}
-                      </span>
-                      <span className="text-[10px] opacity-40 font-bold  truncate">
+                      </Heading>
+                      <Text
+                        variant="caption"
+                        color="muted"
+                        as="span"
+                        className="truncate"
+                      >
                         @{friend.username}
-                      </span>
+                      </Text>
                     </div>
                     <div
                       className={cn(
@@ -344,12 +356,12 @@ export const CreateTeamPage = () => {
           {/* Section 3: Identity */}
           <section>
             <div className="flex flex-col gap-6 mb-8">
-              <label>Select team avatar</label>
+              <Label>Select team avatar</Label>
 
               <div className="space-y-4">
-                <p className="text-[10px] font-black text-plaeen-green uppercase ">
+                <Text variant="caption" as="p" className="text-plaeen-green">
                   Select Collection:
-                </p>
+                </Text>
                 <div className="flex flex-wrap gap-2">
                   {AVATAR_CATEGORIES.map((cat) => (
                     <button
@@ -359,7 +371,7 @@ export const CreateTeamPage = () => {
                         if (scrollRef.current) scrollRef.current.scrollLeft = 0;
                       }}
                       className={cn(
-                        "px-5 py-2.5 rounded-full text-[10px] font-black uppercase  transition-all border-2 cursor-pointer",
+                        "px-5 py-2.5 rounded-full transition-all border-2 cursor-pointer",
                         activeCategory === cat.id
                           ? "bg-plaeen-green border-plaeen-green text-black shadow-lg"
                           : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white",
@@ -422,9 +434,14 @@ export const CreateTeamPage = () => {
                 ))}
               </div>
             </div>
-            <p className="mt-4 text-[10px] font-bold text-white/40 uppercase  text-center">
+            <Text
+              variant="caption"
+              color="muted"
+              as="p"
+              className="mt-4 text-center"
+            >
               ← Scroll or swipe for more options →
-            </p>
+            </Text>
           </section>
 
           {/* Footer Button */}

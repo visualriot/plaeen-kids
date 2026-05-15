@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -242,7 +243,7 @@ export const ParentSettingsPage = () => {
       </button>
 
       <div className="mb-12">
-        <h1 className="text-5xl font-bold text-white uppercase tracking-tighter drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
+        <h1 className="text-5xl font-bold text-white uppercase  drop-shadow-[0_0_30px_rgba(118,233,0,0.3)]">
           <span className="text-plaeen-green">Settings</span>
         </h1>
         <p className="text-white/40 font-bold uppercase  text-xs mt-2">
@@ -256,7 +257,7 @@ export const ParentSettingsPage = () => {
             <Lock size={32} className="text-plaeen-green" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white uppercase tracking-tight">
+            <h2 className="text-xl font-bold text-white uppercase ">
               Parental PIN
             </h2>
             <p className="text-white/40 text-xs font-bold uppercase  mt-1">
@@ -343,7 +344,7 @@ export const ParentSettingsPage = () => {
         <div className="flex items-start gap-4">
           <Shield size={20} className="text-plaeen-purple mt-1" />
           <div>
-            <p className="text-xs font-bold text-white uppercase tracking-tight mb-2">
+            <p className="text-xs font-bold text-white uppercase  mb-2">
               Why use a PIN?
             </p>
             <p className="text-white/40 text-[10px] font-bold uppercase  ">
@@ -362,7 +363,7 @@ export const ParentSettingsPage = () => {
           <Card className="bg-red-500/5 border-red-500/20 p-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div>
-                <h3 className="text-xl font-bold text-white uppercase tracking-tight">
+                <h3 className="text-xl font-bold text-white uppercase ">
                   Delete Account
                 </h3>
                 <p className="text-white/40 text-xs font-bold uppercase  mt-1">
@@ -402,7 +403,7 @@ export const ParentSettingsPage = () => {
                       <AlertTriangle size={40} className="text-red-500" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">
+                      <h2 className="text-2xl font-bold text-white uppercase  mb-4">
                         First Warning
                       </h2>
                       <p className="text-white/40 text-sm font-bold uppercase  ">
@@ -439,7 +440,7 @@ export const ParentSettingsPage = () => {
                       <Trash2 size={40} className="text-white" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-white uppercase tracking-tighter mb-4">
+                      <h2 className="text-2xl font-bold text-white uppercase  mb-4">
                         Final Confirmation
                       </h2>
                       <p className="text-white/60 text-xs font-bold uppercase   mb-4">

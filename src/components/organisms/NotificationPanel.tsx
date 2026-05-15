@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db } from "../firebase";
+import { auth, db } from "../../firebase";
 import {
   collection,
   query,
@@ -34,13 +34,25 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Button } from "./Button";
-import { cn, formatName, safeToDate } from "../lib/utils";
+import { cn, formatName, safeToDate } from "../../lib/utils";
 import { format } from "date-fns";
-import { handleFirestoreError } from "../lib/firestoreUtils";
+import { handleFirestoreError } from "../../lib/firestoreUtils";
 import { useProfile } from "@/contexts/ProfileContext";
 import type { Notification, NotificationPanelProps } from "@/lib/types";
+import { Heading, Text, Label, Button } from "@/components/atoms";
 
+/**
+ * @component NotificationPanel
+ * @atomic organism
+ * @figma NotificationPanel (Components / Organisms / NotificationPanel)
+ *
+ * @tokens
+ *   shadow-xl, shadow-glow-sm, radius-lg, radius-full, radius-sm,
+ *   color-primary, color-accent, color-muted
+ *
+ * @states open, closed
+ * @transitions all 200ms ease
+ */
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   userId,
   isOpen,
@@ -444,148 +456,150 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           initial={{ opacity: 0, y: 10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
-          className="absolute right-0 top-full mt-2 w-80 md:w-96 rounded-2xl bg-plaeen-dark border border-white/10 shadow-2xl z-[70] overflow-hidden backdrop-blur-xl"
+          className="absolute right-0 top-full mt-2 w-80 md:w-96 z-70"
         >
-          <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <h3 className="text-xs font-bold text-white uppercase ">
-              Notifications
-            </h3>
-          </div>
+          <div className="rounded-radius-lg border border-white/10 overflow-hidden bg-surface-raised/95" style={{ boxShadow: "var(--shadow-xl)" }}>
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-surface-overlay/95">
+              <Heading level={3} variant="section">
+                Notifications
+              </Heading>
+            </div>
 
-          <AnimatePresence>
-            {feedback && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className={cn(
-                  "px-4 py-2 border-b font-bold uppercase  text-[8px] text-center",
-                  feedback.type === "success"
-                    ? "bg-plaeen-green/10 text-plaeen-green border-plaeen-green/20"
-                    : "bg-white/5 text-white/40 border-white/10",
-                )}
-              >
-                {feedback.message}
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <AnimatePresence>
+              {feedback && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={cn(
+                    "px-4 py-2 border-b type-body-sm text-center",
+                    feedback.type === "success"
+                      ? "bg-plaeen-green/10 text-plaeen-green border-plaeen-green/20"
+                      : "bg-white/5 text-white/40 border-white/10",
+                  )}
+                >
+                  {feedback.message}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          <div className="max-h-[480px] overflow-y-auto custom-scrollbar">
-            {notifications.length === 0 ? (
-              <div className="p-12 text-center">
-                <Bell size={32} className="mx-auto text-white/5 mb-4" />
-                <p className="text-[10px] font-bold text-white/20 uppercase ">
-                  All clear
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5">
-                {notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`group relative p-4 hover:bg-white/5 transition-all cursor-pointer ${!notif.read ? "bg-plaeen-green/5" : ""}`}
-                    onClick={() => handleNotificationClick(notif)}
-                  >
-                    <div className="flex gap-4">
-                      <div className="mt-1 h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                        {getIcon(notif.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <p
-                            className={`text-[10px] font-bold uppercase tracking-tight truncate ${!notif.read ? "text-white" : "text-white/60"}`}
-                          >
-                            {formatName(notif.title)}
+            <div className="max-h-120 overflow-y-auto custom-scrollbar ">
+              {notifications.length === 0 ? (
+                <div className="p-12 text-center">
+                  <Bell size={32} className="mx-auto text-muted mb-4" />
+                  <Text className="type-body text-muted">All clear</Text>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {notifications.map((notif) => (
+                    <div
+                      key={notif.id}
+                      className={`group relative p-4 hover:bg-white/5 transition-all cursor-pointer ${!notif.read ? "bg-plaeen-green/5" : ""}`}
+                      onClick={() => handleNotificationClick(notif)}
+                    >
+                      <div className="flex gap-4">
+                        <div className="mt-1 h-8 w-8 rounded-radius-sm bg-white/5 flex items-center justify-center shrink-0">
+                          {getIcon(notif.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p
+                              className={`text-[10px] font-bold uppercase  truncate ${!notif.read ? "text-white" : "text-white/60"}`}
+                            >
+                              {formatName(notif.title)}
+                            </p>
+                            <span className="text-[8px] font-bold text-white/20 uppercase  shrink-0">
+                              {notif.createdAt
+                                ? format(safeToDate(notif.createdAt), "HH:mm")
+                                : "Just now"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-white/40 font-medium  mb-3">
+                            {notif.message}
                           </p>
-                          <span className="text-[8px] font-bold text-white/20 uppercase  shrink-0">
-                            {notif.createdAt
-                              ? format(safeToDate(notif.createdAt), "HH:mm")
-                              : "Just now"}
-                          </span>
+
+                          {/* Action Buttons for specific types - showing always as fulfilled items are deleted */}
+                          {notif.type === "team_invite" && (
+                            <div
+                              className="flex gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                size="sm"
+                                onClick={() => handleTeamInvite(notif, true)}
+                                className="bg-plaeen-green text-black text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleTeamInvite(notif, false)}
+                                className="border-white/10 text-white/40 text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
+                              >
+                                Decline
+                              </Button>
+                            </div>
+                          )}
+
+                          {notif.type === "friend_request" && (
+                            <div
+                              className="flex gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button
+                                size="sm"
+                                onClick={() => handleFriendRequest(notif, true)}
+                                className="bg-plaeen-green text-black text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleFriendRequest(notif, false)
+                                }
+                                className="border-white/10 text-white/40 text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
+                              >
+                                Decline
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => navigate("/friends")}
+                                className="text-white/20 text-[6px] font-bold uppercase  px-2 py-1.5 h-auto ml-auto"
+                              >
+                                View
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-[10px] text-white/40 font-medium  mb-3">
-                          {notif.message}
-                        </p>
-
-                        {/* Action Buttons for specific types - showing always as fulfilled items are deleted */}
-                        {notif.type === "team_invite" && (
-                          <div
-                            className="flex gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button
-                              size="sm"
-                              onClick={() => handleTeamInvite(notif, true)}
-                              className="bg-plaeen-green text-black text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
-                            >
-                              Accept
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleTeamInvite(notif, false)}
-                              className="border-white/10 text-white/40 text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
-                            >
-                              Decline
-                            </Button>
-                          </div>
-                        )}
-
-                        {notif.type === "friend_request" && (
-                          <div
-                            className="flex gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button
-                              size="sm"
-                              onClick={() => handleFriendRequest(notif, true)}
-                              className="bg-plaeen-green text-black text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
-                            >
-                              Accept
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleFriendRequest(notif, false)}
-                              className="border-white/10 text-white/40 text-[8px] font-bold uppercase  px-3 py-1.5 h-auto"
-                            >
-                              Decline
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => navigate("/friends")}
-                              className="text-white/20 text-[6px] font-bold uppercase  px-2 py-1.5 h-auto ml-auto"
-                            >
-                              View
-                            </Button>
+                        {!notif.read && (
+                          <div className="shrink-0 mt-2">
+                            <div className="h-1.5 w-1.5 rounded-radius-full bg-plaeen-green" style={{ boxShadow: "var(--shadow-glow-sm)" }} />
                           </div>
                         )}
                       </div>
-                      {!notif.read && (
-                        <div className="shrink-0 mt-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-plaeen-green shadow-[0_0_10px_rgba(118,233,0,0.5)]" />
-                        </div>
-                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <div className="p-3 border-t border-white/5 bg-white/5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-[8px] font-bold uppercase  text-white/40 hover:text-white"
-              onClick={() => {
-                onClose();
-                navigate("/notifications");
-              }}
-            >
-              View All Notifications
-            </Button>
+            <div className="border-t border-white/5 bg-surface-overlay/95">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full border-none hover:bg-surface-overlay"
+                onClick={() => {
+                  onClose();
+                  navigate("/notifications");
+                }}
+              >
+                View All Notifications
+              </Button>
+            </div>
           </div>
         </motion.div>
       )}

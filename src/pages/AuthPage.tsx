@@ -1,5 +1,6 @@
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   GoogleAuthProvider,
@@ -173,17 +174,17 @@ export const AuthPage = () => {
       {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(118,233,0,0.05)_0%,transparent_50%)]" /> */}
 
       <Card className="w-full max-w-md p-10 space-y-4">
-        <h2 className="text-4xl  mb-6 tracking-wide">
+        <Heading level={2} className="mb-6">
           {isSignUp ? (
             <>
               <span className="text-white">Sign Up for</span> Plaeen
             </>
           ) : (
             <>
-              <span className="text-plaeen-green tracking-wide">Sign In</span>
+              <span className="text-plaeen-green">Sign In</span>
             </>
           )}
-        </h2>
+        </Heading>
 
         {/* Social Sign-In Options */}
         <Button
@@ -217,9 +218,9 @@ export const AuthPage = () => {
 
         <div className="relative flex items-center gap-6 mb-8">
           <div className="flex-1 h-[1px] bg-white/15" />
-          <span className="text-[1px] font-bold text-white/80 uppercase">
+          <Text variant="caption" as="span" className="text-white/80">
             or
-          </span>
+          </Text>
           <div className="flex-1 h-[1px] bg-white/15" />
         </div>
 
@@ -265,8 +266,10 @@ export const AuthPage = () => {
           </div>
 
           {error && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold text-center uppercase">
-              {error}
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-center">
+              <Text variant="caption" className="!text-red-400">
+                {error}
+              </Text>
             </div>
           )}
 
@@ -281,39 +284,39 @@ export const AuthPage = () => {
         {/* Footer Links */}
         <div className="mt-10 text-center">
           {isSignUp ? (
-            <p>
+            <Text as="div" variant="body" color="secondary">
               Already have an account?{" "}
               <Button
                 onClick={() => navigate("/auth?mode=signin")}
                 variant="tertiary"
-                className="p-0 font-bold !text-white hover:!text-plaeen-green"
+                className="p-0 !text-white hover:!text-plaeen-green"
               >
                 Sign In
               </Button>
-            </p>
+            </Text>
           ) : (
-            <p>
+            <Text as="div" variant="body" color="secondary">
               New to Plaeen?{" "}
               <Button
                 onClick={() => navigate("/auth?mode=signup")}
                 variant="tertiary"
-                className="p-0 font-bold !text-white hover:!text-plaeen-green"
+                className="p-0 !text-white hover:!text-plaeen-green"
               >
                 Sign Up Now
               </Button>
-            </p>
+            </Text>
           )}
         </div>
 
         {isSignUp && (
           <div className="mt-10 pt-10 border-t border-white/20 text-center">
-            <p className="text-xs text-white/60">
+            <Text variant="caption" color="secondary">
               By creating an account, you agree to the{" "}
               <span className="text-white/80 hover:underline transition-all ease-in-out cursor-pointer">
                 Terms of Service
               </span>
               .
-            </p>
+            </Text>
           </div>
         )}
       </Card>

@@ -11,6 +11,7 @@ interface ProfileContextType {
     uid: string;
     displayName: string;
     email: string;
+    photoURL?: string | null;
     role: "parent" | "kid"; // Could be a kid account too
     onboardingComplete?: boolean;
     guardianPin?: string;

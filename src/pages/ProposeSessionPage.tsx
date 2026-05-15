@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   doc,
@@ -14,8 +15,8 @@ import {
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useProfile } from "@/contexts/ProfileContext";
-import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
+import { Button } from "@/components/atoms/Button";
+import { Card } from "@/components/molecules/Card";
 import {
   X,
   Calendar as CalendarIcon,
@@ -162,7 +163,7 @@ export const ProposeSessionPage = () => {
             <ChevronLeft size={24} />
           </button>
           <div>
-            <h1 className="text-4xl md:text-6xl font-bold text-white uppercase tracking-tighter">
+            <h1 className="text-4xl md:text-6xl font-bold text-white uppercase ">
               Propose <span className="text-plaeen-green">Session</span>
             </h1>
             <p className="text-white/40 font-bold uppercase  text-[10px] mt-2">
@@ -185,7 +186,7 @@ export const ProposeSessionPage = () => {
                   <p className="text-[10px] font-bold text-plaeen-green uppercase  mb-1">
                     Selected Game
                   </p>
-                  <h3 className="text-2xl font-bold text-white uppercase tracking-tight">
+                  <h3 className="text-2xl font-bold text-white uppercase ">
                     {selectedGame.name}
                   </h3>
                 </div>
@@ -313,7 +314,7 @@ export const ProposeSessionPage = () => {
                     />
                     <p
                       className={cn(
-                        "text-sm font-bold uppercase tracking-tight truncate px-2",
+                        "text-sm font-bold uppercase  truncate px-2",
                         selectedGame?.id === game.id
                           ? "text-black"
                           : "text-white/60",

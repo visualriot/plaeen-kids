@@ -1,0 +1,264 @@
+@theme {
+  /*
+    Two-layer naming strategy:
+    - CSS variables keep the full category path for clarity in raw CSS (--color-text-primary)
+    - Tailwind-facing variables drop the category so utilities read naturally (text-primary, bg-surface)
+
+    Source: Figma color/text/primary → CSS var: --color-text-primary → Tailwind: --color-primary → class: text-primary
+  */
+
+  /* ===== FONTS ===== */
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Abolition", sans-serif;
+  --font-brand: "Abolition", sans-serif;
+
+  /* ===== FONT SIZES ===== */
+  /* All values verified against Figma type styles (node 3:2) */
+  --font-size-display: 4rem; /* 64px — Display */
+  --font-size-heading-lg: 1.5rem; /* 24px — Card Heading */
+  --font-size-body: 1rem; /* 16px — Body, Button */
+  --font-size-body-sm: 0.875rem; /* 14px — Body Small, Section Title, Widget Title, Tab Label */
+  --font-size-caption: 0.75rem; /* 12px — Caption, Label, Page Subtitle */
+
+  /* ===== FONT WEIGHTS ===== */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ===== LINE HEIGHTS ===== */
+  --line-height-display: 1;
+  --line-height-heading: 1.25; /* Card Heading */
+  --line-height-button: 1.2; /* Button */
+  --line-height-label: 1.3; /* Label */
+  --line-height-body: 1.6; /* Body, Tab Label */
+  --line-height-body-sm: 1.5; /* Body Small */
+  --line-height-caption: 1.4; /* Caption, Section Title, Widget Title, Page Subtitle */
+
+  /* ===== LETTER SPACING (TRACKING) ===== */
+  --tracking-display: 5px;
+  --tracking-section-title: 0.7px;
+  --tracking-widget-title: 0.28px;
+  --tracking-page-subtitle: 0.6px;
+  --tracking-button: 0.16px;
+  --tracking-label: 0.48px;
+
+  /* ===== TEXT COLORS ===== */
+  --color-text-primary: #f2eef9;
+  --color-text-secondary: #baafd9;
+  --color-text-muted: #8b7aaa;
+  --color-text-disabled: #4a3d6a;
+  --color-text-accent: #76e900;
+  --color-text-accent-secondary: #a07fd0;
+  --color-text-inverse: #0a0514;
+
+  /* ===== BACKGROUND COLORS ===== */
+  --color-bg-page: #0a0514;
+  --color-surface-raised: #130d21;
+  --color-surface-overlay: #1d1535;
+  --color-surface-floating: #271d45;
+
+  /* ===== BORDER COLORS ===== */
+  --color-border-subtle: #1d1535;
+  --color-border-default: #2d1b4d;
+  --color-border-strong: #4b2a96;
+  --color-border-accent: #76e900;
+
+  /* ===== INTERACTIVE COLORS ===== */
+  --color-interactive-primary: #76e900;
+  --color-interactive-primary-hover: #8fff10;
+  --color-interactive-primary-active: #5bbb00;
+  --color-interactive-primary-subtle: #152400;
+  --color-interactive-secondary: #2d1b4d;
+  --color-interactive-secondary-hover: #3d2560;
+
+  /* ===== STATE COLORS ===== */
+  --color-focus-ring: #76e900;
+
+  /* ===== WARNING ===== */
+  --color-warning-base: #ffb830;
+  --color-warning-bg: #261500;
+  --color-warning-border: #6b4500;
+  --color-warning-text: #ffb830;
+
+  /* ===== ERROR ===== */
+  --color-error-base: #ff4d6a;
+  --color-error-bg: #200008;
+  --color-error-border: #7a0020;
+  --color-error-text: #ff4d6a;
+
+  /* ===== INFO ===== */
+  --color-info-base: #4dc8ff;
+  --color-info-bg: #001525;
+  --color-info-border: #005580;
+  --color-info-text: #4dc8ff;
+
+  /* ===== SUCCESS ===== */
+  --color-success-text: #00e5a0;
+  --color-success-bg: #002015;
+  --color-success-border: #006645;
+
+  /* ===== ACCENT COLORS ===== */
+  --color-accent-primary: #76e900;
+  --color-accent-secondary: #2d1b4d;
+
+  /* ===== SPACING SCALE ===== */
+  /* Direct Tailwind scale — generates p-2, m-3, space-y-4, etc. */
+  /* Extracted from component usage: 8px, 12px, 16px, 24px, 32px, 48px */
+  spacing: {
+    2: 0.5rem, /* 8px */
+    3: 0.75rem, /* 12px */
+    4: 1rem, /* 16px */
+    6: 1.5rem, /* 24px */
+    8: 2rem, /* 32px */
+    12: 3rem, /* 48px */
+  }
+
+  /* ===== RADIUS SCALE ===== */
+  /* Direct Tailwind scale — generates rounded-sm, rounded-md, rounded-lg, etc. */
+  /* Extracted from component usage */
+  borderRadius: {
+    sm: 0.5rem, /* 8px — small rounded corners */
+    md: 0.75rem, /* 12px — medium rounded corners */
+    lg: 1rem, /* 16px — large rounded corners */
+    xl: 1.5rem, /* 24px — extra large rounded corners */
+    full: 9999px, /* circles */
+  }
+
+  /* ===== SHADOW SCALE ===== */
+  /* Direct Tailwind scale — generates shadow-sm, shadow-md, shadow-lg, etc. */
+  /* Standard elevation shadows */
+  boxShadow: {
+    sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05),
+    md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    "2xl": 0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    /* Neon glow effects — accent color glows */
+    "glow-sm": 0 0 10px rgba(118, 233, 0, 0.3),
+    "glow-md": 0 0 15px rgba(118, 233, 0, 0.3),
+    "glow-lg": 0 0 20px rgba(118, 233, 0, 0.3),
+    "glow-xl": 0 0 40px rgba(118, 233, 0, 0.5),
+  }
+
+  /* ===== TAILWIND ALIASES ===== */
+  /* For natural utility class naming: text-primary, bg-surface, border-accent */
+
+  /* Text color aliases */
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-muted: var(--color-text-muted);
+  --color-disabled: var(--color-text-disabled);
+  --color-accent: var(--color-text-accent);
+  --color-inverse: var(--color-text-inverse);
+
+  /* Surface aliases */
+  --color-surface: var(--color-surface-raised);
+  --color-overlay: var(--color-surface-overlay);
+  --color-floating: var(--color-surface-floating);
+
+  /* Interactive aliases */
+  --color-interactive: var(--color-interactive-primary);
+  --color-interactive-hover: var(--color-interactive-primary-hover);
+  --color-interactive-active: var(--color-interactive-primary-active);
+}
+
+/*
+  Compound type styles — each class applies all typographic properties for a
+  Figma text style in one go. Use these in components instead of combining
+  individual Tailwind utilities.
+
+  Convention: .type-{figma-style-name}
+  Color is NOT included — set it separately with text-* utilities.
+*/
+@layer components {
+  /* 64px · Abolition · leading 1 · tracking 2.4px · uppercase */
+  .type-display {
+    font-family: var(--font-display);
+    font-size: var(--font-size-display);
+    font-weight: 400; /* Abolition has no weight variants */
+    line-height: var(--line-height-display);
+    letter-spacing: var(--tracking-display);
+    text-transform: uppercase;
+  }
+
+  /* 24px · bold · leading 1.25 · uppercase */
+  .type-card-heading {
+    font-size: var(--font-size-heading-lg);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-heading);
+    text-transform: uppercase;
+  }
+
+  /* 14px · bold · leading 1.4 · tracking 0.7px · capitalize */
+  .type-section-title {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-caption);
+    letter-spacing: var(--tracking-section-title);
+    text-transform: capitalize;
+  }
+
+  /* 14px · bold · leading 1.4 · tracking 0.28px · uppercase */
+  .type-widget-title {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-caption);
+    letter-spacing: var(--tracking-widget-title);
+    text-transform: uppercase;
+  }
+
+  /* 14px · bold · leading 1.6 · uppercase */
+  .type-tab-label {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-body);
+    text-transform: uppercase;
+  }
+
+  /* 12px · semibold · leading 1.4 · tracking 0.6px · uppercase */
+  .type-page-subtitle {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-caption);
+    letter-spacing: var(--tracking-page-subtitle);
+    text-transform: uppercase;
+  }
+
+  /* 16px · normal · leading 1.6 */
+  .type-body {
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-body);
+  }
+
+  /* 14px · normal · leading 1.5 */
+  .type-body-sm {
+    font-size: var(--font-size-body-sm);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-body-sm);
+  }
+
+  /* 12px · normal · leading 1.4 */
+  .type-caption {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-caption);
+  }
+
+  /* 16px · bold · leading 1.2 · tracking 0.16px */
+  .type-button {
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-button);
+    letter-spacing: var(--tracking-button);
+  }
+
+  /* 12px · semibold · leading 1.3 · tracking 0.48px */
+  .type-label {
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-label);
+    letter-spacing: var(--tracking-label);
+  }
+}

@@ -1,8 +1,8 @@
 import React from "react";
 import { Flame, RotateCcw, History, Info } from "lucide-react";
 import { format } from "date-fns";
-import { Card } from "./Card";
-import { Button } from "./Button";
+import { Card } from "../molecules/Card";
+import { Button } from "../atoms/Button";
 import { cn } from "@/lib/utils";
 
 interface StreakRewardsProps {
@@ -17,6 +17,18 @@ interface StreakRewardsProps {
   onUpdateConfig: (target: number, reward: number) => void;
 }
 
+/**
+ * @component StreakRewards
+ * @atomic organism
+ * @figma StreakRewards (Components / Organisms / StreakRewards)
+ *
+ * @tokens
+ *   radius-lg, radius-sm,
+ *   color-primary, color-accent, color-muted
+ *
+ * @states default
+ * @transitions all 300ms ease
+ */
 export const StreakRewards: React.FC<StreakRewardsProps> = ({
   streakCount,
   lastUpdate,
@@ -34,9 +46,9 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
         <Flame size={16} /> Streak & Rewards
       </h2>
       <Card className="bg-white/5 border-white/10 p-8 space-y-4">
-        <div className="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col gap-6">
+        <div className="bg-white/5 rounded-radius-lg p-6 border border-white/5 flex flex-col gap-6">
           <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-            <div className="h-16 w-16 rounded-2xl bg-plaeen-green/10 flex items-center justify-center relative">
+            <div className="h-16 w-16 rounded-radius-lg bg-plaeen-green/10 flex items-center justify-center relative">
               <Flame
                 size={32}
                 className={cn(
@@ -50,7 +62,7 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
               </span>
             </div>
             <div className="flex-1">
-              <p className="text-xs font-bold text-white uppercase tracking-tight">
+              <p className="text-xs font-bold text-white uppercase ">
                 Current Streak
               </p>
               <p className="text-[8px] text-white/40 font-bold uppercase  mt-1">
@@ -102,7 +114,7 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
                   setStreakTarget(val);
                   onUpdateConfig(val, streakReward);
                 }}
-                className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-plaeen-green"
+                className="w-full h-1.5 bg-white/5 rounded-radius-sm appearance-none cursor-pointer accent-plaeen-green"
               />
             </div>
 
@@ -126,11 +138,11 @@ export const StreakRewards: React.FC<StreakRewardsProps> = ({
                   setStreakReward(val);
                   onUpdateConfig(streakTarget, val);
                 }}
-                className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-plaeen-green"
+                className="w-full h-1.5 bg-white/5 rounded-radius-sm appearance-none cursor-pointer accent-plaeen-green"
               />
             </div>
 
-            <p className="text-[8px] text-white/40 font-medium uppercase tracking-tight bg-white/5 p-3 rounded-lg border border-white/5">
+            <p className="text-[8px] text-white/40 font-medium uppercase  bg-white/5 p-3 rounded-radius-sm border border-white/5">
               <Info
                 size={10}
                 className="inline mr-1 text-plaeen-green mb-0.5"

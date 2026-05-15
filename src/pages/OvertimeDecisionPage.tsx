@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
+import { Heading, Text, Label } from "@/components/atoms";
 import { db } from "@/firebase";
 import {
   doc,
@@ -356,7 +357,7 @@ export const OvertimeDecisionPage = () => {
             <span className="text-[10px] font-bold uppercase ">Back</span>
           </button>
           <div className="text-right">
-            <h1 className="text-2xl md:text-4xl font-bold text-white uppercase tracking-tight">
+            <h1 className="text-2xl md:text-4xl font-bold text-white uppercase ">
               Overtime Decision
             </h1>
             <p className="text-plaeen-green text-[10px] font-bold uppercase ">

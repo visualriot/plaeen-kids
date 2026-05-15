@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Heading, Text, Label } from "@/components/atoms";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -16,8 +17,8 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Card } from "@/components/molecules/Card";
+import { Button } from "@/components/atoms/Button";
 import { Search, UserPlus, UserMinus, Check, X, Clock } from "lucide-react";
 import { formatName, getUserAvatar } from "@/lib/utils";
 
@@ -433,7 +434,9 @@ export const FriendsPage = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
-      <h1 className="mb-12">Friends</h1>
+      <Heading level={1} className="mb-12">
+        Friends
+      </Heading>
 
       {message && (
         <div
@@ -451,19 +454,23 @@ export const FriendsPage = () => {
         <div className="space-y-12">
           {/* Search Section */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Search size={24} className="text-plaeen-green" /> Find Friends
-            </h2>
+            <Heading
+              level={2}
+              variant="section"
+              className="mb-6 flex items-center gap-2"
+            >
+              <Search size={24} className="text-accent" /> Find Friends
+            </Heading>
             <div className="flex gap-4 mb-8">
               <input
                 type="text"
-                placeholder="Search by exact username (e.g. @aleks2)..."
+                placeholder="Search by exact username or guardian email"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 className="flex-1 rounded-xl border border-white/10 bg-plaeen-purple/40 px-6 py-4 text-white focus:outline-none focus:border-plaeen-green"
               />
-              <Button onClick={handleSearch} disabled={loading}>
+              <Button onClick={handleSearch} disabled={loading} size="md">
                 {loading ? "Searching..." : "Search"}
               </Button>
             </div>
@@ -482,12 +489,8 @@ export const FriendsPage = () => {
                         className="h-12 w-12 rounded-full border-2 border-plaeen-green/20"
                       />
                       <div>
-                        <p className="font-bold text-white uppercase tracking-tight">
-                          {formatName(u.displayName)}
-                        </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase ">
-                          @{u.username}
-                        </p>
+                        <Text>{formatName(u.displayName)}</Text>
+                        <Text variant="caption">@{u.username}</Text>
                       </div>
                     </div>
                     <Button
@@ -506,22 +509,26 @@ export const FriendsPage = () => {
 
           {/* Friends List */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Check size={24} className="text-plaeen-green" /> Your Friends (
+            <Heading
+              level={2}
+              variant="section"
+              className="mb-6 flex items-center gap-2"
+            >
+              <Check size={24} className="text-accent" /> Your Friends (
               {friendsLoading ? "..." : friends.length})
-            </h2>
+            </Heading>
             {friendsLoading ? (
               <Card className="text-center py-12 bg-white/5 border-white/10">
-                <div className="flex items-center justify-center gap-3 text-white/40">
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-plaeen-green" />
-                  <p className="text-xs font-bold uppercase">Loading friends...</p>
+                <div className="flex items-center justify-center gap-3 text-muted">
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-accent" />
+                  <Text variant="caption">Loading friends...</Text>
                 </div>
               </Card>
             ) : friends.length === 0 ? (
               <Card className="text-center py-12 bg-white/5 border-dashed border-white/20">
-                <p className="text-white/40">
+                <Text color="secondary">
                   You haven't added any friends yet.
-                </p>
+                </Text>
               </Card>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -537,12 +544,8 @@ export const FriendsPage = () => {
                         className="h-12 w-12 rounded-full border-2 border-plaeen-green/20"
                       />
                       <div>
-                        <p className="font-bold text-white uppercase tracking-tight">
-                          {formatName(friend.displayName)}
-                        </p>
-                        <p className="text-[10px] text-white/40 font-bold uppercase ">
-                          @{friend.username}
-                        </p>
+                        <Text>{formatName(friend.displayName)}</Text>
+                        <Text variant="caption">@{friend.username}</Text>
                       </div>
                     </div>
                     <button
@@ -562,12 +565,12 @@ export const FriendsPage = () => {
         <aside className="space-y-8">
           {confirmDelete && (
             <Card className="bg-red-500/10 border-red-500/20">
-              <h3 className="text-sm font-bold text-white uppercase  mb-4">
+              <Heading level={3} variant="widget" className="mb-4">
                 Remove Friend?
-              </h3>
-              <p className="text-xs text-white/60 mb-6">
+              </Heading>
+              <Text color="secondary" className="mb-6">
                 This action cannot be undone.
-              </p>
+              </Text>
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -589,13 +592,17 @@ export const FriendsPage = () => {
           )}
 
           <Card className="bg-plaeen-purple/20 border-plaeen-purple/40 sticky top-24">
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-              <Clock size={20} className="text-plaeen-green" /> Requests
-            </h2>
+            <Heading
+              level={2}
+              variant="widget"
+              className="mb-6 flex items-center gap-2"
+            >
+              <Clock size={20} className="text-accent" /> Requests
+            </Heading>
             {requests.length === 0 ? (
-              <p className="text-sm text-white/40 text-center py-4">
+              <Text color="secondary" className="text-center py-4">
                 No pending requests
-              </p>
+              </Text>
             ) : (
               <div className="space-y-4">
                 {requests.map((req) => {
@@ -606,27 +613,27 @@ export const FriendsPage = () => {
                       className="p-4 rounded-xl bg-white/5 border border-white/10"
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <p className="text-sm font-medium text-white">
+                        <Text>
                           {isIncoming ? (
                             <>
-                              <span className="text-plaeen-green">
+                              <span className="text-accent">
                                 {req.fromName}
                               </span>
-                              <span className="text-white/40 ml-1">
+                              <span className="text-secondary ml-1">
                                 Invited You
                               </span>
                             </>
                           ) : (
                             <>
-                              <span className="text-white/40 mr-1">
+                              <span className="text-secondary mr-1">
                                 Sent to
                               </span>
-                              <span className="text-plaeen-green">
+                              <span className="text-accent">
                                 {req.toName || "Friend"}
                               </span>
                             </>
                           )}
-                        </p>
+                        </Text>
                         {!isIncoming && (
                           <span className="text-[8px] font-bold uppercase  text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">
                             Pending

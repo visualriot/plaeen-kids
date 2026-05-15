@@ -1,6 +1,7 @@
 @import url("https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css");
 @import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
 @import "tailwindcss";
+@import "./styles/tokens.css";
 
 @font-face {
   font-family: "Abolition";
@@ -23,9 +24,7 @@
 }
 
 @theme {
-  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Geist", sans-serif;
-
+  /* Legacy Plaeen brand colors — map to semantic tokens for backward compatibility during refactoring */
   --color-plaeen-green: #76e900;
   --color-plaeen-purple: #2d1b4d;
   --color-plaeen-purple-medium: #462d71;
@@ -50,36 +49,6 @@
         transparent 50%
       );
     background-attachment: fixed;
-  }
-
-  h1 {
-    @apply text-4xl md:text-6xl  font-bold tracking-wider;
-    font-family: "Abolition", sans-serif;
-  }
-  h2 {
-    @apply text-[12px]  font-bold  text-plaeen-green;
-  }
-  h3 {
-    @apply text-2xl font-bold text-white uppercase;
-  }
-  h4 {
-    @apply text-xl md:text-2xl;
-  }
-
-  h5 {
-    @apply text-neutral-400;
-  }
-
-  p {
-    @apply text-neutral-300;
-  }
-
-  label {
-    @apply block text-[11px] font-semibold text-white/50 uppercase;
-  }
-
-  .ghost-text {
-    @apply text-sm text-neutral-500 uppercase font-semibold;
   }
 
   .note {
@@ -115,10 +84,14 @@ button {
   box-shadow: 0 0 40px rgba(118, 233, 0, 0.5);
 }
 
+bg-blur {
+  backdrop-filter: blur(10px);
+}
+
 /* SCROLLBARS */
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
   height: 8px;
 }
 
@@ -138,6 +111,7 @@ button {
 
 .scrollbar-thin::-webkit-scrollbar {
   height: 8px;
+  width: 8px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.03);
