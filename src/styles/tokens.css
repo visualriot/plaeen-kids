@@ -103,43 +103,37 @@
   --color-accent-secondary: #2d1b4d;
 
   /* ===== SPACING SCALE ===== */
-  /* Direct Tailwind scale — generates p-2, m-3, space-y-4, etc. */
   /* Extracted from component usage: 8px, 12px, 16px, 24px, 32px, 48px */
-  spacing: {
-    2: 0.5rem, /* 8px */
-    3: 0.75rem, /* 12px */
-    4: 1rem, /* 16px */
-    6: 1.5rem, /* 24px */
-    8: 2rem, /* 32px */
-    12: 3rem, /* 48px */
-  }
+  /* Tailwind generates p-2, m-3, space-y-4 from these via config */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-12: 3rem; /* 48px */
 
   /* ===== RADIUS SCALE ===== */
-  /* Direct Tailwind scale — generates rounded-sm, rounded-md, rounded-lg, etc. */
   /* Extracted from component usage */
-  borderRadius: {
-    sm: 0.5rem, /* 8px — small rounded corners */
-    md: 0.75rem, /* 12px — medium rounded corners */
-    lg: 1rem, /* 16px — large rounded corners */
-    xl: 1.5rem, /* 24px — extra large rounded corners */
-    full: 9999px, /* circles */
-  }
+  /* Tailwind generates rounded-sm, rounded-md, rounded-lg from these */
+  --radius-sm: 0.5rem; /* 8px — small rounded corners */
+  --radius-md: 0.75rem; /* 12px — medium rounded corners */
+  --radius-lg: 1rem; /* 16px — large rounded corners */
+  --radius-xl: 1.5rem; /* 24px — extra large rounded corners */
+  --radius-full: 9999px; /* circles */
 
   /* ===== SHADOW SCALE ===== */
-  /* Direct Tailwind scale — generates shadow-sm, shadow-md, shadow-lg, etc. */
-  /* Standard elevation shadows */
-  boxShadow: {
-    sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05),
-    md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    "2xl": 0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    /* Neon glow effects — accent color glows */
-    "glow-sm": 0 0 10px rgba(118, 233, 0, 0.3),
-    "glow-md": 0 0 15px rgba(118, 233, 0, 0.3),
-    "glow-lg": 0 0 20px rgba(118, 233, 0, 0.3),
-    "glow-xl": 0 0 40px rgba(118, 233, 0, 0.5),
-  }
+  /* Standard elevation shadows — Tailwind generates shadow-sm, shadow-md, shadow-lg, etc. */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* Neon glow effects — accent color glows */
+  --shadow-glow-sm: 0 0 10px rgba(118, 233, 0, 0.3);
+  --shadow-glow-md: 0 0 15px rgba(118, 233, 0, 0.3);
+  --shadow-glow-lg: 0 0 20px rgba(118, 233, 0, 0.3);
+  --shadow-glow-xl: 0 0 40px rgba(118, 233, 0, 0.5);
 
   /* ===== TAILWIND ALIASES ===== */
   /* For natural utility class naming: text-primary, bg-surface, border-accent */
