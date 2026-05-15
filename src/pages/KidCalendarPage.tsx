@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
   Info,
-  Check,
   RotateCcw,
   Zap,
   CalendarCheck2,
